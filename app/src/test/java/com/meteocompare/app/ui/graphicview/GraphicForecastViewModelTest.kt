@@ -96,7 +96,8 @@ class GraphicForecastViewModelTest {
             contextProvider = contextProvider,
             clock = clock,
             appContext = mockk<Context>(relaxed = true),
-            computationDispatcher = dispatcher
+            computationDispatcher = dispatcher,
+            uvIndexRepository = mockk(relaxed = true)
         )
 
         try {

@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.ui.components.UvIndexCompact
+
 import com.meteocompare.app.core.charts.metricPlotValue
 import com.meteocompare.app.core.charts.canonicalChartRange
 import com.meteocompare.app.core.units.WeatherUnit
@@ -687,17 +689,20 @@ private fun ChronoConditionsLane(points: List<SimplifiedTimelinePoint>) {
     ) {
         points.forEach { point ->
             ChronoCell {
-                Box(
-                    modifier = Modifier.height(34.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    point.condition?.let { condition ->
-                        WeatherIconDecorative(
-                            condition = condition,
-                            size = 28.dp,
-                            tint = condition.semanticTint()
-                        )
-                    } ?: Text("—", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier.height(34.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        point.condition?.let { condition ->
+                            WeatherIconDecorative(
+                                condition = condition,
+                                size = 28.dp,
+                                tint = condition.semanticTint()
+                            )
+                        } ?: Text("—", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    UvIndexCompact(point.uvIndex)
                 }
             }
         }
@@ -1121,7 +1126,7 @@ internal const val TAG_TIMELINE_CHRONO_CONDITIONS_LANE = "timeline_chrono_condit
 
 private val CHRONO_DATE_HEIGHT = 52.dp
 private val CHRONO_TEMP_HEIGHT = 118.dp
-private val CHRONO_CONDITIONS_HEIGHT = 52.dp
+private val CHRONO_CONDITIONS_HEIGHT = 65.dp
 private val CHRONO_RAIN_HEIGHT = 60.dp
 private val CHRONO_CLOUD_HEIGHT = 52.dp
 private val CHRONO_WIND_HEIGHT = 62.dp

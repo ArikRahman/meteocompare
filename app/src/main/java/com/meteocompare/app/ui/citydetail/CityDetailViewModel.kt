@@ -21,6 +21,7 @@ import com.meteocompare.app.domain.model.CityDetailContentTab
 import com.meteocompare.app.domain.model.CityDetailSection
 import com.meteocompare.app.domain.model.CityDetailViewMode
 import com.meteocompare.app.domain.model.CityForecast
+import com.meteocompare.app.domain.model.UvForecast
 import com.meteocompare.app.domain.model.ForecastDisplayHorizon
 import com.meteocompare.app.domain.model.DayNormals
 import com.meteocompare.app.domain.model.ForecastEngine
@@ -35,6 +36,7 @@ import com.meteocompare.app.domain.repository.ForecastRepository
 import com.meteocompare.app.domain.repository.MarineRepository
 import com.meteocompare.app.domain.repository.UserPreferencesRepository
 import com.meteocompare.app.domain.repository.VigilanceRepository
+import com.meteocompare.app.domain.repository.UvIndexRepository
 import com.meteocompare.app.domain.usecase.ComputeBiasUseCase
 import com.meteocompare.app.domain.usecase.ComputeForecastEvolutionUseCase
 import com.meteocompare.app.domain.usecase.ConfidenceCalculator
@@ -117,7 +119,8 @@ class CityDetailViewModel @Inject constructor(
     private val computeForecastEvolution: ComputeForecastEvolutionUseCase,
     private val clock: Clock,
     @param:DefaultDispatcher private val computationDispatcher: CoroutineDispatcher = Dispatchers.Default,
-    private val engineContextProvider: ForecastEngineContextProvider
+    private val engineContextProvider: ForecastEngineContextProvider,
+    private val uvIndexRepository: UvIndexRepository
 ) : ViewModel() {
 
     private val cityId: String = checkNotNull(
@@ -126,6 +129,8 @@ class CityDetailViewModel @Inject constructor(
 
     private val _state = MutableStateFlow<CityDetailUiState>(CityDetailUiState.Loading)
     val state: StateFlow<CityDetailUiState> = _state.asStateFlow()
+    private val _uvForecast = MutableStateFlow<UvForecast?>(null)
+    val uvForecast: StateFlow<UvForecast?> = _uvForecast.asStateFlow()
 
     /** Fuseau de la ville courante, source de vérité des fenêtres calendaires. */
     private val cityTimezone = MutableStateFlow<String?>(null)
@@ -491,6 +496,13 @@ class CityDetailViewModel @Inject constructor(
      * normalement — c'est un chemin séparé via `refresh()` qui bypasse ce
      * seuil (utilise `refreshCityForecast` sans seuil).
      */
+    private fun loadUv(city: City) {
+        viewModelScope.launch {
+            val uv = runSuspendCatching { uvIndexRepository.get(city) }.getOrNull()
+            if (uv != null) _uvForecast.value = uv
+        }
+    }
+
     private fun loadInitial() {
         viewModelScope.launch {
             try {
@@ -501,6 +513,7 @@ class CityDetailViewModel @Inject constructor(
                     return@launch
                 }
                 cityTimezone.value = city.timezone
+                loadUv(city)
                 launchVigilanceLoad(city, forceRefresh = false)
                 if (city.marineEnabled) launchMarineLoad(city, forceRefresh = false)
 
@@ -568,6 +581,8 @@ class CityDetailViewModel @Inject constructor(
      * et ne télécharge que si le cache dépasse l'intervalle utilisateur.
      */
     fun refreshIfStale() {
+        // TTL-aware UV revalidation, independent of the weather model refresh.
+        (_state.value as? CityDetailUiState.Loaded)?.forecast?.city?.let(::loadUv)
         // La vue courante est recalculée depuis le cache même hors connexion.
         viewModelScope.launch { recalculatePresentation(clock.instant()) }
         // Vigilance et Mer / côte suivent leurs propres politiques de cache.

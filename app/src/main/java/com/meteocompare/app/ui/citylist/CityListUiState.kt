@@ -5,6 +5,7 @@ import com.meteocompare.app.domain.model.City
 import com.meteocompare.app.domain.model.DayConfidence
 import com.meteocompare.app.domain.model.VigilanceForecast
 import com.meteocompare.app.domain.model.WeatherCondition
+import com.meteocompare.app.domain.model.UvForecast
 import com.meteocompare.app.domain.model.WeatherModel
 import com.meteocompare.app.domain.model.WeatherScenario
 import java.time.Instant
@@ -55,7 +56,8 @@ data class CityCardState(
     val forecast: ForecastState,
     /** Vigilance officielle Météo-France (jaune ou plus affichée dans la card). */
     val vigilance: VigilanceForecast? = null,
-    val isMarineLoading: Boolean = false
+    val isMarineLoading: Boolean = false,
+    val uvForecast: UvForecast? = null
 )
 
 sealed interface ForecastState {

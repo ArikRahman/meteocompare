@@ -980,4 +980,15 @@
     <string name="radar_forecast_zone">Contour projeté</string>
     <string name="radar_observed_trajectory">Trajectoire observée</string>
     <string name="radar_projected_trajectory">Trajectoire projetée</string>
+
+    <!-- UV index forecast -->
+    <string name="uv_index_title">Indice UV</string>
+    <string name="uv_risk_low">Faible</string>
+    <string name="uv_risk_moderate">Modéré</string>
+    <string name="uv_risk_high">Élevé</string>
+    <string name="uv_risk_very_high">Très élevé</string>
+    <string name="uv_risk_extreme">Extrême</string>
+    <string name="uv_index_value">%1$.1f</string>
+    <string name="uv_accessibility">Indice UV %1$s, %2$s</string>
+    <string name="uv_compact">UV %1$s</string>
 </resources>

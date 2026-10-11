@@ -77,6 +77,9 @@
     <!-- Personnalisation libre des couleurs et de la forme -->
     <string name="widget_color_custom">Couleur personnalisée</string>
     <string name="widget_color_picker_hint">Ouvrir la roue chromatique</string>
+    <string name="widget_config_appearance">Apparence</string>
+    <string name="widget_config_appearance_note">Personnalisez la forme, les marges, les couleurs et la transparence.</string>
+    <string name="widget_config_preview_title">Aperçu du widget</string>
     <string name="widget_config_corner_style">Coins du widget</string>
     <string name="widget_corner_rounded">Arrondis</string>
     <string name="widget_corner_square">Carrés</string>

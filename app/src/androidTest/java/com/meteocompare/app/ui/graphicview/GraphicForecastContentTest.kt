@@ -107,7 +107,8 @@ class GraphicForecastContentTest {
                     3 -> WeatherCondition.OVERCAST
                     else -> null // La vue doit quand même réserver/rendre un pictogramme UNKNOWN.
                 },
-                modelCount = 3
+                modelCount = 3,
+                uvIndex = 5.4
             )
         }
         val state = GraphicForecastUiState.Loaded(
@@ -166,6 +167,7 @@ class GraphicForecastContentTest {
 
         composeRule.onNodeWithTag(TAG_GRAPHIC_CHART_PANEL, useUnmergedTree = true).assertExists()
         composeRule.onNodeWithTag(TAG_GRAPHIC_SELECTION_HEADER, useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag(TAG_GRAPHIC_UV_LANE).assertExists()
         composeRule.onNodeWithTag(TAG_GRAPHIC_TEMPERATURE_PLOT).assertExists()
         composeRule.onNodeWithTag(TAG_GRAPHIC_RAIN_PLOT).assertExists()
         composeRule.onNodeWithTag(TAG_GRAPHIC_WIND_PLOT).assertExists()
@@ -179,6 +181,23 @@ class GraphicForecastContentTest {
         val temperaturePlotBounds = composeRule
             .onNodeWithTag(TAG_GRAPHIC_TEMPERATURE_PLOT, useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot
+        val conditionLaneBounds = composeRule
+            .onNodeWithTag(TAG_GRAPHIC_UV_LANE, useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            "Les UV doivent être entièrement au-dessus du graphique de température",
+            conditionLaneBounds.bottom <= temperaturePlotBounds.top
+        )
+        val uvLabels = composeRule.onAllNodesWithTag("uv_compact", useUnmergedTree = true)
+            .fetchSemanticsNodes()
+        assertTrue("Seuls les UV visibles doivent être composés", uvLabels.size in 2 until 40)
+        assertTrue(
+            "Les valeurs UV doivent être rendues dans la bande dédiée",
+            uvLabels.any {
+                it.boundsInRoot.top >= conditionLaneBounds.top &&
+                    it.boundsInRoot.bottom <= conditionLaneBounds.bottom
+            }
+        )
         assertTrue(
             "Le résumé de l'heure sélectionnée et les graphiques doivent appartenir au même panneau visuel",
             selectionBounds.top >= panelBounds.top &&

@@ -161,7 +161,8 @@ class CityListViewModelTest {
         userPreferences = userPreferences,
         clock = clock,
         computationDispatcher = computationDispatcher,
-        engineContextProvider = engineContextProvider
+        engineContextProvider = engineContextProvider,
+        uvIndexRepository = mockk(relaxed = true)
     ).also(createdViewModels::add)
 
     /**

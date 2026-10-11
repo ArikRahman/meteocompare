@@ -51,6 +51,9 @@
     <!-- Personnalisation libre des couleurs et de la forme -->
     <string name="widget_color_custom">Eigene Farbe</string>
     <string name="widget_color_picker_hint">Farbrad öffnen</string>
+    <string name="widget_config_appearance">Darstellung</string>
+    <string name="widget_config_appearance_note">Form, Abstände, Farben und Transparenz anpassen.</string>
+    <string name="widget_config_preview_title">Widget-Vorschau</string>
     <string name="widget_config_corner_style">Widget-Ecken</string>
     <string name="widget_corner_rounded">Abgerundet</string>
     <string name="widget_corner_square">Eckig</string>

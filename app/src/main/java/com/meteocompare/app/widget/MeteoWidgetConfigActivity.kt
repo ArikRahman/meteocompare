@@ -35,6 +35,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -436,7 +437,7 @@ private fun WidgetConfigForm(
             .imePadding()
             .padding(16.dp)
             // verticalScroll : sur petits écrans (téléphone en portrait avec
-            // clavier ouvert, ou écran compact), les 3 sections + boutons
+            // clavier ouvert, ou écran compact), les sections + boutons
             // peuvent dépasser la hauteur disponible. Le scroll empêche que
             // les boutons Save/Cancel deviennent inaccessibles.
             .verticalScroll(rememberScrollState())
@@ -504,142 +505,92 @@ private fun WidgetConfigForm(
 
         Spacer(Modifier.height(24.dp))
 
-        // ─── Section opacité ────────────────────────────────────
+        // ─── Section horizon / mode de prévision ─────────────────────
+        // Le squelette de configuration reste identique pour tous les widgets.
+        // Le widget « À retenir » utilise volontairement un horizon fixe de
+        // 24 heures : afficher les modes sans effet serait trompeur. On garde
+        // donc la même section, avec une ligne explicative non interactive.
         Text(
-            text = stringResource(R.string.widget_config_opacity),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium
-        )
-        Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Slider(
-                value = opacityPct,
-                onValueChange = {
-                    val percentage = it.roundToInt().coerceIn(0, 100)
-                    opacityPct = percentage.toFloat()
-                    opacityInput = percentage.toString()
-                },
-                valueRange = 0f..100f,
-                // 99 intermediate values = every integer percentage from 0 to 100.
-                steps = 99,
-                modifier = Modifier.weight(1f).testTag(TAG_WIDGET_OPACITY)
-            )
-            Spacer(Modifier.width(8.dp))
-            OutlinedTextField(
-                value = opacityInput,
-                onValueChange = { entered ->
-                    if (entered.length <= 3 && entered.all(Char::isDigit)) {
-                        opacityInput = entered
-                        entered.toIntOrNull()?.takeIf { it in 0..100 }?.let {
-                            opacityPct = it.toFloat()
-                        }
-                    }
-                },
-                modifier = Modifier.width(116.dp)
-                    .showWidgetKeyboardOnFocus()
-                    .testTag(TAG_WIDGET_OPACITY_INPUT),
-                singleLine = true,
-                isError = !opacityIsValid,
-                suffix = { Text("%") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                label = { Text(stringResource(R.string.widget_opacity_manual_label)) }
-            )
-        }
-
-        // Preview visuel de l'opacité choisie — l'user voit à quoi ressemblera
-        // son widget avant de valider. Sans ce feedback, un pourcentage reste abstrait
-        // et il découvrirait le rendu final seulement après validation.
-        //
-        // Le preview reflète aussi les couleurs custom choisies (voir section
-        // Couleurs juste après) : quand l'utilisateur switch d'Auto à Bleu,
-        // le rectangle preview change de couleur — feedback immédiat qui
-        // évite de valider "à l'aveugle" sur des combos illisibles.
-        Spacer(Modifier.height(8.dp))
-        OpacityPreview(
-            opacityPct = opacityPct.toInt(),
-            bgColorArgb = bgColorArgb,
-            textColorArgb = textColorArgb,
-            cornerStyle = cornerStyle,
-            cornerRadiusDp = cornerRadiusDp.toInt(),
-            contentSpacing = contentSpacing
-        )
-
-        Spacer(Modifier.height(24.dp))
-
-        // ─── Section couleurs ────────────────────────────────────
-        // Pastilles rapides + roue HSV pour chaque couleur. Les Int ARGB
-        // existants permettent la reprise exacte de toute couleur libre.
-        // Deux palettes indépendantes : fond et texte. Chacune commence par
-        // "Auto" (null) qui = thème Material. Les autres options overrident.
-        //
-        // ─── Pourquoi deux palettes séparées plutôt qu'un preset combiné ? ──
-        // On voulait laisser au user la liberté de mixer (fond bleu foncé +
-        // texte blanc, ou fond blanc + texte noir). Un preset combiné forcerait
-        // des combos prédéfinis, moins flexible. Le trade-off : plus de choix
-        // à faire, mais l'option "Auto" pour le texte fait 90% du boulot
-        // (calcule blanc/noir selon la luminance du fond choisi) — la plupart
-        // des users ne toucheront jamais la palette texte.
-        Text(
-            text = stringResource(R.string.widget_config_colors_section),
+            text = stringResource(R.string.widget_config_forecast_mode),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Medium
         )
         Text(
-            text = stringResource(R.string.widget_config_colors_note),
+            text = stringResource(
+                if (insightMode) R.string.widget_config_insight_horizon_note
+                else R.string.widget_config_forecast_mode_note
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            text = stringResource(R.string.widget_config_colors_bg),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
-        )
         Spacer(Modifier.height(8.dp))
-        ColorPaletteRow(
-            options = WidgetColorPalette.Backgrounds,
-            selectedArgb = bgColorArgb,
-            onSelect = { bgColorArgb = it }
-        )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            )
+        ) {
+            if (insightMode) {
+                FixedInsightHorizonRow()
+            } else {
+                ForecastModeRow(
+                    selected = forecastMode == ForecastMode.HOURLY,
+                    tag = "$TAG_WIDGET_MODE${ForecastMode.HOURLY.name}",
+                    labelRes = R.string.widget_config_forecast_mode_hourly,
+                    descrRes = R.string.widget_config_forecast_mode_hourly_descr,
+                    onClick = { forecastMode = ForecastMode.HOURLY }
+                )
+                ForecastModeRow(
+                    selected = forecastMode == ForecastMode.DAILY,
+                    tag = "$TAG_WIDGET_MODE${ForecastMode.DAILY.name}",
+                    labelRes = R.string.widget_config_forecast_mode_daily,
+                    descrRes = R.string.widget_config_forecast_mode_daily_descr,
+                    onClick = { forecastMode = ForecastMode.DAILY }
+                )
+                ForecastModeRow(
+                    selected = forecastMode == ForecastMode.MINI_FORECAST_12H,
+                    tag = "$TAG_WIDGET_MODE${ForecastMode.MINI_FORECAST_12H.name}",
+                    labelRes = R.string.widget_config_forecast_mode_mini_12h,
+                    descrRes = R.string.widget_config_forecast_mode_mini_12h_descr,
+                    onClick = { forecastMode = ForecastMode.MINI_FORECAST_12H }
+                )
+                ForecastModeRow(
+                    selected = forecastMode == ForecastMode.HEATMAP_CHART_12H,
+                    tag = "$TAG_WIDGET_MODE${ForecastMode.HEATMAP_CHART_12H.name}",
+                    labelRes = R.string.widget_config_forecast_mode_heatmap_12h,
+                    descrRes = R.string.widget_config_forecast_mode_heatmap_12h_descr,
+                    onClick = { forecastMode = ForecastMode.HEATMAP_CHART_12H }
+                )
+                ForecastModeRow(
+                    selected = forecastMode == ForecastMode.HEATMAP_TREND_12H,
+                    tag = "$TAG_WIDGET_MODE${ForecastMode.HEATMAP_TREND_12H.name}",
+                    labelRes = R.string.widget_config_forecast_mode_heatmap_trend_12h,
+                    descrRes = R.string.widget_config_forecast_mode_heatmap_trend_12h_descr,
+                    onClick = { forecastMode = ForecastMode.HEATMAP_TREND_12H }
+                )
+                ConfidenceModeRow(
+                    selected = forecastMode.normalized() == ForecastMode.CONFIDENCE_ALL,
+                    tag = "$TAG_WIDGET_MODE${ForecastMode.CONFIDENCE_ALL.name}",
+                    onClick = { forecastMode = ForecastMode.CONFIDENCE_ALL }
+                )
+            }
+        }
 
-        // Les palettes restent regroupées : les couleurs libres sont une
-        // section À PART, et non une action collée aux dernières pastilles.
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
+
+        // ─── Apparence : forme, espacement, palette et opacité ─────────
         Text(
-            text = stringResource(R.string.widget_config_colors_text),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
+            text = stringResource(R.string.widget_config_appearance),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold
         )
-        Spacer(Modifier.height(8.dp))
-        ColorPaletteRow(
-            options = WidgetColorPalette.Texts,
-            selectedArgb = textColorArgb,
-            onSelect = { textColorArgb = it }
-        )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(3.dp))
         Text(
-            text = stringResource(R.string.widget_color_custom),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
+            text = stringResource(R.string.widget_config_appearance_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.height(14.dp))
-        WidgetCustomColorButton(
-            color = bgColorArgb,
-            labelRes = R.string.widget_config_colors_bg,
-            tag = TAG_WIDGET_CUSTOM_BG,
-            onClick = { editingColor = "bg" }
-        )
-        Spacer(Modifier.height(12.dp))
-        WidgetCustomColorButton(
-            color = textColorArgb,
-            labelRes = R.string.widget_config_colors_text,
-            tag = TAG_WIDGET_CUSTOM_TEXT,
-            onClick = { editingColor = "text" }
-        )
-
-        Spacer(Modifier.height(30.dp))
-
+        Spacer(Modifier.height(16.dp))
         // Forme sans marge EXTERNE : le fond occupe toujours 100 % du widget.
         Text(
             text = stringResource(R.string.widget_config_corner_style),
@@ -738,78 +689,137 @@ private fun WidgetConfigForm(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(18.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Spacer(Modifier.height(18.dp))
 
-        // ─── Section horizon / mode de prévision ─────────────────────
-        // Le squelette de configuration reste identique pour tous les widgets.
-        // Le widget « À retenir » utilise volontairement un horizon fixe de
-        // 24 heures : afficher les modes sans effet serait trompeur. On garde
-        // donc la même section, avec une ligne explicative non interactive.
+        // ─── Section couleurs ────────────────────────────────────
+        // Pastilles rapides + roue HSV pour chaque couleur. Les Int ARGB
+        // existants permettent la reprise exacte de toute couleur libre.
+        // Deux palettes indépendantes : fond et texte. Chacune commence par
+        // "Auto" (null) qui = thème Material. Les autres options overrident.
+        //
+        // ─── Pourquoi deux palettes séparées plutôt qu'un preset combiné ? ──
+        // On voulait laisser au user la liberté de mixer (fond bleu foncé +
+        // texte blanc, ou fond blanc + texte noir). Un preset combiné forcerait
+        // des combos prédéfinis, moins flexible. Le trade-off : plus de choix
+        // à faire, mais l'option "Auto" pour le texte fait 90% du boulot
+        // (calcule blanc/noir selon la luminance du fond choisi) — la plupart
+        // des users ne toucheront jamais la palette texte.
         Text(
-            text = stringResource(R.string.widget_config_forecast_mode),
+            text = stringResource(R.string.widget_config_colors_section),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Medium
         )
         Text(
-            text = stringResource(
-                if (insightMode) R.string.widget_config_insight_horizon_note
-                else R.string.widget_config_forecast_mode_note
-            ),
+            text = stringResource(R.string.widget_config_colors_note),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text = stringResource(R.string.widget_config_colors_bg),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium
+        )
         Spacer(Modifier.height(8.dp))
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ColorPaletteRow(
+            options = WidgetColorPalette.Backgrounds,
+            selectedArgb = bgColorArgb,
+            onSelect = { bgColorArgb = it }
+        )
+
+        Spacer(Modifier.height(8.dp))
+        WidgetCustomColorButton(
+            color = bgColorArgb,
+            labelRes = R.string.widget_config_colors_bg,
+            tag = TAG_WIDGET_CUSTOM_BG,
+            onClick = { editingColor = "bg" }
+        )
+
+        Spacer(Modifier.height(20.dp))
+        Text(
+            text = stringResource(R.string.widget_config_colors_text),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(8.dp))
+        ColorPaletteRow(
+            options = WidgetColorPalette.Texts,
+            selectedArgb = textColorArgb,
+            onSelect = { textColorArgb = it }
+        )
+        Spacer(Modifier.height(8.dp))
+        WidgetCustomColorButton(
+            color = textColorArgb,
+            labelRes = R.string.widget_config_colors_text,
+            tag = TAG_WIDGET_CUSTOM_TEXT,
+            onClick = { editingColor = "text" }
+        )
+
+        Spacer(Modifier.height(18.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Spacer(Modifier.height(18.dp))
+
+        // ─── Section opacité ────────────────────────────────────
+        Text(
+            text = stringResource(R.string.widget_config_opacity),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Slider(
+                value = opacityPct,
+                onValueChange = {
+                    val percentage = it.roundToInt().coerceIn(0, 100)
+                    opacityPct = percentage.toFloat()
+                    opacityInput = percentage.toString()
+                },
+                valueRange = 0f..100f,
+                // 99 intermediate values = every integer percentage from 0 to 100.
+                steps = 99,
+                modifier = Modifier.weight(1f).testTag(TAG_WIDGET_OPACITY)
             )
-        ) {
-            if (insightMode) {
-                FixedInsightHorizonRow()
-            } else {
-                ForecastModeRow(
-                    selected = forecastMode == ForecastMode.HOURLY,
-                    tag = "$TAG_WIDGET_MODE${ForecastMode.HOURLY.name}",
-                    labelRes = R.string.widget_config_forecast_mode_hourly,
-                    descrRes = R.string.widget_config_forecast_mode_hourly_descr,
-                    onClick = { forecastMode = ForecastMode.HOURLY }
-                )
-                ForecastModeRow(
-                    selected = forecastMode == ForecastMode.DAILY,
-                    tag = "$TAG_WIDGET_MODE${ForecastMode.DAILY.name}",
-                    labelRes = R.string.widget_config_forecast_mode_daily,
-                    descrRes = R.string.widget_config_forecast_mode_daily_descr,
-                    onClick = { forecastMode = ForecastMode.DAILY }
-                )
-                ForecastModeRow(
-                    selected = forecastMode == ForecastMode.MINI_FORECAST_12H,
-                    tag = "$TAG_WIDGET_MODE${ForecastMode.MINI_FORECAST_12H.name}",
-                    labelRes = R.string.widget_config_forecast_mode_mini_12h,
-                    descrRes = R.string.widget_config_forecast_mode_mini_12h_descr,
-                    onClick = { forecastMode = ForecastMode.MINI_FORECAST_12H }
-                )
-                ForecastModeRow(
-                    selected = forecastMode == ForecastMode.HEATMAP_CHART_12H,
-                    tag = "$TAG_WIDGET_MODE${ForecastMode.HEATMAP_CHART_12H.name}",
-                    labelRes = R.string.widget_config_forecast_mode_heatmap_12h,
-                    descrRes = R.string.widget_config_forecast_mode_heatmap_12h_descr,
-                    onClick = { forecastMode = ForecastMode.HEATMAP_CHART_12H }
-                )
-                ForecastModeRow(
-                    selected = forecastMode == ForecastMode.HEATMAP_TREND_12H,
-                    tag = "$TAG_WIDGET_MODE${ForecastMode.HEATMAP_TREND_12H.name}",
-                    labelRes = R.string.widget_config_forecast_mode_heatmap_trend_12h,
-                    descrRes = R.string.widget_config_forecast_mode_heatmap_trend_12h_descr,
-                    onClick = { forecastMode = ForecastMode.HEATMAP_TREND_12H }
-                )
-                ConfidenceModeRow(
-                    selected = forecastMode.normalized() == ForecastMode.CONFIDENCE_ALL,
-                    tag = "$TAG_WIDGET_MODE${ForecastMode.CONFIDENCE_ALL.name}",
-                    onClick = { forecastMode = ForecastMode.CONFIDENCE_ALL }
-                )
-            }
+            Spacer(Modifier.width(8.dp))
+            OutlinedTextField(
+                value = opacityInput,
+                onValueChange = { entered ->
+                    if (entered.length <= 3 && entered.all(Char::isDigit)) {
+                        opacityInput = entered
+                        entered.toIntOrNull()?.takeIf { it in 0..100 }?.let {
+                            opacityPct = it.toFloat()
+                        }
+                    }
+                },
+                modifier = Modifier.width(116.dp)
+                    .showWidgetKeyboardOnFocus()
+                    .testTag(TAG_WIDGET_OPACITY_INPUT),
+                singleLine = true,
+                isError = !opacityIsValid,
+                suffix = { Text("%") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                label = { Text(stringResource(R.string.widget_opacity_manual_label)) }
+            )
         }
+
+        Spacer(Modifier.height(14.dp))
+        Text(
+            text = stringResource(R.string.widget_config_preview_title),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(8.dp))
+        // A shared preview reflects shape, spacing, colors and opacity.
+        OpacityPreview(
+            opacityPct = opacityPct.toInt(),
+            bgColorArgb = bgColorArgb,
+            textColorArgb = textColorArgb,
+            cornerStyle = cornerStyle,
+            cornerRadiusDp = cornerRadiusDp.toInt(),
+            contentSpacing = contentSpacing
+        )
 
         Spacer(Modifier.height(24.dp))
 

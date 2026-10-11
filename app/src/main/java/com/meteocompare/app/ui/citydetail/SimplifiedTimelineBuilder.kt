@@ -1,6 +1,7 @@
 package com.meteocompare.app.ui.citydetail
 
 import com.meteocompare.app.domain.model.CityForecast
+import com.meteocompare.app.domain.model.UvForecast
 import com.meteocompare.app.domain.model.ForecastDisplayHorizon
 import com.meteocompare.app.domain.model.ForecastEngineContext
 import com.meteocompare.app.domain.model.ForecastEngineVariable
@@ -117,6 +118,8 @@ internal data class SimplifiedTimelinePoint(
     /** Direction d'origine du vent agrégée circulairement, en degrés météo. */
     val windDirectionDeg: Int? = null,
     val condition: WeatherCondition? = null,
+    /** UV from one location-based best-match forecast, not a model consensus. */
+    val uvIndex: Double? = null,
     /** Nombre de modèles ayant fourni au moins une valeur exploitable à cette échéance. */
     val modelCount: Int = 0,
     /** Nombre de lignées numériques indépendantes à cette échéance. */
@@ -143,6 +146,16 @@ internal data class SimplifiedTimelinePoint(
 
     fun consensusFor(metric: ForecastMetric): MetricConsensus? = metricConsensus[metric]
 }
+
+/** Align UV to absolute hour / local forecast day; do not interpolate missing values. */
+internal fun List<SimplifiedTimelinePoint>.withUvIndex(uv: UvForecast?): List<SimplifiedTimelinePoint> =
+    if (uv == null) this else map { point ->
+        point.copy(uvIndex = when {
+            point.instant != null -> uv.at(point.instant)
+            point.date != null -> uv.maxOn(point.date)
+            else -> null
+        })
+    }
 
 internal fun buildSimplifiedTimeline(
     forecast: CityForecast,

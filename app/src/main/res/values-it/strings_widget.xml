@@ -52,6 +52,9 @@
     <!-- Personnalisation libre des couleurs et de la forme -->
     <string name="widget_color_custom">Colore personalizzato</string>
     <string name="widget_color_picker_hint">Apri la ruota dei colori</string>
+    <string name="widget_config_appearance">Aspetto</string>
+    <string name="widget_config_appearance_note">Personalizza forma, spaziatura, colori e trasparenza.</string>
+    <string name="widget_config_preview_title">Anteprima widget</string>
     <string name="widget_config_corner_style">Angoli del widget</string>
     <string name="widget_corner_rounded">Arrotondati</string>
     <string name="widget_corner_square">Quadrati</string>

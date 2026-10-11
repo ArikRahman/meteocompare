@@ -81,13 +81,28 @@ class WidgetContractTests(unittest.TestCase):
             self.assertNotIn('widgetPanelSize()', source)
 
     def test_all_shape_and_spacing_labels_translated(self):
-        labels = ('widget_corner_soft', 'widget_corner_pill', 'widget_corner_custom',
+        labels = ('widget_config_appearance', 'widget_config_appearance_note', 'widget_config_preview_title',
+                  'widget_corner_soft', 'widget_corner_pill', 'widget_corner_custom',
                   'widget_corner_radius', 'widget_config_spacing',
                   'widget_spacing_normal', 'widget_spacing_compact', 'widget_spacing_none')
         for locale in ('values','values-en','values-de','values-es','values-it'):
             strings = ET.parse(RES_DIR / locale / 'strings_widget.xml').getroot()
             values = {el.get('name') for el in strings.findall('string')}
             self.assertTrue(set(labels).issubset(values), locale)
+
+    def test_settings_group_continuity(self):
+        form = (WIDGET_DIR / 'MeteoWidgetConfigActivity.kt').read_text()
+        # Locality -> forecast content -> appearance -> shape/spacing/colors/opacity.
+        ordered = ('widget_config_pick_city', 'widget_config_forecast_mode',
+                   'widget_config_appearance', 'widget_config_corner_style',
+                   'widget_config_spacing', 'widget_config_colors_section',
+                   'widget_config_opacity', 'widget_config_preview_title')
+        positions = [form.index('R.string.' + key) for key in ordered]
+        self.assertEqual(positions, sorted(positions))
+        for preserved_tag in ('TAG_WIDGET_CUSTOM_BG', 'TAG_WIDGET_CUSTOM_TEXT',
+                              'TAG_WIDGET_CORNER_CUSTOM', 'TAG_WIDGET_CORNER_RADIUS',
+                              'TAG_WIDGET_OPACITY_INPUT', 'TAG_WIDGET_SAVE'):
+            self.assertIn(preserved_tag, form)
 
     def test_picker_labels_localized(self):
         for locale in ('values','values-en','values-de','values-es','values-it'):

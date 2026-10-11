@@ -11,18 +11,21 @@ import com.meteocompare.app.core.util.runSuspendCatching
 import com.meteocompare.app.di.DefaultDispatcher
 import com.meteocompare.app.domain.model.City
 import com.meteocompare.app.domain.model.CityForecast
+import com.meteocompare.app.domain.model.UvForecast
 import com.meteocompare.app.domain.model.ForecastDisplayHorizon
 import com.meteocompare.app.domain.model.VigilanceForecast
 import com.meteocompare.app.domain.repository.CityRepository
 import com.meteocompare.app.domain.repository.ForecastRepository
 import com.meteocompare.app.domain.repository.UserPreferencesRepository
 import com.meteocompare.app.domain.repository.VigilanceRepository
+import com.meteocompare.app.domain.repository.UvIndexRepository
 import com.meteocompare.app.domain.usecase.ForecastEngineContextProvider
 import com.meteocompare.app.domain.util.SolarTimes
 import com.meteocompare.app.ui.citydetail.DisplayMode
 import com.meteocompare.app.ui.citydetail.SimplifiedTimelinePoint
 import com.meteocompare.app.ui.citydetail.buildSimplifiedTimeline
 import com.meteocompare.app.ui.citydetail.resolveCityZone
+import com.meteocompare.app.ui.citydetail.withUvIndex
 import com.meteocompare.app.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -86,7 +89,8 @@ class GraphicForecastViewModel @Inject constructor(
     private val contextProvider: ForecastEngineContextProvider,
     private val clock: Clock,
     @param:ApplicationContext private val appContext: Context,
-    @param:DefaultDispatcher private val computationDispatcher: CoroutineDispatcher
+    @param:DefaultDispatcher private val computationDispatcher: CoroutineDispatcher,
+    private val uvIndexRepository: UvIndexRepository
 ) : ViewModel() {
     private val cityId: String = checkNotNull(savedStateHandle[Destinations.CITY_DETAIL_ARG])
     private val _state = MutableStateFlow<GraphicForecastUiState>(GraphicForecastUiState.Loading)
@@ -95,6 +99,9 @@ class GraphicForecastViewModel @Inject constructor(
     private var loadJob: Job? = null
     private var vigilanceJob: Job? = null
     private var latestVigilance: VigilanceForecast? = null
+    private var latestUv: UvForecast? = null
+    private var uvCityId: String? = null
+    private var uvJob: Job? = null
 
     init {
         load()
@@ -123,6 +130,7 @@ class GraphicForecastViewModel @Inject constructor(
                 }
 
                 launchVigilance(city)
+                refreshUvIfStale(city)
 
                 var forceNextRequest = forceRefresh
                 combine(
@@ -183,6 +191,22 @@ class GraphicForecastViewModel @Inject constructor(
         }
     }
 
+    private fun refreshUvIfStale(city: City) {
+        if (uvJob?.isActive == true && uvCityId == city.id) return
+        uvCityId = city.id
+        uvJob = viewModelScope.launch {
+            val uv = runSuspendCatching { uvIndexRepository.get(city) }.getOrNull()
+            if (uv != null && uvCityId == city.id) {
+                latestUv = uv
+                _state.update { current ->
+                    if (current is GraphicForecastUiState.Loaded && current.city.id == city.id) {
+                        current.copy(points = current.points.withUvIndex(uv))
+                    } else current
+                }
+            }
+        }
+    }
+
     private fun launchVigilance(city: City) {
         latestVigilance = null
         if (!city.isFrenchLocation) return
@@ -224,7 +248,7 @@ class GraphicForecastViewModel @Inject constructor(
             now = now,
             engineContext = engineContext,
             hourlyHorizonHours = GRAPHIC_HORIZON_HOURS
-        ).take(GRAPHIC_HORIZON_HOURS)
+        ).take(GRAPHIC_HORIZON_HOURS).withUvIndex(latestUv)
 
         return GraphicForecastUiState.Loaded(
             city = forecast.city,

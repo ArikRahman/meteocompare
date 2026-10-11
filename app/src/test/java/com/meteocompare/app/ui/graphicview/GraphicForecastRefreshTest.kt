@@ -176,7 +176,8 @@ class GraphicForecastRefreshTest {
                 every { observeRefreshInterval() } returns interval
                 every { observeForecastEngine() } returns flowOf(ForecastEngine.MULTI_CONSENSUS)
             },
-            ForecastEngineContextProvider(mockk(relaxed = true)), clock, context, dispatcher
+            ForecastEngineContextProvider(mockk(relaxed = true)), clock, context, dispatcher,
+            mockk(relaxed = true)
         ).also(viewModels::add)
     }
 

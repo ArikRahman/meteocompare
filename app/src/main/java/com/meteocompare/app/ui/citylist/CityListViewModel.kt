@@ -12,6 +12,7 @@ import com.meteocompare.app.core.util.runSuspendCatching
 import com.meteocompare.app.di.DefaultDispatcher
 import com.meteocompare.app.domain.model.City
 import com.meteocompare.app.domain.model.CityForecast
+import com.meteocompare.app.domain.model.UvForecast
 import com.meteocompare.app.domain.model.ForecastEngine
 import com.meteocompare.app.domain.model.RefreshInterval
 import com.meteocompare.app.domain.model.VigilanceForecast
@@ -21,6 +22,7 @@ import com.meteocompare.app.domain.repository.ForecastRepository
 import com.meteocompare.app.domain.repository.MarineRepository
 import com.meteocompare.app.domain.repository.UserPreferencesRepository
 import com.meteocompare.app.domain.repository.VigilanceRepository
+import com.meteocompare.app.domain.repository.UvIndexRepository
 import com.meteocompare.app.domain.usecase.ConfidenceCalculator
 import com.meteocompare.app.domain.usecase.ForecastEngineContextProvider
 import com.meteocompare.app.domain.util.ForecastAggregates
@@ -83,13 +85,16 @@ class CityListViewModel @Inject constructor(
     private val userPreferences: UserPreferencesRepository,
     private val clock: Clock,
     @param:DefaultDispatcher private val computationDispatcher: CoroutineDispatcher = Dispatchers.Default,
-    private val engineContextProvider: ForecastEngineContextProvider
+    private val engineContextProvider: ForecastEngineContextProvider,
+    private val uvIndexRepository: UvIndexRepository
 ) : ViewModel() {
 
     private val forecastsById = MutableStateFlow<Map<String, ForecastState>>(emptyMap())
     /** Dernières données brutes : changer de moteur recalcule sans refetch réseau. */
     private val rawForecastsById = MutableStateFlow<Map<String, CityForecast>>(emptyMap())
     private val vigilanceById = MutableStateFlow<Map<String, VigilanceForecast>>(emptyMap())
+    private val uvById = MutableStateFlow<Map<String, UvForecast>>(emptyMap())
+    private val requestedUvIds = mutableSetOf<String>()
     private val vigilanceJobs = mutableMapOf<String, Job>()
     private val vigilanceCoastModeById = mutableMapOf<String, Boolean>()
     private val _isRefreshing = MutableStateFlow(false)
@@ -127,8 +132,8 @@ class CityListViewModel @Inject constructor(
     private val appliedConfigGenerationByCity = mutableMapOf<String, Long>()
     private val appliedRequestedModelsByCity = mutableMapOf<String, Set<WeatherModel>>()
 
-    private val auxiliaryUiState = combine(marineLoadingIds, vigilanceById) { marineLoading, vigilance ->
-        marineLoading to vigilance
+    private val auxiliaryUiState = combine(marineLoadingIds, vigilanceById, uvById) { marineLoading, vigilance, uv ->
+        Triple(marineLoading, vigilance, uv)
     }
 
     val uiState: StateFlow<CityListUiState> = combine(
@@ -138,14 +143,15 @@ class CityListViewModel @Inject constructor(
         _isOnline,
         auxiliaryUiState
     ) { cities, cache, refreshing, online, auxiliary ->
-        val (marineLoading, vigilance) = auxiliary
+        val (marineLoading, vigilance, uv) = auxiliary
         CityListUiState(
             items = cities.map { city ->
                 CityCardState(
                     city = city,
                     forecast = cache[city.id] ?: ForecastState.Loading,
                     vigilance = vigilance[city.id]?.takeIf { city.isFrenchLocation },
-                    isMarineLoading = city.id in marineLoading
+                    isMarineLoading = city.id in marineLoading,
+                    uvForecast = uv[city.id]
                 )
             },
             isRefreshing = refreshing,
@@ -396,6 +402,8 @@ class CityListViewModel @Inject constructor(
         // C'est le rattrapage immédiat après une longue veille du process.
         viewModelScope.launch { recalculatePresentation(clock.instant()) }
         val cities = favoriteCitiesById.values.toList()
+        // Only a TTL validation: changing theme, engine or timeline never requests UV.
+        cities.forEach(::loadUv)
         // La Vigilance a son propre TTL et peut être revalidée à ON_RESUME.
         // La partie marine, elle, n'est jamais préchargée : elle ne doit accéder
         // au repository qu'après une action explicite de l'utilisateur dans le menu.
@@ -465,6 +473,15 @@ class CityListViewModel @Inject constructor(
      *   - Sinon, on refait le cancel-all comme avant : la nouvelle config
      *     s'applique à tous les streams.
      */
+    private fun loadUv(city: City) {
+        viewModelScope.launch {
+            val uv = runSuspendCatching { uvIndexRepository.get(city) }.getOrNull()
+            if (uv != null && favoriteCitiesById[city.id] == city) {
+                uvById.update { it + (city.id to uv) }
+            }
+        }
+    }
+
     private fun syncStreams(
         cities: List<City>,
         models: List<WeatherModel>,
@@ -472,6 +489,13 @@ class CityListViewModel @Inject constructor(
     ) {
         favoriteCitiesById = cities.associateBy(City::id)
         val currentIds = favoriteCitiesById.keys
+        // UV is fetched once per favorite when first shown, independently of
+        // weather model changes. Cached results are shared with other screens.
+        cities.forEach { city ->
+            if (requestedUvIds.add(city.id)) loadUv(city)
+        }
+        requestedUvIds.retainAll(currentIds)
+        uvById.update { it.filterKeys(currentIds::contains) }
 
         // 1. Cancel les streams pour les villes retirées + purge cache. On le
         //    fait TOUJOURS, indépendamment du path d'optimisation ci-dessous.

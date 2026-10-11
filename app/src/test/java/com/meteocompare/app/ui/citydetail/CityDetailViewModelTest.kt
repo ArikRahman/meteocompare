@@ -183,7 +183,8 @@ class CityDetailViewModelTest {
             computeForecastEvolution = ComputeForecastEvolutionUseCase(),
             clock = clock,
             computationDispatcher = dispatcher,
-            engineContextProvider = contextProvider
+            engineContextProvider = contextProvider,
+            uvIndexRepository = mockk(relaxed = true)
         ).also(createdViewModels::add)
     }
 

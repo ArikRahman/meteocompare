@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.ui.components.UvIndexCompact
+
 import com.meteocompare.app.core.units.WeatherUnit
 import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.core.units.LocalWeatherUnits
@@ -681,21 +683,21 @@ private fun TimelinePointColumn(
             showEndCap = isLast
         )
 
-        Box(
-            modifier = Modifier.height(34.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            point.condition?.let {
-                WeatherIconDecorative(
-                    condition = it,
-                    size = 32.dp,
-                    tint = it.semanticTint()
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(modifier = Modifier.height(34.dp), contentAlignment = Alignment.Center) {
+                point.condition?.let { condition ->
+                    WeatherIconDecorative(
+                        condition = condition,
+                        size = 32.dp,
+                        tint = condition.semanticTint()
+                    )
+                } ?: Text(
+                    text = "—",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            } ?: Text(
-                text = "—",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            }
+            UvIndexCompact(point.uvIndex)
         }
 
         TemperatureHeatmapBand(

@@ -963,4 +963,15 @@ Daten</string>
     <string name="radar_forecast_zone">Projizierte Kontur</string>
     <string name="radar_observed_trajectory">Beobachtete Zugbahn</string>
     <string name="radar_projected_trajectory">Projizierte Zugbahn</string>
+
+    <!-- UV index forecast -->
+    <string name="uv_index_title">UV-Index</string>
+    <string name="uv_risk_low">Niedrig</string>
+    <string name="uv_risk_moderate">Mäßig</string>
+    <string name="uv_risk_high">Hoch</string>
+    <string name="uv_risk_very_high">Sehr hoch</string>
+    <string name="uv_risk_extreme">Extrem</string>
+    <string name="uv_index_value">%1$.1f</string>
+    <string name="uv_accessibility">UV-Index %1$s, %2$s</string>
+    <string name="uv_compact">UV %1$s</string>
 </resources>

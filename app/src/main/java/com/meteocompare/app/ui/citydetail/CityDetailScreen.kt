@@ -1,5 +1,8 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.domain.model.UvForecast
+import com.meteocompare.app.ui.components.UvIndexGauge
+
 import com.meteocompare.app.core.units.WeatherUnit
 import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.core.units.LocalWeatherUnits
@@ -216,6 +219,7 @@ private fun CityDetailLoadedStateBridge(
     onConfidenceClick: (isoDate: String) -> Unit
 ) {
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
+    val uvForecast by viewModel.uvForecast.collectAsStateWithLifecycle()
     val biasState by viewModel.biasState.collectAsStateWithLifecycle()
     val biasHistoryRefreshState by viewModel.biasHistoryRefreshState.collectAsStateWithLifecycle()
     val evolutionState by viewModel.evolutionState.collectAsStateWithLifecycle()
@@ -239,6 +243,7 @@ private fun CityDetailLoadedStateBridge(
         engineContext = loaded.engineContext,
         calculatedAt = loaded.calculatedAt,
         fetchedAt = loaded.fetchedAt,
+        uvForecast = uvForecast,
         isOnline = isOnline,
         biasState = biasState,
         biasHistoryRefreshState = biasHistoryRefreshState,
@@ -544,6 +549,7 @@ private fun LoadedView(
     engineContext: ForecastEngineContext,
     calculatedAt: Instant,
     fetchedAt: Instant?,
+    uvForecast: UvForecast? = null,
     isOnline: Boolean,
     biasState: BiasScreenState,
     biasHistoryRefreshState: BiasHistoryRefreshState,
@@ -573,7 +579,8 @@ private fun LoadedView(
     // « maintenant » : résumé, chronologie et tableaux restent cohérents.
     val presentationNow = calculatedAt
     val engineCacheSignature = engineContext.cacheSignature
-    val hourlyTimelinePoints = remember(forecast, presentationNow, engineCacheSignature) {
+    // Keep expensive consensus/event analysis independent of asynchronous UV arrival.
+    val baseHourlyTimeline = remember(forecast, presentationNow, engineCacheSignature) {
         buildSimplifiedTimeline(
             forecast = forecast,
             mode = DisplayMode.HOURLY,
@@ -582,7 +589,7 @@ private fun LoadedView(
             hourlyHorizonHours = ForecastDisplayHorizon.HOURLY_HOURS
         )
     }
-    val dailyTimelinePoints = remember(forecast, presentationNow, engineCacheSignature) {
+    val baseDailyTimeline = remember(forecast, presentationNow, engineCacheSignature) {
         buildSimplifiedTimeline(
             forecast = forecast,
             mode = DisplayMode.DAILY,
@@ -591,8 +598,14 @@ private fun LoadedView(
             dailyHorizonDays = ForecastDisplayHorizon.DAYS
         )
     }
-    val overviewTimeline = remember(hourlyTimelinePoints, dailyTimelinePoints, forecast.city.timezone) {
-        overviewFromTimelines(hourlyTimelinePoints, dailyTimelinePoints, forecast.city.timezone)
+    val hourlyTimelinePoints = remember(baseHourlyTimeline, uvForecast) {
+        baseHourlyTimeline.withUvIndex(uvForecast)
+    }
+    val dailyTimelinePoints = remember(baseDailyTimeline, uvForecast) {
+        baseDailyTimeline.withUvIndex(uvForecast)
+    }
+    val overviewTimeline = remember(baseHourlyTimeline, baseDailyTimeline, forecast.city.timezone) {
+        overviewFromTimelines(baseHourlyTimeline, baseDailyTimeline, forecast.city.timezone)
     }
     val forecastEvents = remember(overviewTimeline) { detectForecastEvents(overviewTimeline) }
     val insights = remember(forecastEvents) { buildForecastInsights(forecastEvents) }
@@ -604,7 +617,7 @@ private fun LoadedView(
             if (dailyTimelinePoints.isNotEmpty()) add(TimelineRange.DAILY)
         }
     }
-    var timelineRange by remember(overviewTimeline) {
+    var timelineRange by remember(forecast.city.id) {
         mutableStateOf(TimelineRange.defaultFor(overviewTimeline.mode))
     }
     val timelineMode = timelineRange.displayMode
@@ -750,6 +763,7 @@ private fun LoadedView(
                     currentTemp = currentTemp,
                     currentCondition = currentCondition,
                     currentCloudCover = currentCloudCover,
+                    uvIndex = uvForecast?.at(presentationNow),
                     fetchedAt = fetchedAt,
                     isOnline = isOnline,
                     expanded = todaySummaryExpanded,
@@ -1512,6 +1526,7 @@ internal fun TodaySummaryCard(
     currentTemp: Double?,
     currentCondition: WeatherCondition? = null,
     currentCloudCover: Int? = null,
+    uvIndex: Double? = null,
     fetchedAt: Instant? = null,
     isOnline: Boolean = true,
     expanded: Boolean = true,
@@ -1523,9 +1538,15 @@ internal fun TodaySummaryCard(
     val resources = LocalResources.current
     val baseDescription = A11yFormatter
         .todaySummaryDescription(resources, today, modelCount, units = units)
-    val a11yDescription = if (currentTemp != null) {
+    val temperatureDescription = if (currentTemp != null) {
         com.meteocompare.app.core.units.weatherString(resources, units, R.string.a11y_now_temp, currentTemp) + ". $baseDescription"
     } else baseDescription
+    val uvDescription = uvIndex?.let {
+        val uvValue = resources.getString(R.string.uv_index_value, it)
+        val riskRes = com.meteocompare.app.ui.components.uvRiskLabelRes(it)
+        resources.getString(R.string.uv_accessibility, uvValue, resources.getString(riskRes))
+    }
+    val a11yDescription = temperatureDescription + (uvDescription?.let { ". $it" } ?: "")
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val weatherAccent = WeatherAccent.of(currentCondition, isDark)
     val dateLocale = LocalConfiguration.current.locales[0]
@@ -1622,6 +1643,10 @@ internal fun TodaySummaryCard(
                         }
                     }
 
+                    if (uvIndex != null) {
+                        Spacer(Modifier.height(10.dp))
+                        UvIndexGauge(value = uvIndex, modifier = Modifier.fillMaxWidth())
+                    }
                     DetailMetricGrid(
                         today = today,
                         samples = remember(forecast, today.date) {

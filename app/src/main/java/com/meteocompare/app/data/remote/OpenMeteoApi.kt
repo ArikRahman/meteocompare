@@ -1,6 +1,7 @@
 package com.meteocompare.app.data.remote
 
 import com.meteocompare.app.data.remote.dto.BatchedForecastResponseDto
+import com.meteocompare.app.data.remote.dto.UvForecastDto
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -54,6 +55,17 @@ interface OpenMeteoApi {
         @Query("temperature_unit") temperatureUnit: String = "celsius",
         @Query("precipitation_unit") precipitationUnit: String = "mm"
     ): BatchedForecastResponseDto
+
+    /** One location-level UV forecast (not one UV request per weather model). */
+    @GET("v1/forecast")
+    suspend fun getUvForecast(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("hourly") hourly: String = "uv_index",
+        @Query("daily") daily: String = "uv_index_max",
+        @Query("timezone") timezone: String = "auto",
+        @Query("forecast_days") forecastDays: Int = 11
+    ): UvForecastDto
 
     companion object {
         /**

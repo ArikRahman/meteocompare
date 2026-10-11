@@ -52,6 +52,9 @@
     <!-- Personnalisation libre des couleurs et de la forme -->
     <string name="widget_color_custom">Color personalizado</string>
     <string name="widget_color_picker_hint">Abrir la rueda de colores</string>
+    <string name="widget_config_appearance">Apariencia</string>
+    <string name="widget_config_appearance_note">Personaliza la forma, los márgenes, los colores y la transparencia.</string>
+    <string name="widget_config_preview_title">Vista previa del widget</string>
     <string name="widget_config_corner_style">Esquinas del widget</string>
     <string name="widget_corner_rounded">Redondeadas</string>
     <string name="widget_corner_square">Cuadradas</string>

@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.graphicview
 
+import com.meteocompare.app.ui.components.UvIndexCompact
+
 import com.meteocompare.app.core.charts.metricPlotValue
 import com.meteocompare.app.core.charts.canonicalChartRange
 import com.meteocompare.app.core.units.WeatherUnit
@@ -113,6 +115,7 @@ import kotlin.math.max
 
 private val GraphicHourWidth = 40.dp
 private val GraphicAxisWidth = 76.dp
+private val WeatherConditionLaneHeight = 53.dp
 private val TemperaturePlotHeight = 252.dp
 private val RainPlotHeight = 150.dp
 private val WindPlotHeight = 150.dp
@@ -123,6 +126,7 @@ private val PlotBottomPadding = 18.dp
 
 internal const val TAG_GRAPHIC_HOUR_CELL = "graphic_hour_cell"
 internal const val TAG_GRAPHIC_CONDITION_ICON = "graphic_condition_icon"
+internal const val TAG_GRAPHIC_UV_LANE = "graphic_uv_lane"
 internal const val TAG_GRAPHIC_TEMPERATURE_PLOT = "graphic_temperature_plot"
 internal const val TAG_GRAPHIC_RAIN_PLOT = "graphic_rain_plot"
 internal const val TAG_GRAPHIC_WIND_PLOT = "graphic_wind_plot"
@@ -297,7 +301,8 @@ internal fun GraphicForecastContent(
 
     val locale = LocalConfiguration.current.locales[0]
     val zone = remember(state.city.timezone) { resolveCityZone(state.city.timezone) }
-    var selectedIndex by remember(state.points) { mutableIntStateOf(0) }
+    // UV enrichment must not reset a user's selected hour.
+    var selectedIndex by remember(state.city.id) { mutableIntStateOf(0) }
     var showAgreement by remember { mutableStateOf(false) }
     val selectedPoint = state.points[selectedIndex.coerceIn(state.points.indices)]
     val selectedModels = selectedPoint.instant?.let(state.modelValuesByInstant::get).orEmpty()
@@ -436,6 +441,14 @@ private fun GraphicChartPanel(
                         .horizontalScroll(horizontalScroll)
                 ) {
                     val chartWidth = GraphicHourWidth * points.size.toFloat()
+                    // Dedicated weather-condition lane: UV is intentionally outside
+                    // the temperature plot, so it never overlaps its curves or scale.
+                    GraphicConditionLane(
+                        points = points,
+                        renderData = renderData,
+                        visibleRange = viewportRange.indices,
+                        modifier = Modifier.width(chartWidth).height(WeatherConditionLaneHeight)
+                    )
                     TemperaturePlot(
                         points = points,
                         renderData = renderData,
@@ -621,6 +634,7 @@ private fun GraphicSelectionHeader(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                UvIndexCompact(point.uvIndex)
             }
             if (models.isNotEmpty()) {
                 TextButton(onClick = { showModels = !showModels }) {
@@ -913,6 +927,8 @@ private fun GraphicAxisColumn(
             .width(GraphicAxisWidth)
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
+        // Same leading height as the independently scrolling condition/UV lane.
+        Spacer(Modifier.height(WeatherConditionLaneHeight))
         PlotAxis(
             label = stringResource(R.string.graphic_view_temperature),
             icon = Icons.Outlined.Thermostat,
@@ -1030,6 +1046,47 @@ private fun AxisLabelSlot(title: String, subtitle: String, height: Dp) {
     }
 }
 
+/** Weather icons + hourly UV live in their own row, not on the temperature lines. */
+@Composable
+private fun GraphicConditionLane(
+    points: List<SimplifiedTimelinePoint>,
+    renderData: GraphicRenderData,
+    visibleRange: IntRange,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .testTag(TAG_GRAPHIC_UV_LANE)
+    ) {
+        StaticWeatherIconStrip(
+            conditions = renderData.conditions,
+            slotWidth = GraphicHourWidth,
+            iconSize = 25.dp,
+            visibleRange = visibleRange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(30.dp)
+                .align(Alignment.TopStart)
+                .padding(top = 3.dp)
+                .testTag(TAG_GRAPHIC_CONDITION_ICON)
+        )
+        // Only visible indices are composed, even for a 240-hour timeline.
+        visibleRange.forEach { index ->
+            points.getOrNull(index)?.uvIndex?.let { uv ->
+                UvIndexCompact(
+                    uv,
+                    small = true,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .offset(x = GraphicHourWidth * index.toFloat(), y = 30.dp)
+                        .width(GraphicHourWidth)
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun TemperaturePlot(
     points: List<SimplifiedTimelinePoint>,
@@ -1141,18 +1198,6 @@ private fun TemperaturePlot(
                 )
             }
         }
-        StaticWeatherIconStrip(
-            conditions = renderData.conditions,
-            slotWidth = GraphicHourWidth,
-            iconSize = 25.dp,
-            visibleRange = visibleRange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(30.dp)
-                .align(Alignment.TopStart)
-                .padding(top = 3.dp)
-                .testTag(TAG_GRAPHIC_CONDITION_ICON)
-        )
         points.getOrNull(selectedIndex)?.let { selected ->
             val central = selected.temperatureC?.let { units.format(it, WeatherUnit.TEMPERATURE, 1) } ?: "—"
             val range = formatRange(
@@ -1167,7 +1212,7 @@ private fun TemperaturePlot(
                 range = range.takeUnless { it == "—" },
                 selectedIndex = selectedIndex,
                 pointCount = points.size,
-                yOffset = 34.dp
+                yOffset = 48.dp
             )
         }
     }

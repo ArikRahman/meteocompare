@@ -1,5 +1,8 @@
 package com.meteocompare.app.ui.citylist
 
+import com.meteocompare.app.ui.components.UvIndexGauge
+import com.meteocompare.app.domain.model.UvForecast
+
 import com.meteocompare.app.core.units.WeatherUnit
 import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.core.units.LocalWeatherUnits
@@ -494,9 +497,16 @@ internal fun CityCard(
     units: WeatherUnits = LocalWeatherUnits.current
 ) {
     val resources = LocalResources.current
-    val a11yDescription = A11yFormatter
-        .cityCardDescription(resources, state, units = units)
     val loaded = state.forecast as? ForecastState.Loaded
+    val uv = loaded?.let { state.uvForecast?.at(it.calculatedAt ?: java.time.Instant.now()) }
+    val uvDescription = uv?.let {
+        val value = resources.getString(R.string.uv_index_value, it)
+        val riskRes = com.meteocompare.app.ui.components.uvRiskLabelRes(it)
+        resources.getString(R.string.uv_accessibility, value, resources.getString(riskRes))
+    }
+    val a11yDescription = A11yFormatter
+        .cityCardDescription(resources, state, units = units) +
+        (uvDescription?.let { ". $it" } ?: "")
     WeatherAccentTheme(condition = loaded?.currentCondition) {
         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
         val accentColor = WeatherAccent.of(condition = loaded?.currentCondition, isDark = isDark)
@@ -629,6 +639,7 @@ internal fun CityCard(
                                 currentTemp = forecast.currentTemp,
                                 currentCondition = forecast.currentCondition,
                                 currentCloudCover = forecast.currentCloudCover,
+                                uvIndex = uv,
                                 fetchedAt = forecast.fetchedAt,
                                 next12hTemps = forecast.next12hTemps,
                                 next12hPrecipProb = forecast.next12hPrecipProb,
@@ -796,6 +807,7 @@ private fun CityCardLoaded(
     currentTemp: Double?,
     currentCondition: WeatherCondition?,
     currentCloudCover: Int?,
+    uvIndex: Double?,
     fetchedAt: Instant?,
     next12hTemps: List<Double?>,
     next12hPrecipProb: List<Int?>,
@@ -817,6 +829,11 @@ private fun CityCardLoaded(
             hourlyTemps = next12hTemps
         )
 
+        if (uvIndex != null) {
+            Spacer(Modifier.height(9.dp))
+            UvIndexGauge(uvIndex, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(7.dp))
+        }
         TodayMetricGrid(today = today)
 
         vigilance?.takeIf { it.activeAlerts.isNotEmpty() }?.let { alertForecast ->
