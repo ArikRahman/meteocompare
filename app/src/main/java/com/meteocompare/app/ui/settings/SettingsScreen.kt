@@ -464,6 +464,12 @@ internal fun SettingsContent(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = stringResource(R.string.model_metadata_explanation),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(Modifier.height(12.dp))
                 ModelSortSelector(selected = sortMode, onSelect = { sortMode = it })
             }
@@ -713,26 +719,7 @@ private fun ModelGroupHeader(text: String) {
     )
 }
 
-/**
- * Ligne de modèle compactée par rapport à l'ancienne version.
- *
- * ─── Optimisations de densité ──────────────────────────────────────────
- * Ancien layout : 2 lignes de texte (displayName en bodyLarge/Medium + méta
- * en bodySmall), padding vertical 12dp → hauteur ~64dp.
- *
- * Nouveau : 1 seule ligne combinant nom (bodyMedium/Medium) + métadonnées
- * courtes (labelSmall) séparées par bullet, padding vertical 8dp → hauteur
- * ~40dp. Gain : ~35% de hauteur, on voit deux fois plus de modèles à l'écran
- * sur un téléphone standard. Utile maintenant que l'enum WeatherModel a
- * grossi à 21 modèles (débordement inévitable sinon).
- *
- * ─── Format des méta ───────────────────────────────────────────────────
- * "1.5 km · 48 h" ou "11 km · 4 j" — résolution + horizon natif. La zone n'est plus dupliquée sur
- * chaque ligne car elle est déjà portée par le header de groupe en mode ZONE.
- * En mode FAMILLE ou FINESSE, l'utilisateur peut inférer la zone depuis le
- * nom du modèle ("EU" dans "ICON-EU", etc.) — trade-off acceptable pour la
- * densité gagnée.
- */
+/** Une ligne modèle accessible, sans ellipses ni raccourcis ambigus sur la temporalité. */
 @Composable
 private fun CompactModelRow(
     model: WeatherModel,
@@ -748,46 +735,65 @@ private fun CompactModelRow(
             .padding(horizontal = 6.dp)
             .clip(RoundedCornerShape(12.dp))
             .let { if (clickable) it.clickable { onToggle(!enabled) } else it }
-            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .padding(horizontal = 10.dp, vertical = 10.dp)
             .testTag("$TAG_SETTINGS_MODEL${model.name}"),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Pastille de couleur du modèle — 10dp (vs 14dp historique) pour
-        // rester lisible sans dominer la ligne compacte.
         Surface(
             color = model.color(),
             modifier = Modifier.size(10.dp).clip(CircleShape)
         ) {}
-        Spacer(Modifier.size(10.dp))
-
-        // Nom + méta sur la même ligne avec baseline alignée. Le weight sur
-        // le nom pousse les métadonnées et la checkbox contre le bord droit.
-        Text(
-            text = model.displayName,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
-        )
-        Spacer(Modifier.size(8.dp))
-        Text(
-            text = stringResource(
-                R.string.model_metadata,
-                formatResolution(model.resolutionKm, units = units),
-                formatForecastHorizon(model.forecastHorizonHours)
-            ),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f)
-        )
-
+        Spacer(Modifier.size(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = model.displayName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = stringResource(
+                    R.string.model_metadata_provider_resolution,
+                    model.family.institutionName,
+                    formatResolution(model.resolutionKm, units = units)
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(
+                    R.string.model_metadata_temporal,
+                    nativeTimeStepLabel(model),
+                    formatForecastHorizon(model.forecastHorizonHours),
+                    model.updateFrequencyHours
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Checkbox(
             checked = enabled,
-            onCheckedChange = if (clickable) onToggle else null,
-            // Réduit la taille interne du Checkbox — le default M3 a une
-            // hitbox de 48dp qui devient énorme sur cette ligne compacte.
-            // Pas de override officiel : on laisse tel quel pour préserver
-            // l'accessibilité tactile (48dp est le min recommandé WCAG).
+            onCheckedChange = if (clickable) onToggle else null
         )
     }
+}
+
+/** Pas de sortie *natif* du modèle : la série Open-Meteo est parfois interpolée à 1 h. */
+@Composable
+private fun nativeTimeStepLabel(model: WeatherModel): String = when {
+    model.threeHourlyFromHour != null && model.sixHourlyFromHour != null ->
+        stringResource(
+            R.string.model_step_hourly_three_six,
+            model.threeHourlyFromHour,
+            model.sixHourlyFromHour
+        )
+    model.threeHourlyFromHour != null ->
+        stringResource(R.string.model_step_hourly_three, model.threeHourlyFromHour)
+    model.nativeStepMinutes == 15 -> stringResource(R.string.model_step_15_minutes)
+    model.nativeStepMinutes == 60 -> stringResource(R.string.model_step_1_hour)
+    model.nativeStepMinutes == 180 -> stringResource(R.string.model_step_3_hours)
+    model.nativeStepMinutes == 360 -> stringResource(R.string.model_step_6_hours)
+    else -> stringResource(R.string.model_step_minutes, model.nativeStepMinutes)
 }
 
 /**

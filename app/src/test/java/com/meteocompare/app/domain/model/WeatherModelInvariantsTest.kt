@@ -191,6 +191,33 @@ class WeatherModelInvariantsTest {
     }
 
     @Test
+    fun `les metadonnees temporelles et institutions sont valides`() {
+        ModelFamily.entries.forEach { family ->
+            assertTrue("Institution absente pour $family", family.institutionName.isNotBlank())
+        }
+        WeatherModel.entries.forEach { model ->
+            assertTrue("Mise a jour invalide pour $model", model.updateFrequencyHours > 0)
+            assertTrue("Pas natif invalide pour $model", model.nativeStepMinutes in setOf(15, 60, 180, 360))
+            assertTrue("Horizon invalide pour $model", model.forecastHorizonHours > 0)
+            model.threeHourlyFromHour?.let { cutoff ->
+                assertEquals(60, model.nativeStepMinutes)
+                assertTrue(cutoff in 1 until model.forecastHorizonHours)
+            }
+            model.sixHourlyFromHour?.let { cutoff ->
+                assertNotNull(model.threeHourlyFromHour)
+                assertTrue(cutoff > (model.threeHourlyFromHour ?: 0))
+                assertTrue(cutoff < model.forecastHorizonHours)
+            }
+        }
+        assertEquals(360, WeatherModel.ECMWF_AIFS.nativeStepMinutes)
+        assertEquals(360, WeatherModel.JMA_GSM.nativeStepMinutes)
+        assertEquals(180, WeatherModel.GEM_GLOBAL.nativeStepMinutes)
+        assertEquals(1, WeatherModel.HRRR_CONUS.updateFrequencyHours)
+        assertEquals(54, WeatherModel.UKMO_GLOBAL.threeHourlyFromHour)
+        assertEquals(144, WeatherModel.UKMO_GLOBAL.sixHourlyFromHour)
+    }
+
+    @Test
     fun `catalogue contient les 21 modeles attendus`() {
         assertEquals(21, WeatherModel.entries.size)
         assertTrue(WeatherModel.DMI_HARMONIE_EU in WeatherModel.entries)

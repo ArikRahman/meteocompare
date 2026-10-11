@@ -65,7 +65,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.appwidget.state.updateAppWidgetState
@@ -458,8 +457,8 @@ private fun WidgetConfigForm(
         // ─── Section ville ────────────────────────────────────────
         Text(
             text = stringResource(R.string.widget_config_pick_city),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(8.dp))
 
@@ -512,8 +511,8 @@ private fun WidgetConfigForm(
         // donc la même section, avec une ligne explicative non interactive.
         Text(
             text = stringResource(R.string.widget_config_forecast_mode),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold
         )
         Text(
             text = stringResource(
@@ -662,7 +661,8 @@ private fun WidgetConfigForm(
         Spacer(Modifier.height(14.dp))
         Text(
             text = stringResource(R.string.widget_config_spacing),
-            style = MaterialTheme.typography.titleSmall
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Medium
         )
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
@@ -807,7 +807,7 @@ private fun WidgetConfigForm(
         Spacer(Modifier.height(14.dp))
         Text(
             text = stringResource(R.string.widget_config_preview_title),
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Medium
         )
         Spacer(Modifier.height(8.dp))
@@ -1051,7 +1051,7 @@ private fun OpacityPreview(
                     text = stringResource(R.string.widget_config_opacity_preview),
                     color = fg,
                     style = MaterialTheme.typography.titleSmall,
-                    fontSize = 14.sp
+                    fontWeight = FontWeight.Medium
                 )
                 val spacingLabel = when (contentSpacing) {
                     WidgetContentSpacing.NONE -> R.string.widget_spacing_none

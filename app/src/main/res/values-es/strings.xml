@@ -8,7 +8,7 @@
     <string name="action_add_city">Añadir una ciudad</string>
     <string name="action_cancel">Cancelar</string>
 
-    <string name="widget_description">Tiempo actual de una ciudad favorita con un índice de convergencia de los modelos.</string>
+    <string name="widget_description">Widget del tiempo personalizable y redimensionable para una ciudad favorita, con comparación de modelos.</string>
     <string name="widget_config_title">Configurar widget</string>
     <string name="widget_config_subtitle">Elige la ciudad que se mostrará y la opacidad del fondo.</string>
     <string name="widget_config_pick_city">Ciudad que se mostrará</string>
@@ -16,7 +16,7 @@
     <string name="widget_config_opacity">Opacidad del fondo</string>
     <string name="widget_config_opacity_preview">Vista previa del fondo</string>
     <string name="widget_config_forecast_mode">Previsión ampliada</string>
-    <string name="widget_config_forecast_mode_note">El contenido se adapta al tamaño. Los widgets 4×2 y 5×2 muestran cinco pasos de previsión.</string>
+    <string name="widget_config_forecast_mode_note">La presentación se adapta al espacio disponible al cambiar el tamaño del widget.</string>
     <string name="widget_config_forecast_mode_hourly">Próximas 5 horas</string>
     <string name="widget_config_forecast_mode_daily">Próximos 5 días</string>
     <string name="widget_config_forecast_mode_hourly_descr">Muestra la previsión de las próximas 5 horas.</string>

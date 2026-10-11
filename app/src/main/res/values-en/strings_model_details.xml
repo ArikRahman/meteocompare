@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="model_metadata_explanation">Grid spacing: approximate native spatial resolution. Native step: actual time between model outputs (sometimes interpolated to hourly by Open-Meteo). Update frequency refers to the model, not the app refresh interval.</string>
+    <string name="model_metadata_provider_resolution">%1$s · grid ≈ %2$s</string>
+    <string name="model_metadata_temporal">Native step: %1$s · horizon: %2$s · updated every %3$d h</string>
+    <string name="model_step_15_minutes">15 min</string>
+    <string name="model_step_1_hour">1 h</string>
+    <string name="model_step_3_hours">3 h</string>
+    <string name="model_step_6_hours">6 h</string>
+    <string name="model_step_minutes">%1$d min</string>
+    <string name="model_step_hourly_three">1 h, then 3 h after %1$d h</string>
+    <string name="model_step_hourly_three_six">1 h, then 3 h after %1$d h and 6 h after %2$d h</string>
+</resources>

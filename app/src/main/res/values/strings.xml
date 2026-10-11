@@ -8,7 +8,7 @@
     <string name="action_add_city">Ajouter une ville</string>
     <string name="action_cancel">Annuler</string>
 
-    <string name="widget_description">Météo actuelle d\'une ville favorite avec indice de convergence des modèles.</string>
+    <string name="widget_description">Météo personnalisable et redimensionnable pour une ville favorite, avec comparaison des modèles.</string>
     <string name="widget_config_title">Configurer le widget</string>
     <string name="widget_config_subtitle">Choisissez la ville affichée et l\'opacité du fond.</string>
     <string name="widget_config_pick_city">Ville affichée</string>
@@ -16,7 +16,7 @@
     <string name="widget_config_opacity">Opacité du fond</string>
     <string name="widget_config_opacity_preview">Aperçu du fond</string>
     <string name="widget_config_forecast_mode">Prévision étendue</string>
-    <string name="widget_config_forecast_mode_note">Le contenu s’adapte à la taille. Les widgets 4×2 et 5×2 affichent cinq échéances.</string>
+    <string name="widget_config_forecast_mode_note">La présentation s’adapte à la place disponible après redimensionnement du widget.</string>
     <string name="widget_config_forecast_mode_hourly">5 prochaines heures</string>
     <string name="widget_config_forecast_mode_daily">5 prochains jours</string>
     <string name="widget_config_forecast_mode_hourly_descr">Affiche les prévisions des 5 prochaines heures</string>

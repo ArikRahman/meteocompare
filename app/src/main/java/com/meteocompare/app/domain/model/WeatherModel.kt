@@ -43,7 +43,14 @@ enum class WeatherModel(
      */
     val preferenceApiKeyAliases: Set<String> = emptySet(),
     /** Horizon natif indicatif, distinct du plafond entier utilisé par `forecast_days`. */
-    val forecastHorizonHours: Int = maxForecastDays * 24
+    val forecastHorizonHours: Int = maxForecastDays * 24,
+    /** Intervalle natif, distinct du pas horaire interpolé renvoyé par Open-Meteo. */
+    val nativeStepMinutes: Int = 60,
+    /** Seuils d'échéance où le modèle fournit des pas plus espacés. */
+    val threeHourlyFromHour: Int? = null,
+    val sixHourlyFromHour: Int? = null,
+    /** Cadence nominale des nouveaux calculs du fournisseur, pas le refresh de l'app. */
+    val updateFrequencyHours: Int = 6
 ) {
     AROME_FRANCE_HD(
         apiKey = "meteofrance_arome_france_hd",
@@ -52,6 +59,7 @@ enum class WeatherModel(
         maxForecastDays = 3,
         coverage = Coverage.FRANCE,
         family = ModelFamily.METEO_FRANCE,
+        updateFrequencyHours = 3,
         forecastHorizonHours = 48
     ),
     AROME_FRANCE(
@@ -61,6 +69,7 @@ enum class WeatherModel(
         maxForecastDays = 3,
         coverage = Coverage.FRANCE,
         family = ModelFamily.METEO_FRANCE,
+        updateFrequencyHours = 3,
         forecastHorizonHours = 48
     ),
     ARPEGE_EUROPE(
@@ -77,7 +86,8 @@ enum class WeatherModel(
         resolutionKm = 25.0,
         maxForecastDays = 4,
         coverage = Coverage.GLOBAL,
-        family = ModelFamily.METEO_FRANCE
+        family = ModelFamily.METEO_FRANCE,
+        threeHourlyFromHour = 48,
     ),
     ICON_EU(
         apiKey = "icon_eu",
@@ -85,7 +95,9 @@ enum class WeatherModel(
         resolutionKm = 7.0,
         maxForecastDays = 5,
         coverage = Coverage.EUROPE,
-        family = ModelFamily.DWD
+        family = ModelFamily.DWD,
+        updateFrequencyHours = 3,
+        threeHourlyFromHour = 78,
     ),
     ICON_GLOBAL(
         apiKey = "icon_global",
@@ -94,6 +106,7 @@ enum class WeatherModel(
         maxForecastDays = 8,
         coverage = Coverage.GLOBAL,
         family = ModelFamily.DWD,
+        threeHourlyFromHour = 78,
         forecastHorizonHours = 180,
         // Ancienne version de l'app demandait le "seamless" DWD, qui peut
         // basculer vers ICON-EU / ICON-D2 selon la position. Le modèle nommé
@@ -107,6 +120,7 @@ enum class WeatherModel(
         maxForecastDays = 16,
         coverage = Coverage.GLOBAL,
         family = ModelFamily.NOAA,
+        threeHourlyFromHour = 120,
         apiKeyAliases = setOf("gfs_seamless")
     ),
     /**
@@ -126,6 +140,8 @@ enum class WeatherModel(
         maxForecastDays = 15,
         coverage = Coverage.GLOBAL,
         family = ModelFamily.ECMWF,
+        threeHourlyFromHour = 90,
+        sixHourlyFromHour = 144,
         preferenceApiKeyAliases = setOf("ecmwf_ifs025")
     ),
 
@@ -148,7 +164,9 @@ enum class WeatherModel(
         resolutionKm = 10.0,
         maxForecastDays = 7,
         coverage = Coverage.GLOBAL,
-        family = ModelFamily.UKMO
+        family = ModelFamily.UKMO,
+        threeHourlyFromHour = 54,
+        sixHourlyFromHour = 144,
     ),
 
     /**
@@ -164,7 +182,8 @@ enum class WeatherModel(
         resolutionKm = 28.0,
         maxForecastDays = 15,
         coverage = Coverage.GLOBAL,
-        family = ModelFamily.ECMWF
+        family = ModelFamily.ECMWF,
+        nativeStepMinutes = 360,
     ),
 
     /**
@@ -178,6 +197,8 @@ enum class WeatherModel(
         maxForecastDays = 10,
         coverage = Coverage.GLOBAL,
         family = ModelFamily.ECCC,
+        nativeStepMinutes = 180,
+        updateFrequencyHours = 12,
         apiKeyAliases = setOf("gem_global")
     ),
 
@@ -197,6 +218,8 @@ enum class WeatherModel(
         maxForecastDays = 3,
         coverage = Coverage.EUROPE,
         family = ModelFamily.DWD,
+        nativeStepMinutes = 15,
+        updateFrequencyHours = 3,
         forecastHorizonHours = 48
     ),
 
@@ -223,6 +246,7 @@ enum class WeatherModel(
         maxForecastDays = 3,
         coverage = Coverage.UNITED_STATES,
         family = ModelFamily.NOAA,
+        updateFrequencyHours = 1,
         forecastHorizonHours = 18
     ),
 
@@ -241,6 +265,7 @@ enum class WeatherModel(
         maxForecastDays = 4,
         coverage = Coverage.EUROPE,
         family = ModelFamily.METNO,
+        updateFrequencyHours = 1,
         forecastHorizonHours = 60
     ),
 
@@ -260,6 +285,7 @@ enum class WeatherModel(
         maxForecastDays = 4,
         coverage = Coverage.EUROPE,
         family = ModelFamily.KNMI,
+        updateFrequencyHours = 1,
         forecastHorizonHours = 60
     ),
 
@@ -288,7 +314,8 @@ enum class WeatherModel(
         resolutionKm = 15.0,
         maxForecastDays = 10,
         coverage = Coverage.GLOBAL,
-        family = ModelFamily.CMA
+        family = ModelFamily.CMA,
+        nativeStepMinutes = 180,
     ),
 
     /**
@@ -306,6 +333,7 @@ enum class WeatherModel(
         maxForecastDays = 4,
         coverage = Coverage.EUROPE,
         family = ModelFamily.DMI,
+        updateFrequencyHours = 3,
         forecastHorizonHours = 60
     ),
 
@@ -339,7 +367,8 @@ enum class WeatherModel(
         resolutionKm = 55.0,
         maxForecastDays = 11,
         coverage = Coverage.GLOBAL,
-        family = ModelFamily.JMA
+        family = ModelFamily.JMA,
+        nativeStepMinutes = 360,
     ),
 
     /**
@@ -355,7 +384,8 @@ enum class WeatherModel(
         resolutionKm = 25.0,
         maxForecastDays = 16,
         coverage = Coverage.GLOBAL,
-        family = ModelFamily.NOAA
+        family = ModelFamily.NOAA,
+        nativeStepMinutes = 360,
     );
 
     /** Clé courante ou alias de MÊME source accepté en lecture de données/cache. */
@@ -426,18 +456,18 @@ enum class Coverage { FRANCE, EUROPE, UNITED_STATES, GLOBAL }
  * historique d'ajout des modèles à l'app (Météo-France en premier car app
  * originalement franco-centrée). Utilisé comme tri stable secondaire.
  */
-enum class ModelFamily(val displayName: String) {
-    METEO_FRANCE("Météo-France"),
-    DWD("DWD"),
-    NOAA("NOAA"),
-    ECMWF("ECMWF"),
-    UKMO("UK Met Office"),
-    ECCC("ECCC"),
-    METNO("MET Norway"),
-    KNMI("KNMI"),
-    BOM("BOM"),
-    CMA("CMA"),
-    DMI("DMI"),
-    METEOSWISS("MeteoSwiss"),
-    JMA("JMA")
+enum class ModelFamily(val displayName: String, val institutionName: String) {
+    METEO_FRANCE("Météo-France", "Météo-France"),
+    DWD("DWD", "DWD — Deutscher Wetterdienst"),
+    NOAA("NOAA", "NOAA — National Oceanic and Atmospheric Administration"),
+    ECMWF("ECMWF", "ECMWF — European Centre for Medium-Range Weather Forecasts"),
+    UKMO("UK Met Office", "UK Met Office"),
+    ECCC("ECCC", "ECCC — Environment and Climate Change Canada"),
+    METNO("MET Norway", "MET Norway — Norwegian Meteorological Institute"),
+    KNMI("KNMI", "KNMI — Royal Netherlands Meteorological Institute"),
+    BOM("BOM", "BOM — Australian Bureau of Meteorology"),
+    CMA("CMA", "CMA — China Meteorological Administration"),
+    DMI("DMI", "DMI — Danish Meteorological Institute"),
+    METEOSWISS("MeteoSwiss", "MeteoSwiss — Federal Office of Meteorology and Climatology"),
+    JMA("JMA", "JMA — Japan Meteorological Agency")
 }

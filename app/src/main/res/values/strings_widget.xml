@@ -48,7 +48,7 @@
 
     <!-- Widget éditorial MeteoCompare -->
     <string name="widget_label_insight">À retenir</string>
-    <string name="widget_description_insight">Le signal météo le plus utile et son niveau de convergence entre modèles.</string>
+    <string name="widget_description_insight">Synthèse météo personnalisable et redimensionnable des prochaines 24 heures.</string>
     <string name="widget_config_insight_horizon_note">Le widget À retenir analyse toujours les 24 prochaines heures.</string>
     <string name="widget_config_insight_horizon">Prochaines 24 heures</string>
     <string name="widget_config_insight_horizon_descr">Le signal principal et son incertitude sont recalculés automatiquement.</string>

@@ -8,7 +8,7 @@
     <string name="action_add_city">Ort hinzufügen</string>
     <string name="action_cancel">Abbrechen</string>
 
-    <string name="widget_description">Aktuelles Wetter für einen Favoriten mit einem Konvergenzindex der Modelle.</string>
+    <string name="widget_description">Anpassbares, größenveränderbares Wetter-Widget für eine Favoritenstadt mit Modellvergleich.</string>
     <string name="widget_config_title">Widget konfigurieren</string>
     <string name="widget_config_subtitle">Wähle den angezeigten Ort und die Deckkraft des Hintergrunds.</string>
     <string name="widget_config_pick_city">Anzuzeigender Ort</string>
@@ -16,7 +16,7 @@
     <string name="widget_config_opacity">Hintergrund-Deckkraft</string>
     <string name="widget_config_opacity_preview">Hintergrundvorschau</string>
     <string name="widget_config_forecast_mode">Erweiterte Vorhersage</string>
-    <string name="widget_config_forecast_mode_note">Der Inhalt passt sich an die Größe an. 4×2- und 5×2-Widgets zeigen fünf Vorhersageschritte.</string>
+    <string name="widget_config_forecast_mode_note">Die Darstellung passt sich dem verfügbaren Platz nach dem Vergrößern oder Verkleinern an.</string>
     <string name="widget_config_forecast_mode_hourly">Nächste 5 Stunden</string>
     <string name="widget_config_forecast_mode_daily">Nächste 5 Tage</string>
     <string name="widget_config_forecast_mode_hourly_descr">Zeigt die Vorhersage für die nächsten 5 Stunden.</string>
