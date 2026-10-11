@@ -2,6 +2,7 @@ package com.meteocompare.app.data.repository
 
 import android.content.Context
 import android.util.Log
+import androidx.core.content.edit
 import com.meteocompare.app.core.network.NetworkMonitor
 import com.meteocompare.app.data.remote.OpenMeteoApi
 import com.meteocompare.app.data.remote.dto.UvForecastDto
@@ -86,10 +87,15 @@ class UvIndexRepositoryImpl @Inject constructor(
                     val response = api.getUvForecast(city.latitude, city.longitude)
                     val parsed = response.toDomainOrNull()
                     if (parsed != null) {
-                        prefs.edit().putString(
-                            key,
-                            json.encodeToString(UvCacheRecord.serializer(), UvCacheRecord(clock.millis(), response))
-                        ).apply()
+                        prefs.edit {
+                            putString(
+                                key,
+                                json.encodeToString(
+                                    UvCacheRecord.serializer(),
+                                    UvCacheRecord(clock.millis(), response)
+                                )
+                            )
+                        }
                         lastFailure.remove(key)
                         parsed
                     } else {
