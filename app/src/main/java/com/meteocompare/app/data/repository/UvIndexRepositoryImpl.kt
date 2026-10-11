@@ -52,7 +52,11 @@ class UvIndexRepositoryImpl @Inject constructor(
     @ApplicationContext context: Context,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : UvIndexRepository {
-    private val prefs = context.getSharedPreferences("uv_forecast_cache_v1", Context.MODE_PRIVATE)
+    // Hilt can construct this singleton from a ViewModel on the UI thread.
+    // Defer filesystem-backed preferences initialization until get() runs on ioDispatcher.
+    private val prefs by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        context.getSharedPreferences("uv_forecast_cache_v1", Context.MODE_PRIVATE)
+    }
     private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val mutex = Mutex()
     private val inFlight = mutableMapOf<String, Deferred<UvForecast?>>()

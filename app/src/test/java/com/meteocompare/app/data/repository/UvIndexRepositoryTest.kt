@@ -12,6 +12,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -67,6 +68,22 @@ class UvIndexRepositoryTest {
         api, Json { ignoreUnknownKeys = true }, clock, network, context,
         UnconfinedTestDispatcher()
     )
+
+    @Test fun preferences_are_initialized_only_on_first_lookup() = runTest {
+        val repository = repository()
+        verify(exactly = 0) { context.getSharedPreferences(any(), any()) }
+
+        // Offline lookup is enough to initialize the cache, without any HTTP request.
+        isOnline = false
+        assertNull(repository.get(city))
+        verify(exactly = 1) {
+            context.getSharedPreferences("uv_forecast_cache_v1", Context.MODE_PRIVATE)
+        }
+        assertNull(repository.get(city))
+        verify(exactly = 1) {
+            context.getSharedPreferences("uv_forecast_cache_v1", Context.MODE_PRIVATE)
+        }
+    }
 
     @Test fun concurrent_city_views_share_one_http_request_and_fresh_cache_is_reused() = runTest {
         val gate = CompletableDeferred<Unit>()
