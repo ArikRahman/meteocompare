@@ -8,6 +8,7 @@ import com.meteocompare.app.domain.repository.ForecastEvolutionRepository
 import com.meteocompare.app.domain.repository.ForecastRepository
 import com.meteocompare.app.domain.repository.MarineRepository
 import com.meteocompare.app.domain.repository.UserPreferencesRepository
+import com.meteocompare.app.domain.repository.UvIndexRepository
 import com.meteocompare.app.domain.repository.VigilanceRepository
 import com.meteocompare.app.domain.usecase.EqualWeighting
 import com.meteocompare.app.domain.usecase.ModelWeightingStrategy
@@ -40,6 +41,10 @@ object TestRepositoryModule {
     @Provides
     @Singleton
     fun marineRepository(fake: FakeMarineRepository): MarineRepository = fake
+
+    @Provides
+    @Singleton
+    fun uvIndexRepository(fake: FakeUvIndexRepository): UvIndexRepository = fake
 
     @Provides
     @Singleton
