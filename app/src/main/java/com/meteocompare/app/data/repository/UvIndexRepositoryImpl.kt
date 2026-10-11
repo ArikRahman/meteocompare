@@ -48,7 +48,7 @@ class UvIndexRepositoryImpl @Inject constructor(
     private val json: Json,
     private val clock: Clock,
     private val networkMonitor: NetworkMonitor,
-    @param:ApplicationContext context: Context,
+    @ApplicationContext context: Context,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : UvIndexRepository {
     private val prefs = context.getSharedPreferences("uv_forecast_cache_v1", Context.MODE_PRIVATE)
