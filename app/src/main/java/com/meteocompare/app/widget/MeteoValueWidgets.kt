@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -52,7 +51,6 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.meteocompare.app.R
-import com.meteocompare.app.BuildConfig
 import com.meteocompare.app.core.locale.applyPersistedLocale
 import com.meteocompare.app.core.locale.weatherConditionLabelRes
 import com.meteocompare.app.core.network.OPEN_METEO_LICENSE_URL
@@ -80,17 +78,9 @@ internal class MeteoInsightWidget : GlanceAppWidget() {
             val customBackground = prefs[WidgetPreferences.BackgroundColorKey]
             val customText = prefs[WidgetPreferences.TextColorKey]
             val cornerStyle = WidgetCornerStyle.fromStored(prefs[WidgetPreferences.CornerStyleKey])
-            // Diagnostic ponctuel pour confirmer que la vraie surface Glance
-            // relit la forme sauvegardée, et pas seulement l'aperçu Compose.
-            LaunchedEffect(cornerStyle) {
-                if (BuildConfig.DEBUG) {
-                    Log.d("MeteoCompare/WidgetShape", "widget=$id style=${cornerStyle.name} " +
-                        "render=${if (cornerStyle == WidgetCornerStyle.SQUARE) "INSET_RECTANGLE" else "ROUNDED"} " +
-                        "launcherClip=unverified")
-                }
-            }
-
-
+            val customCornerRadiusDp = (prefs[WidgetPreferences.CornerRadiusDpKey]
+                ?: WidgetPreferences.DEFAULT_CORNER_RADIUS_DP).coerceIn(0, WidgetPreferences.MAX_CORNER_RADIUS_DP)
+            val contentSpacing = WidgetContentSpacing.fromStored(prefs[WidgetPreferences.ContentSpacingKey])
             var data by remember {
                 mutableStateOf(
                     if (cityId == null) WidgetData.NotConfigured else WidgetData.Loading
@@ -115,7 +105,9 @@ internal class MeteoInsightWidget : GlanceAppWidget() {
                         opacityPct = opacityPct,
                         customBackgroundArgb = customBackground,
                         customTextArgb = customText,
-                        cornerStyle = cornerStyle
+                        cornerStyle = cornerStyle,
+                        customCornerRadiusDp = customCornerRadiusDp,
+                        contentSpacing = contentSpacing
                     )
                 }
             }
@@ -140,7 +132,9 @@ private fun InsightWidgetContent(
     opacityPct: Int,
     customBackgroundArgb: Int?,
     customTextArgb: Int?,
-    cornerStyle: WidgetCornerStyle
+    cornerStyle: WidgetCornerStyle,
+    customCornerRadiusDp: Int,
+    contentSpacing: WidgetContentSpacing
 ) {
     val context = LocalContext.current
     val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
@@ -152,30 +146,81 @@ private fun InsightWidgetContent(
         customTextArgb = customTextArgb
     )
     val size = LocalSize.current
-    val panel = widgetPanelGeometryDp(size.width.value, size.height.value, cornerStyle)
-    val compact = panel.widthDp < 220f || panel.heightDp < 126f
+    val compact = size.width.value < 220f || size.height.value < 126f ||
+        (cornerStyle == WidgetCornerStyle.PILL && size.height.value < 180f)
+    val baseHorizontal = if (compact) 13.dp else 17.dp
+    val baseVertical = if (compact) 11.dp else 13.dp
+    val (requestedX, requestedY) = widgetContentPadding(
+        baseHorizontal, baseVertical, contentSpacing
+    )
+    val (safeX, safeY) = widgetShapeSafeContentPaddingDp(
+        cornerStyle, size.width.value, size.height.value,
+        requestedX.value, requestedY.value
+    )
+    val pillNeedsSummary = cornerStyle == WidgetCornerStyle.PILL && (
+        size.width.value - 2f * safeX < 170f ||
+            size.height.value - 2f * safeY < 120f
+        )
 
     WidgetSurface(
         background = colors.container,
         cornerStyle = cornerStyle,
-        horizontalPadding = if (compact) 13.dp else 17.dp,
-        verticalPadding = when {
-            cornerStyle == WidgetCornerStyle.SQUARE && compact -> 6.dp
-            cornerStyle == WidgetCornerStyle.SQUARE -> 9.dp
-            compact -> 11.dp
-            else -> 13.dp
-        }
+        customCornerRadiusDp = customCornerRadiusDp,
+        contentSpacing = contentSpacing,
+        horizontalPadding = baseHorizontal,
+        verticalPadding = baseVertical
     ) {
         Column(modifier = GlanceModifier.fillMaxSize()) {
             Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
                 when (data.error) {
-                    null -> InsightWidgetLayout(data, colors, compact)
+                    null -> if (pillNeedsSummary) InsightPillSummary(
+                        data, colors, veryNarrow = size.width.value - 2f * safeX < 82f
+                    ) else InsightWidgetLayout(data, colors, compact)
                     else -> ValueWidgetError(data, colors, compact)
                 }
             }
             if (data.error == null) {
                 InsightOpenMeteoAttribution(colors.muted, compact)
             }
+        }
+    }
+}
+
+/** Compact editorial summary when a pill is too narrow for the full insight card. */
+@Composable
+private fun InsightPillSummary(
+    data: WidgetData,
+    colors: ValueWidgetColors,
+    veryNarrow: Boolean,
+    units: WeatherUnits = LocalWeatherUnits.current
+) {
+    Column(
+        modifier = GlanceModifier.fillMaxSize(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (!veryNarrow) {
+                ValueWeatherGlyph(data.currentCondition, 25)
+                Spacer(GlanceModifier.width(4.dp))
+            }
+            Text(
+                text = units.temp(data.currentTemp),
+                style = TextStyle(
+                    color = colors.foreground,
+                    fontSize = if (veryNarrow) 16.sp else 20.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                maxLines = 1
+            )
+        }
+        if (!veryNarrow) data.keyInsight?.title?.takeIf(String::isNotBlank)?.let {
+            Spacer(GlanceModifier.height(3.dp))
+            Text(
+                text = it,
+                style = TextStyle(color = colors.muted, fontSize = 9.sp),
+                maxLines = 1
+            )
         }
     }
 }

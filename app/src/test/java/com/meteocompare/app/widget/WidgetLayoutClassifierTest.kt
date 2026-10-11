@@ -55,4 +55,30 @@ class WidgetLayoutClassifierTest {
         assertEquals(5, extendedForecastItemCount(320f))
         assertEquals(5, extendedForecastItemCount(420f))
     }
+    @Test
+    fun `narrow pills select readable summaries rather than clipped charts`() {
+        assertEquals(
+            WidgetLayoutKind.TINY,
+            classifyWidgetLayoutForShape(170f, 150f, WidgetCornerStyle.PILL, 40f, 14f)
+        )
+        assertEquals(
+            WidgetLayoutKind.COMPACT_TALL,
+            classifyWidgetLayoutForShape(280f, 150f, WidgetCornerStyle.PILL, 35f, 14f)
+        )
+        assertEquals(
+            WidgetLayoutKind.EXTRA_LARGE,
+            classifyWidgetLayoutForShape(430f, 170f, WidgetCornerStyle.PILL, 40f, 14f)
+        )
+    }
+
+    @Test
+    fun `non-pill shapes keep their size-based forecast modes`() {
+        for (shape in listOf(WidgetCornerStyle.SQUARE, WidgetCornerStyle.SOFT,
+            WidgetCornerStyle.ROUNDED, WidgetCornerStyle.CUSTOM)) {
+            assertEquals(
+                classifyWidgetLayout(320f, 170f),
+                classifyWidgetLayoutForShape(320f, 170f, shape, 40f, 14f)
+            )
+        }
+    }
 }

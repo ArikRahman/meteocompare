@@ -80,7 +80,15 @@
     <string name="widget_config_corner_style">Coins du widget</string>
     <string name="widget_corner_rounded">Arrondis</string>
     <string name="widget_corner_square">Carrés</string>
-    <string name="widget_corner_launcher_note">En mode carré, le widget demande un fond à angles droits. Le lanceur peut néanmoins imposer ses propres coins.</string>
+    <string name="widget_corner_soft">Doux</string>
+    <string name="widget_corner_pill">Pilule</string>
+    <string name="widget_corner_custom">Personnalisé</string>
+    <string name="widget_corner_radius">Rayon : %1$d dp</string>
+    <string name="widget_config_spacing">Marge intérieure</string>
+    <string name="widget_spacing_normal">Normale</string>
+    <string name="widget_spacing_compact">Réduite</string>
+    <string name="widget_spacing_none">Aucune</string>
+    <string name="widget_corner_launcher_note">Fond bord à bord, sans marge extérieure. Le lanceur Android peut malgré tout arrondir ou découper les coins du widget.</string>
     <string name="widget_color_wheel_title">Choisir une couleur</string>
     <string name="widget_color_wheel_hint">Teinte et saturation</string>
     <string name="widget_color_brightness">Luminosité</string>

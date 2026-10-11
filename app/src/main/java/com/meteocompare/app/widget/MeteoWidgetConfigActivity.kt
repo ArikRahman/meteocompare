@@ -14,6 +14,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -152,7 +154,8 @@ class MeteoWidgetConfigActivity : ComponentActivity() {
                 WidgetConfigScreen(
                     widgetId = widgetId,
                     insightMode = isInsightWidgetProvider(providerClassName),
-                    onSave = { cityId, opacityPct, forecastMode, bgColorArgb, textColorArgb, cornerStyle ->
+                    onSave = { cityId, opacityPct, forecastMode, bgColorArgb, textColorArgb,
+                               cornerStyle, cornerRadiusDp, contentSpacing ->
                         persistAndFinish(
                             widgetId = widgetId,
                             expectedProviderClassName = providerClassName,
@@ -161,7 +164,9 @@ class MeteoWidgetConfigActivity : ComponentActivity() {
                             forecastMode = forecastMode,
                             bgColorArgb = bgColorArgb,
                             textColorArgb = textColorArgb,
-                            cornerStyle = cornerStyle
+                            cornerStyle = cornerStyle,
+                            cornerRadiusDp = cornerRadiusDp,
+                            contentSpacing = contentSpacing
                         )
                     },
                     onCancel = { finish() }
@@ -233,7 +238,9 @@ class MeteoWidgetConfigActivity : ComponentActivity() {
         forecastMode: ForecastMode,
         bgColorArgb: Int?,
         textColorArgb: Int?,
-        cornerStyle: WidgetCornerStyle
+        cornerStyle: WidgetCornerStyle,
+        cornerRadiusDp: Int,
+        contentSpacing: WidgetContentSpacing
     ) {
         val appCtx = applicationContext
         lifecycleScope.launch {
@@ -266,7 +273,9 @@ class MeteoWidgetConfigActivity : ComponentActivity() {
                             forecastMode = forecastMode,
                             backgroundColorArgb = bgColorArgb,
                             textColorArgb = textColorArgb,
-                            cornerStyle = cornerStyle
+                            cornerStyle = cornerStyle,
+                            cornerRadiusDp = cornerRadiusDp,
+                            contentSpacing = contentSpacing
                         ).writeTo(this)
                     }
                 }
@@ -320,7 +329,8 @@ private fun WidgetConfigScreen(
     widgetId: Int,
     insightMode: Boolean,
     onSave: (cityId: String, opacityPct: Int, forecastMode: ForecastMode,
-             bgColorArgb: Int?, textColorArgb: Int?, cornerStyle: WidgetCornerStyle) -> Unit,
+             bgColorArgb: Int?, textColorArgb: Int?, cornerStyle: WidgetCornerStyle,
+             cornerRadiusDp: Int, contentSpacing: WidgetContentSpacing) -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current.applicationContext
@@ -370,6 +380,7 @@ private fun WidgetConfigScreen(
     WidgetConfigForm(widgetId, insightMode, loaded.first, loaded.second, onSave, onCancel)
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun WidgetConfigForm(
     widgetId: Int,
@@ -377,7 +388,8 @@ private fun WidgetConfigForm(
     favorites: List<City>,
     initial: WidgetConfiguration,
     onSave: (cityId: String, opacityPct: Int, forecastMode: ForecastMode,
-             bgColorArgb: Int?, textColorArgb: Int?, cornerStyle: WidgetCornerStyle) -> Unit,
+             bgColorArgb: Int?, textColorArgb: Int?, cornerStyle: WidgetCornerStyle,
+             cornerRadiusDp: Int, contentSpacing: WidgetContentSpacing) -> Unit,
     onCancel: () -> Unit
 ) {
     var selectedCityId by rememberSaveable(widgetId) {
@@ -392,6 +404,10 @@ private fun WidgetConfigForm(
     var bgColorArgb by rememberSaveable(widgetId) { mutableStateOf(initial.backgroundColorArgb) }
     var textColorArgb by rememberSaveable(widgetId) { mutableStateOf(initial.textColorArgb) }
     var cornerStyle by rememberSaveable(widgetId) { mutableStateOf(initial.cornerStyle) }
+    var cornerRadiusDp by rememberSaveable(widgetId) {
+        mutableFloatStateOf(initial.cornerRadiusDp.toFloat())
+    }
+    var contentSpacing by rememberSaveable(widgetId) { mutableStateOf(initial.contentSpacing) }
     var editingColor by rememberSaveable(widgetId) { mutableStateOf<String?>(null) }
 
     if (editingColor != null) {
@@ -543,7 +559,9 @@ private fun WidgetConfigForm(
             opacityPct = opacityPct.toInt(),
             bgColorArgb = bgColorArgb,
             textColorArgb = textColorArgb,
-            cornerStyle = cornerStyle
+            cornerStyle = cornerStyle,
+            cornerRadiusDp = cornerRadiusDp.toInt(),
+            contentSpacing = contentSpacing
         )
 
         Spacer(Modifier.height(24.dp))
@@ -622,27 +640,98 @@ private fun WidgetConfigForm(
 
         Spacer(Modifier.height(30.dp))
 
-        // Seule la forme du fond EXTERNE change, pas les cartes intérieures.
+        // Forme sans marge EXTERNE : le fond occupe toujours 100 % du widget.
         Text(
             text = stringResource(R.string.widget_config_corner_style),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Medium
         )
         Spacer(Modifier.height(8.dp))
-        Row(modifier = Modifier.fillMaxWidth()) {
+        // FlowRow keeps every shape reachable in the vertical form scroll.
+        // A nested horizontal scroll could consume Compose test clicks when
+        // performScrollTo() was trying to reveal the form section.
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             WidgetCornerOption(
                 label = stringResource(R.string.widget_corner_rounded),
                 selected = cornerStyle == WidgetCornerStyle.ROUNDED,
+                radiusDp = 20,
                 tag = TAG_WIDGET_CORNER_ROUNDED,
                 onClick = { cornerStyle = WidgetCornerStyle.ROUNDED }
             )
             WidgetCornerOption(
                 label = stringResource(R.string.widget_corner_square),
                 selected = cornerStyle == WidgetCornerStyle.SQUARE,
+                radiusDp = 0,
                 tag = TAG_WIDGET_CORNER_SQUARE,
                 onClick = { cornerStyle = WidgetCornerStyle.SQUARE }
             )
+            WidgetCornerOption(
+                label = stringResource(R.string.widget_corner_soft),
+                selected = cornerStyle == WidgetCornerStyle.SOFT,
+                radiusDp = 9,
+                tag = TAG_WIDGET_CORNER_SOFT,
+                onClick = { cornerStyle = WidgetCornerStyle.SOFT }
+            )
+            WidgetCornerOption(
+                label = stringResource(R.string.widget_corner_pill),
+                selected = cornerStyle == WidgetCornerStyle.PILL,
+                radiusDp = 20,
+                tag = TAG_WIDGET_CORNER_PILL,
+                onClick = { cornerStyle = WidgetCornerStyle.PILL }
+            )
+            WidgetCornerOption(
+                label = stringResource(R.string.widget_corner_custom),
+                selected = cornerStyle == WidgetCornerStyle.CUSTOM,
+                radiusDp = cornerRadiusDp.toInt(),
+                tag = TAG_WIDGET_CORNER_CUSTOM,
+                onClick = { cornerStyle = WidgetCornerStyle.CUSTOM }
+            )
         }
+        if (cornerStyle == WidgetCornerStyle.CUSTOM) {
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.widget_corner_radius, cornerRadiusDp.toInt()),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.width(12.dp))
+                Slider(
+                    value = cornerRadiusDp,
+                    onValueChange = { cornerRadiusDp = it.roundToInt().toFloat() },
+                    valueRange = 0f..WidgetPreferences.MAX_CORNER_RADIUS_DP.toFloat(),
+                    steps = WidgetPreferences.MAX_CORNER_RADIUS_DP - 1,
+                    modifier = Modifier.weight(1f).testTag(TAG_WIDGET_CORNER_RADIUS)
+                )
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Text(
+            text = stringResource(R.string.widget_config_spacing),
+            style = MaterialTheme.typography.titleSmall
+        )
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(
+                WidgetContentSpacing.NORMAL to R.string.widget_spacing_normal,
+                WidgetContentSpacing.COMPACT to R.string.widget_spacing_compact,
+                WidgetContentSpacing.NONE to R.string.widget_spacing_none
+            ).forEach { (option, labelRes) ->
+                WidgetSpacingOption(
+                    label = stringResource(labelRes),
+                    selected = contentSpacing == option,
+                    tag = "$TAG_WIDGET_SPACING${option.name}",
+                    onClick = { contentSpacing = option }
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
         Text(
             text = stringResource(R.string.widget_corner_launcher_note),
             style = MaterialTheme.typography.bodySmall,
@@ -740,7 +829,8 @@ private fun WidgetConfigForm(
             Button(
                 onClick = {
                     selectedCityId?.let { id ->
-                        onSave(id, opacityPct.toInt(), forecastMode, bgColorArgb, textColorArgb, cornerStyle)
+                        onSave(id, opacityPct.toInt(), forecastMode, bgColorArgb, textColorArgb,
+                            cornerStyle, cornerRadiusDp.toInt(), contentSpacing)
                     }
                 },
                 enabled = selectedCityId != null && opacityIsValid,
@@ -914,7 +1004,9 @@ private fun OpacityPreview(
     opacityPct: Int,
     bgColorArgb: Int?,
     textColorArgb: Int?,
-    cornerStyle: WidgetCornerStyle
+    cornerStyle: WidgetCornerStyle,
+    cornerRadiusDp: Int,
+    contentSpacing: WidgetContentSpacing
 ) {
     val alpha = opacityPct / 100f
     // Résolution du fond : custom ou primaryContainer du thème.
@@ -931,25 +1023,37 @@ private fun OpacityPreview(
         alpha < 0.15f -> MaterialTheme.colorScheme.onBackground
         else -> MaterialTheme.colorScheme.onPrimaryContainer
     }
-    // Représenter aussi la marge TRANSPARENTE imposée en mode carré : un
-    // aperçu plein-bord donnait jusqu'ici un résultat trompeur sur Pixel.
-    BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(68.dp)) {
-        val (insetX, insetY) = squarePanelInsetsDp(maxWidth.value, maxHeight.value)
+    // Le preview montre les coins appliqués par l'app, sans marge externe.
+    // Le masque éventuel du lanceur n'est pas simulable dans une Activity.
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxWidth().height(84.dp)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+    ) {
+        val radius = widgetCornerRadiusDp(cornerStyle, cornerRadiusDp, maxWidth.value, maxHeight.value)
         Box(
-            modifier = Modifier.fillMaxSize().then(
-                if (cornerStyle == WidgetCornerStyle.SQUARE) {
-                    Modifier.padding(horizontal = insetX.dp, vertical = insetY.dp)
-                } else Modifier
-            ).clip(RoundedCornerShape(if (cornerStyle == WidgetCornerStyle.SQUARE) 0.dp else 16.dp))
+            modifier = Modifier.fillMaxSize()
+                .clip(RoundedCornerShape(radius.dp))
                 .background(baseBg.copy(alpha = alpha)),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = stringResource(R.string.widget_config_opacity_preview),
-                color = fg,
-                style = MaterialTheme.typography.bodyMedium,
-                fontSize = 13.sp
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = stringResource(R.string.widget_config_opacity_preview),
+                    color = fg,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontSize = 14.sp
+                )
+                val spacingLabel = when (contentSpacing) {
+                    WidgetContentSpacing.NONE -> R.string.widget_spacing_none
+                    WidgetContentSpacing.COMPACT -> R.string.widget_spacing_compact
+                    WidgetContentSpacing.NORMAL -> R.string.widget_spacing_normal
+                }
+                Text(
+                    text = stringResource(spacingLabel),
+                    color = fg.copy(alpha = 0.75f),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }
@@ -1043,6 +1147,11 @@ internal const val TAG_WIDGET_CUSTOM_BG = "widget_custom_bg"
 internal const val TAG_WIDGET_CUSTOM_TEXT = "widget_custom_text"
 internal const val TAG_WIDGET_CORNER_ROUNDED = "widget_corner_rounded"
 internal const val TAG_WIDGET_CORNER_SQUARE = "widget_corner_square"
+internal const val TAG_WIDGET_CORNER_SOFT = "widget_corner_soft"
+internal const val TAG_WIDGET_CORNER_PILL = "widget_corner_pill"
+internal const val TAG_WIDGET_CORNER_CUSTOM = "widget_corner_custom"
+internal const val TAG_WIDGET_CORNER_RADIUS = "widget_corner_radius"
+internal const val TAG_WIDGET_SPACING = "widget_spacing_"
 internal const val TAG_WIDGET_CONFIG_ROOT = "widget_config_root"
 internal const val TAG_WIDGET_CITY = "widget_city_"
 internal const val TAG_WIDGET_OPACITY = "widget_opacity"

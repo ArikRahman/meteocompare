@@ -1,143 +1,132 @@
 package com.meteocompare.app.widget
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalSize
-import androidx.glance.appwidget.appWidgetBackground
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.appWidgetBackground
+import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Box
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
 import androidx.glance.unit.ColorProvider
 import com.meteocompare.app.MainActivity
+import kotlin.math.sqrt
 
 /**
- * Android 12+ launchers can clip the widget HOST, outside of Glance's RemoteViews.
- * cornerRadius(0.dp) is not sufficient to produce square visible corners there.
- * Leave the host-level background transparent in SQUARE mode and move the actual
- * coloured, rectangular panel INSIDE the host's corner clipping area.
- *
- * The inset is mostly HORIZONTAL. At a panel top inset of 6dp, its top-left
- * corner is already inside a 28dp-radius launcher mask when x >= 12dp
- * (quarter-circle geometry). The older 10/14/20dp VERTICAL insets consumed
- * up to 40dp of widget height and cut the bottom heatmap and daily/hourly cards.
- *
- * Insets are in dp per side. Clamp narrow widgets to leave a minimum content
- * width instead of accidentally reducing a tiny widget to a few pixels.
+ * Corner radius for an app-controlled background (in dp).
+ * The launcher may still clip the HOST on Android 12+; 0dp cannot override it.
  */
-internal fun squarePanelInsetsDp(widthDp: Float, heightDp: Float): Pair<Int, Int> {
-    val horizontal = when {
-        widthDp < 170f || heightDp < 96f -> 16
-        widthDp < 260f || heightDp < 150f -> 20
-        else -> 22
+internal fun widgetCornerRadiusDp(
+    style: WidgetCornerStyle,
+    customRadiusDp: Int,
+    widthDp: Float,
+    heightDp: Float
+): Float {
+    val halfShortestSide = (minOf(widthDp, heightDp).coerceAtLeast(0f) / 2f)
+    return when (style) {
+        WidgetCornerStyle.SQUARE -> 0f
+        WidgetCornerStyle.SOFT -> minOf(12f, halfShortestSide)
+        WidgetCornerStyle.PILL -> halfShortestSide
+        WidgetCornerStyle.CUSTOM -> minOf(
+            customRadiusDp.coerceIn(0, WidgetPreferences.MAX_CORNER_RADIUS_DP).toFloat(),
+            halfShortestSide
+        )
+        WidgetCornerStyle.ROUNDED -> minOf(28f, halfShortestSide)
     }
-    val maxInsetX = ((widthDp - 40f) / 2f).toInt().coerceAtLeast(0)
-    val maxInsetY = ((heightDp - 32f) / 2f).toInt().coerceAtLeast(0)
-    return minOf(horizontal, maxInsetX) to minOf(6, maxInsetY)
 }
 
-/** One source of truth for the actual coloured panel, preview and layout. */
-internal data class WidgetPanelGeometry(
-    val insetX: Int,
-    val insetY: Int,
-    val widthDp: Float,
-    val heightDp: Float
-)
+/** All inset values are INSIDE the background. External panel margins are always zero. */
+internal fun widgetContentPadding(
+    horizontalPadding: Dp,
+    verticalPadding: Dp,
+    spacing: WidgetContentSpacing
+): Pair<Dp, Dp> = when (spacing) {
+    WidgetContentSpacing.NORMAL -> horizontalPadding to verticalPadding
+    WidgetContentSpacing.COMPACT -> (horizontalPadding.value / 2f).dp to (verticalPadding.value / 2f).dp
+    WidgetContentSpacing.NONE -> 0.dp to 0.dp
+}
 
-internal fun widgetPanelGeometryDp(
+/**
+ * The pill shape has curved ENDS even when the launcher grants no margins.
+ * Inscribe the content in a safe rectangular area of the rounded capsule:
+ * at the first/last content row, the safe horizontal inset follows the circle.
+ * The background itself stays fully edge-to-edge.
+ *
+ * A minimum vertical inset is necessary even for spacing=NONE, otherwise a
+ * 100%-wide text row intersects the capsule near its top/bottom corners.
+ */
+internal fun widgetShapeSafeContentPaddingDp(
+    style: WidgetCornerStyle,
     widthDp: Float,
     heightDp: Float,
-    style: WidgetCornerStyle
-): WidgetPanelGeometry {
-    val (x, y) = if (style == WidgetCornerStyle.SQUARE) {
-        squarePanelInsetsDp(widthDp, heightDp)
-    } else 0 to 0
-    return WidgetPanelGeometry(
-        insetX = x,
-        insetY = y,
-        widthDp = (widthDp - 2f * x).coerceAtLeast(0f),
-        heightDp = (heightDp - 2f * y).coerceAtLeast(0f)
-    )
+    requestedHorizontalDp: Float,
+    requestedVerticalDp: Float
+): Pair<Float, Float> {
+    val x = requestedHorizontalDp.coerceAtLeast(0f)
+    val y = requestedVerticalDp.coerceAtLeast(0f)
+    if (style != WidgetCornerStyle.PILL || widthDp <= 0f || heightDp <= 0f) return x to y
+
+    val radius = minOf(widthDp, heightDp) / 2f
+    // Reserve approximately one eighth of the height at the top and bottom.
+    // Never reserve more than a quarter, including for tiny circular widgets.
+    val safeY = maxOf(y, (heightDp * 0.12f).coerceIn(5f, 14f))
+        .coerceAtMost(heightDp / 4f)
+    // Circle equation, plus 2dp against host raster rounding and text ascenders.
+    val distanceFromCenter = (radius - safeY).coerceIn(0f, radius)
+    val safeX = radius - sqrt((radius * radius - distanceFromCenter * distanceFromCenter).coerceAtLeast(0f)) + 2f
+    return maxOf(x, safeX).coerceAtMost(widthDp / 2f) to safeY
 }
 
-// Glance LocalSize is the HOST size even inside a padded nested Box. All the
-// forecast/heatmap height budgets must use the coloured panel size instead.
-private val LocalWidgetPanelSize = staticCompositionLocalOf<DpSize?> { null }
-
-@Composable
-internal fun widgetPanelSize(): DpSize = LocalWidgetPanelSize.current ?: LocalSize.current
-
-internal fun widgetContainerCorners(style: WidgetCornerStyle): GlanceModifier =
-    when (style) {
-        WidgetCornerStyle.ROUNDED -> GlanceModifier.cornerRadius(
-            android.R.dimen.system_app_widget_background_radius
-        )
-        WidgetCornerStyle.SQUARE -> GlanceModifier.cornerRadius(0.dp)
-    }
-
-/** Shared outer surface for forecast and insight widgets. */
+/** Shared true edge-to-edge surface for the weather and insight widgets. */
 @Composable
 internal fun WidgetSurface(
     background: ColorProvider,
     cornerStyle: WidgetCornerStyle,
+    customCornerRadiusDp: Int,
+    contentSpacing: WidgetContentSpacing,
     horizontalPadding: Dp,
     verticalPadding: Dp,
     content: @Composable () -> Unit
 ) {
-    if (cornerStyle == WidgetCornerStyle.SQUARE) {
-        val size = LocalSize.current
-        val geometry = widgetPanelGeometryDp(
-            size.width.value, size.height.value, cornerStyle
-        )
-        Box(
-            modifier = GlanceModifier.fillMaxSize()
-                // Do not draw the coloured background at the launcher-clipped edge.
-                .background(ColorProvider(Color.Transparent))
-                .appWidgetBackground()
-                .then(widgetContainerCorners(WidgetCornerStyle.SQUARE))
-                .clickable(actionStartActivity<MainActivity>())
-        ) {
-            Box(
-                modifier = GlanceModifier.fillMaxSize()
-                    .padding(horizontal = geometry.insetX.dp, vertical = geometry.insetY.dp)
-            ) {
-                Box(
-                    modifier = GlanceModifier.fillMaxSize()
-                        .background(background)
-                        .cornerRadius(0.dp)
-                       .padding(horizontal = horizontalPadding, vertical = verticalPadding)
-                ) {
-                    CompositionLocalProvider(
-                        LocalWidgetPanelSize provides DpSize(geometry.widthDp.dp, geometry.heightDp.dp)
-                    ) {
-                        content()
-                    }
+    val size = LocalSize.current
+    val radius = widgetCornerRadiusDp(
+        cornerStyle, customCornerRadiusDp, size.width.value, size.height.value
+    )
+    val (requestedX, requestedY) = widgetContentPadding(horizontalPadding, verticalPadding, contentSpacing)
+    val (safeX, safeY) = widgetShapeSafeContentPaddingDp(
+        style = cornerStyle,
+        widthDp = size.width.value,
+        heightDp = size.height.value,
+        requestedHorizontalDp = requestedX.value,
+        requestedVerticalDp = requestedY.value
+    )
+    val insetX = safeX.dp
+    val insetY = safeY.dp
+    // The background always fills the entire allocation. Android 12+ launcher
+    // masking is outside RemoteViews and cannot be disabled by the app.
+    Box(
+        modifier = GlanceModifier.fillMaxSize()
+            .background(background)
+            .then(
+                if (cornerStyle == WidgetCornerStyle.ROUNDED) {
+                    GlanceModifier.cornerRadius(android.R.dimen.system_app_widget_background_radius)
+                } else {
+                    GlanceModifier.cornerRadius(radius.dp)
                 }
-            }
-        }
-    } else {
+            )
+            .appWidgetBackground()
+            .clickable(actionStartActivity<MainActivity>())
+    ) {
         Box(
             modifier = GlanceModifier.fillMaxSize()
-                .background(background)
-                .then(widgetContainerCorners(cornerStyle))
-                .appWidgetBackground()
-                .clickable(actionStartActivity<MainActivity>())
+                .padding(horizontal = insetX, vertical = insetY)
         ) {
-            Box(
-                modifier = GlanceModifier.fillMaxSize()
-                    .padding(horizontal = horizontalPadding, vertical = verticalPadding)
-            ) {
-                content()
-            }
+            content()
         }
     }
 }

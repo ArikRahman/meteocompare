@@ -57,7 +57,7 @@ internal object WidgetHeatmapTrendForecastRenderer {
         val precipTop = tempBottom + rowGap
         val precipBottom = precipTop + precipBandHeight
         val axisY = precipBottom + axisGap
-        val slotInset = (columnWidth * 0.08f).coerceAtLeast(1f)
+        val slotInset = (columnWidth * 0.03f).coerceAtLeast(0.6f)
         val anchors = WidgetHeatmapForecastRenderer.anchorIndices(profile)
 
         val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -113,18 +113,16 @@ internal object WidgetHeatmapTrendForecastRenderer {
                 tempTop,
                 left,
                 tempBottom,
-                withAlpha(tempColor, if (isCurrent) 0xF2 else 0xE4),
-                withAlpha(tempColor, if (isCurrent) 0xC8 else 0xB0),
+                withAlpha(tempColor, if (isCurrent) 0x5A else 0x44),
+                withAlpha(tempColor, if (isCurrent) 0x20 else 0x14),
                 Shader.TileMode.CLAMP
             )
             panelPaint.shader = gradient
-            canvas.drawRoundRect(tempRect, 11f, 11f, panelPaint)
+            canvas.drawRect(tempRect, panelPaint)
             panelPaint.shader = null
             if (isCurrent) {
-                panelPaint.style = Paint.Style.STROKE
-                panelPaint.color = withAlpha(textColorArgb, 0x5E)
-                canvas.drawRoundRect(tempRect, 11f, 11f, panelPaint)
-                panelPaint.style = Paint.Style.FILL
+                panelPaint.color = withAlpha(textColorArgb, 0xA0)
+                canvas.drawRect(left, tempTop, right, tempTop + 2f, panelPaint)
             }
 
             val tempY = temp?.let {
@@ -149,12 +147,7 @@ internal object WidgetHeatmapTrendForecastRenderer {
                     bandHeight = tempBandHeight,
                     profile = profile
                 )
-                val contentColor = if (temp == null) {
-                    withAlpha(textColorArgb, 0xD8)
-                } else {
-                    WidgetMiniForecastRenderer.heatmapContentColorArgb(tempColor)
-                }
-                valuePaint.color = contentColor
+                valuePaint.color = withAlpha(textColorArgb, 0xEC)
                 canvas.drawText(
                     temp?.let { units.temp(it) } ?: "—",
                     centerX,
@@ -171,24 +164,21 @@ internal object WidgetHeatmapTrendForecastRenderer {
                 amountMm = precipAmountsMm.getOrNull(index)
             )
             val precipRect = RectF(left, precipTop + 2f, right, precipBottom - 2f)
+            val rainAlpha = (precipColor ushr 24) and 0xFF
             val precipGradient = LinearGradient(
                 left,
                 precipTop,
                 right,
                 precipBottom,
-                withAlpha(precipColor, 0xD0),
-                withAlpha(precipColor, 0xF2),
+                withAlpha(precipColor, (rainAlpha * 0.38f).toInt().coerceIn(16, 84)),
+                withAlpha(precipColor, (rainAlpha * 0.70f).toInt().coerceIn(28, 132)),
                 Shader.TileMode.CLAMP
             )
             panelPaint.shader = precipGradient
-            canvas.drawRoundRect(precipRect, 8f, 8f, panelPaint)
+            canvas.drawRect(precipRect, panelPaint)
             panelPaint.shader = null
             if (index in anchors) {
-                valuePaint.color = if (((precipColor ushr 24) and 0xFF) >= 0x72) {
-                    WidgetMiniForecastRenderer.heatmapContentColorArgb(precipColorArgb)
-                } else {
-                    withAlpha(textColorArgb, 0xD8)
-                }
+                valuePaint.color = withAlpha(textColorArgb, 0xDF)
                 canvas.drawText(
                     precipProb?.let { "$it%" } ?: "—",
                     centerX,
@@ -214,7 +204,7 @@ internal object WidgetHeatmapTrendForecastRenderer {
                 MiniForecastSizeProfile.MEDIUM_3X2 -> 4.8f
                 MiniForecastSizeProfile.EXPANDED_4X2 -> 5.6f
             }
-            color = withAlpha(0xFFFFFFFF.toInt(), 0x40)
+            color = withAlpha(textColorArgb, 0x20)
         }
         val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
@@ -225,7 +215,7 @@ internal object WidgetHeatmapTrendForecastRenderer {
                 MiniForecastSizeProfile.MEDIUM_3X2 -> 2.6f
                 MiniForecastSizeProfile.EXPANDED_4X2 -> 3.2f
             }
-            color = 0xFFFFFFFF.toInt()
+            color = withAlpha(textColorArgb, 0xEC)
         }
         val pointFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         val pointRingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -239,7 +229,7 @@ internal object WidgetHeatmapTrendForecastRenderer {
         }
         plotPoints.forEachIndexed { index, point ->
             val radius = if (index == 0) 5.4f else 4.0f
-            pointFillPaint.color = 0xFFFFFFFF.toInt()
+            pointFillPaint.color = withAlpha(textColorArgb, 0xEC)
             canvas.drawCircle(point.first, point.second, radius + 1.4f, pointRingPaint)
             canvas.drawCircle(point.first, point.second, radius, pointFillPaint)
         }

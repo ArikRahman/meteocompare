@@ -42,9 +42,10 @@ internal fun miniForecastChartHeightDp(
     widgetHeightDp: Float,
     headerHeightDp: Float,
     sectionGapDp: Float,
-    profile: MiniForecastSizeProfile
+    profile: MiniForecastSizeProfile,
+    rootVerticalPaddingDp: Float = forecastContainerVerticalPaddingDp(widgetHeightDp)
 ): Int {
-    val widgetPadding = forecastContainerVerticalPaddingDp(widgetHeightDp) * 2f
+    val widgetPadding = rootVerticalPaddingDp * 2f
     val chartContainerPadding = miniForecastContainerVerticalPaddingDp(profile) * 2f
     // Petite réserve pour absorber les arrondis dp→px de Glance/RemoteViews.
     // Elle est plus forte en 4×2+, là où le rognage a été observé.
@@ -121,7 +122,6 @@ internal object WidgetMiniForecastRenderer {
         val rowHeight = usableHeight / 2f
         val columnWidth = (widthPx - outerPadding * 2f) / COLUMNS_PER_ROW
         val cellGap = (columnWidth * metrics.cellGapFraction).coerceAtLeast(1f)
-        val cellRadius = min(columnWidth * 0.18f, rowHeight * 0.10f)
 
         val baseTimeTextSize = min(
             rowHeight * metrics.timeTextFraction,
@@ -164,7 +164,6 @@ internal object WidgetMiniForecastRenderer {
         canvas.drawLine(outerPadding, dividerY, widthPx - outerPadding, dividerY, dividerPaint)
 
         val rect = RectF()
-        val cellRect = RectF()
         for (index in 0 until CELL_COUNT) {
             val row = index / COLUMNS_PER_ROW
             val column = index % COLUMNS_PER_ROW
@@ -208,32 +207,23 @@ internal object WidgetMiniForecastRenderer {
                 precipPaint.textSize = basePrecipTextSize
             }
 
-            /*cellRect.set(left, top, right, bottom)
-            shapePaint.style = Paint.Style.FILL
-            shapePaint.color = withAlpha(textColorArgb, if (isUpcomingHour) 0x16 else 0x0C)*/
-            val currentCellRadius = min(cellRadius + horizontalExpansion * 0.35f, cellHeight * 0.12f)
-            canvas.drawRoundRect(cellRect, currentCellRadius, currentCellRadius, shapePaint)
-
-            // ─── Zone température : grande tuile colorée ─────────────────
+            // A lightweight tonal band, not a card inside the widget surface.
             val tempTop = top + cellHeight * 0.045f
             val tempBottom = top + cellHeight * 0.645f
             val temp = metricPlotValue(temps.getOrNull(index))
             val tempColor = temp?.let(::temperatureHeatmapArgb)
                 ?: withAlpha(textColorArgb, 0x18)
-            val tempTileColor = if (temp == null) tempColor else withAlpha(tempColor, 0xE8)
-
             rect.set(left, tempTop, right, tempBottom)
-            shapePaint.color = tempTileColor
-            canvas.drawRoundRect(rect, currentCellRadius, currentCellRadius, shapePaint)
+            shapePaint.color = withAlpha(tempColor, if (isUpcomingHour) 0x24 else 0x14)
+            canvas.drawRect(rect, shapePaint)
+            // Slim thermal indicator preserves the original color scale.
+            shapePaint.color = withAlpha(tempColor, 0xD8)
+            rect.set(left, tempTop, right, tempTop + 2.5f)
+            canvas.drawRoundRect(rect, 1.25f, 1.25f, shapePaint)
 
-            val tempContentColor = if (temp == null) {
-                withAlpha(textColorArgb, 0xB0)
-            } else {
-                heatmapContentColorArgb(tempColor)
-            }
             val label = timelineLabels.getOrNull(index) ?: "+${index}h"
-            timePaint.color = withAlpha(tempContentColor, 0xD8)
-            tempPaint.color = tempContentColor
+            timePaint.color = withAlpha(textColorArgb, if (isUpcomingHour) 0xE8 else 0xA8)
+            tempPaint.color = withAlpha(textColorArgb, 0xF2)
 
             val tempZoneHeight = tempBottom - tempTop
             canvas.drawText(
@@ -290,21 +280,14 @@ internal object WidgetMiniForecastRenderer {
                 amountMm = amountMm
             )
 
-            rect.set(left, precipTop, right, precipBottom)
+            // Precipitation appears as an inline value with a small intensity
+            // track. No rounded blue rectangle behind every percentage.
+            val progress = (probability?.toFloat()?.div(100f)
+                ?: (amountMm?.toFloat()?.div(4f) ?: 0f)).coerceIn(0f, 1f)
+            rect.set(left, precipBottom - 2.5f, left + (right - left) * progress, precipBottom)
             shapePaint.color = precipTileColor
-            canvas.drawRoundRect(
-                rect,
-                currentCellRadius * 0.72f,
-                currentCellRadius * 0.72f,
-                shapePaint
-            )
-
-            val precipAlpha = (precipTileColor ushr 24) and 0xFF
-            precipPaint.color = if (precipAlpha >= 0x78) {
-                heatmapContentColorArgb(precipColorArgb)
-            } else {
-                withAlpha(textColorArgb, 0xD8)
-            }
+            canvas.drawRoundRect(rect, 1.25f, 1.25f, shapePaint)
+            precipPaint.color = withAlpha(textColorArgb, 0xCF)
             val precipText = probability?.let { "$it%" } ?: "—"
             val precipFontMetrics = precipPaint.fontMetrics
             val precipBaseline = (precipTop + precipBottom) / 2f -

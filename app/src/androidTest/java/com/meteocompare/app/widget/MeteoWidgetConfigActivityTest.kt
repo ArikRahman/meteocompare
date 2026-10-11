@@ -286,6 +286,25 @@ class MeteoWidgetConfigActivityTest {
     }
 
     @Test
+    fun shape_and_spacing_are_independent_and_saved_per_widget() {
+        reopenSavedWidget()
+        composeRule.onNodeWithTag(TAG_WIDGET_CORNER_CUSTOM).performScrollTo().performClick()
+        composeRule.onNodeWithTag(TAG_WIDGET_CORNER_RADIUS).performScrollTo()
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(36f) }
+        composeRule.onNodeWithTag("${TAG_WIDGET_SPACING}NONE").performScrollTo().performClick()
+        assertEquals(savedConfiguration, WidgetConfiguration.fromPreferences(readPreferences(widgetId)))
+        composeRule.onNodeWithTag(TAG_WIDGET_SAVE).performScrollTo().performClick()
+        composeRule.waitUntil(timeoutMillis = 10_000) { scenario.state == Lifecycle.State.DESTROYED }
+        val updated = WidgetConfiguration.fromPreferences(readPreferences(widgetId))
+        assertEquals(WidgetCornerStyle.CUSTOM, updated.cornerStyle)
+        assertEquals(36, updated.cornerRadiusDp)
+        assertEquals(WidgetContentSpacing.NONE, updated.contentSpacing)
+        launchConfiguration(widgetId)
+        composeRule.onNodeWithTag(TAG_WIDGET_CORNER_CUSTOM).performScrollTo().assertIsSelected()
+        composeRule.onNodeWithTag("${TAG_WIDGET_SPACING}NONE").performScrollTo().assertIsSelected()
+    }
+
+    @Test
     fun cancel_keeps_previously_saved_configuration() {
         reopenSavedWidget()
         composeRule.onNodeWithTag("$TAG_WIDGET_CITY${TestFixtures.paris.id}").performClick()
@@ -338,7 +357,8 @@ class MeteoWidgetConfigActivityTest {
         // tolerance while still checking the slider contract itself.
         assertEquals(value, rangeInfo.current, 0.01f)
         assertEquals(0f..100f, rangeInfo.range)
-        assertEquals(19, rangeInfo.steps)
+        // 99 intermediate ticks allow choosing every integer value (0..100).
+        assertEquals(99, rangeInfo.steps)
     }
 
     private fun readPreferences(id: Int): Preferences = runBlocking {

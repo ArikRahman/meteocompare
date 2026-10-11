@@ -202,9 +202,10 @@ internal fun shouldShowForecastPanelHeader(
 internal fun forecastBottomStripAvailableHeightDp(
     widgetHeightDp: Float,
     headerHeightDp: Float,
-    sectionGapDp: Float
+    sectionGapDp: Float,
+    rootVerticalPaddingDp: Float = forecastContainerVerticalPaddingDp(widgetHeightDp)
 ): Float {
-    val rootPadding = forecastContainerVerticalPaddingDp(widgetHeightDp) * 2f
+    val rootPadding = rootVerticalPaddingDp * 2f
     val hostRoundingSafety = when {
         widgetHeightDp < 150f -> 3f
         widgetHeightDp < 190f -> 4f
@@ -222,11 +223,13 @@ internal fun forecastBottomStripAvailableHeightDp(
 internal fun forecastBottomCardHeightProfile(
     widgetHeightDp: Float,
     headerHeightDp: Float,
-    sectionGapDp: Float
+    sectionGapDp: Float,
+    rootVerticalPaddingDp: Float = forecastContainerVerticalPaddingDp(widgetHeightDp)
 ): ForecastCardHeightProfile = forecastCardHeightProfile(
     forecastBottomStripAvailableHeightDp(
         widgetHeightDp = widgetHeightDp,
         headerHeightDp = headerHeightDp,
-        sectionGapDp = sectionGapDp
+        sectionGapDp = sectionGapDp,
+        rootVerticalPaddingDp = rootVerticalPaddingDp
     )
 )

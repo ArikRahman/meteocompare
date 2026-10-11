@@ -104,7 +104,7 @@ internal object WidgetHeatmapForecastRenderer {
         val maxTemp = tempValues.maxOrNull() ?: 1.0
         val padded = paddedTemperatureRange(minTemp, maxTemp)
         val anchorIndices = anchorIndices(profile)
-        val slotInset = (columnWidth * 0.07f).coerceAtLeast(1f)
+        val slotInset = (columnWidth * 0.018f).coerceAtLeast(0.4f)
         val plotPoints = mutableListOf<Pair<Float, Float>>()
         val curveTopRatio = temperatureCurveTopRatio(profile)
         val temperatureLabelBaseline = tempBottom - tempBandHeight * temperatureLabelBottomInsetRatio(profile)
@@ -121,20 +121,19 @@ internal object WidgetHeatmapForecastRenderer {
             val right = outerPadding + (index + 1) * columnWidth - slotInset
             val centerX = (left + right) / 2f
             val isCurrent = index == 0
-            val columnRect = RectF(left, tempTop + 4f, right, tempBottom - 4f)
+            val columnRect = RectF(left, tempTop + 2f, right, tempBottom - 2f)
             val temp = metricPlotValue(temps.getOrNull(index))
             val tempColor = temp
                 ?.let(WidgetMiniForecastRenderer::temperatureHeatmapArgb)
                 ?: withAlpha(textColorArgb, 0x14)
-            val tileColor = if (temp == null) tempColor else withAlpha(tempColor, if (isCurrent) 0xEC else 0xD8)
+            val tileColor = if (temp == null) tempColor else withAlpha(tempColor, if (isCurrent) 0x76 else 0x56)
             panelPaint.color = tileColor
-            canvas.drawRoundRect(columnRect, 10f, 10f, panelPaint)
+            canvas.drawRect(columnRect, panelPaint)
 
             if (isCurrent) {
-                panelPaint.style = Paint.Style.STROKE
-                panelPaint.color = withAlpha(textColorArgb, 0x5E)
-                canvas.drawRoundRect(columnRect, 10f, 10f, panelPaint)
-                panelPaint.style = Paint.Style.FILL
+                // A tiny accent line marks the current hour without a frame.
+                panelPaint.color = withAlpha(textColorArgb, 0xA0)
+                canvas.drawRect(left, tempTop, right, tempTop + 2f, panelPaint)
             }
 
             val tempY = temp?.let {
@@ -152,8 +151,7 @@ internal object WidgetHeatmapForecastRenderer {
             plotPoints += centerX to tempY
 
             if (index in anchorIndices) {
-                val contentColor = if (temp == null) withAlpha(textColorArgb, 0xD8)
-                else WidgetMiniForecastRenderer.heatmapContentColorArgb(tempColor)
+                val contentColor = withAlpha(textColorArgb, 0xEC)
                 drawConditionBadge(
                     canvas = canvas,
                     condition = conditions.getOrNull(index),
@@ -182,15 +180,11 @@ internal object WidgetHeatmapForecastRenderer {
                 amountMm = amount
             )
             cardRect.set(left, precipTop + 2f, right, precipBottom - 2f)
-            panelPaint.color = precipColor
-            canvas.drawRoundRect(cardRect, 8f, 8f, panelPaint)
+            val rainAlpha = (precipColor ushr 24) and 0xFF
+            panelPaint.color = withAlpha(precipColor, (rainAlpha * 0.65f).toInt().coerceIn(18, 120))
+            canvas.drawRect(cardRect, panelPaint)
             if (index in anchorIndices) {
-                val alpha = (precipColor ushr 24) and 0xFF
-                valuePaint.color = if (alpha >= 0x72) {
-                    WidgetMiniForecastRenderer.heatmapContentColorArgb(precipColorArgb)
-                } else {
-                    withAlpha(textColorArgb, 0xD8)
-                }
+                valuePaint.color = withAlpha(textColorArgb, 0xE0)
                 val probText = precipProb?.let { "$it%" } ?: "—"
                 val baseline = precipTop + precipBandHeight * 0.62f
                 canvas.drawText(probText, centerX, baseline, valuePaint)
@@ -211,8 +205,7 @@ internal object WidgetHeatmapForecastRenderer {
         plotPoints.forEachIndexed { index, point ->
             val temp = metricPlotValue(temps.getOrNull(index))
             pointPaint.color = if (temp != null) {
-                val base = WidgetMiniForecastRenderer.temperatureHeatmapArgb(temp)
-                WidgetMiniForecastRenderer.heatmapContentColorArgb(base)
+                withAlpha(textColorArgb, 0xE8)
             } else {
                 withAlpha(textColorArgb, 0x80)
             }

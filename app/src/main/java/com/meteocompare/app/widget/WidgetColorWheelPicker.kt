@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,7 +29,6 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -113,22 +111,54 @@ internal fun WidgetCustomColorButton(color: Int?, labelRes: Int, tag: String, on
     }
 }
 
-/** Accessible via boutons radio. Le choix n'altère aucun paramètre de refresh. */
+/** Selectable shape chips with tangible samples; selection semantics support TalkBack. */
 @Composable
-internal fun RowScope.WidgetCornerOption(
+internal fun WidgetCornerOption(
+    label: String,
+    selected: Boolean,
+    radiusDp: Int,
+    tag: String,
+    onClick: () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .border(1.dp, if (selected) colors.primary else colors.outlineVariant,
+                RoundedCornerShape(14.dp))
+            .background(if (selected) colors.primaryContainer else colors.surfaceContainerLow,
+                RoundedCornerShape(14.dp))
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .testTag(tag)
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(width = 29.dp, height = 25.dp)
+                .background(colors.primary, RoundedCornerShape(radiusDp.dp))
+        )
+        Spacer(Modifier.width(7.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = colors.onSurface)
+    }
+}
+
+@Composable
+internal fun WidgetSpacingOption(
     label: String,
     selected: Boolean,
     tag: String,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.weight(1f).selectable(selected = selected, role = Role.RadioButton,
-            onClick = onClick).testTag(tag)
-            .padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
+    val colors = MaterialTheme.colorScheme
+    Box(
+        modifier = Modifier
+            .border(1.dp, if (selected) colors.primary else colors.outlineVariant,
+                RoundedCornerShape(24.dp))
+            .background(if (selected) colors.primaryContainer else colors.surfaceContainerLow,
+                RoundedCornerShape(24.dp))
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .testTag(tag)
+            .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
-        RadioButton(selected = selected, onClick = null)
-        Spacer(Modifier.width(4.dp))
         Text(label, style = MaterialTheme.typography.bodyMedium)
     }
 }

@@ -112,4 +112,21 @@ class WidgetForecastCardLayoutTest {
         assertEquals(18f, forecastPanelHeaderHeightDp(showHeader = true, compact = false))
     }
 
+    @Test
+    fun `pill root padding reduces card and bitmap budgets`() {
+        val defaultHeight = forecastBottomStripAvailableHeightDp(160f, 54f, 7f)
+        val capsuleHeight = forecastBottomStripAvailableHeightDp(
+            160f, 54f, 7f, rootVerticalPaddingDp = 14f
+        )
+        assertTrue(capsuleHeight < defaultHeight)
+        val chartDefault = miniForecastChartHeightDp(
+            160f, 46f, 6f, MiniForecastSizeProfile.COMPACT_2X2
+        )
+        val chartPill = miniForecastChartHeightDp(
+            160f, 46f, 6f, MiniForecastSizeProfile.COMPACT_2X2,
+            rootVerticalPaddingDp = 14f
+        )
+        assertTrue(chartPill < chartDefault)
+        assertTrue(chartPill > 0)
+    }
 }

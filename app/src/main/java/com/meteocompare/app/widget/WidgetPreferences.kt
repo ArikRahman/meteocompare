@@ -84,6 +84,12 @@ internal object WidgetPreferences {
 
     /** Forme externe : clé facultative pour conserver l'arrondi des widgets existants. */
     val CornerStyleKey = stringPreferencesKey("widget_corner_style")
+    /** Rayon libre en dp, utilisé uniquement en mode CUSTOM. */
+    val CornerRadiusDpKey = intPreferencesKey("widget_corner_radius_dp")
+    /** Espacement ENTRE le bord coloré et le contenu, jamais une marge extérieure. */
+    val ContentSpacingKey = stringPreferencesKey("widget_content_spacing")
+    const val DEFAULT_CORNER_RADIUS_DP = 24
+    const val MAX_CORNER_RADIUS_DP = 64
 
     const val DEFAULT_OPACITY_PCT = 100
 
@@ -97,10 +103,22 @@ internal object WidgetPreferences {
 }
 
 /** Le défaut ROUNDED conserve le comportement historique de tous les widgets installés. */
-internal enum class WidgetCornerStyle { ROUNDED, SQUARE;
+/** ROUNDED et SQUARE restent stables pour les widgets déjà installés. */
+internal enum class WidgetCornerStyle {
+    ROUNDED, SQUARE, SOFT, PILL, CUSTOM;
+
     companion object {
         fun fromStored(value: String?): WidgetCornerStyle =
             entries.firstOrNull { it.name == value } ?: ROUNDED
+    }
+}
+
+internal enum class WidgetContentSpacing {
+    NORMAL, COMPACT, NONE;
+
+    companion object {
+        fun fromStored(value: String?): WidgetContentSpacing =
+            entries.firstOrNull { it.name == value } ?: NORMAL
     }
 }
 

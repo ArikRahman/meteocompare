@@ -67,6 +67,28 @@ class WidgetContractTests(unittest.TestCase):
         self.assertIn('LocalSoftwareKeyboardController.current', helper)
         self.assertIn('onFocusChanged', helper)
 
+    def test_widget_surface_is_edge_to_edge_and_shared_by_both_types(self):
+        surface = (WIDGET_DIR / 'WidgetContainerCorners.kt').read_text()
+        self.assertNotIn('squarePanelInsetsDp', surface)
+        self.assertNotIn('widgetPanelGeometryDp', surface)
+        self.assertIn('.fillMaxSize()', surface)
+        self.assertIn('.appWidgetBackground()', surface)
+        for widget in ('MeteoWidget.kt', 'MeteoValueWidgets.kt'):
+            source = (WIDGET_DIR / widget).read_text()
+            self.assertIn('WidgetSurface(', source)
+            self.assertIn('customCornerRadiusDp = customCornerRadiusDp', source)
+            self.assertIn('contentSpacing = contentSpacing', source)
+            self.assertNotIn('widgetPanelSize()', source)
+
+    def test_all_shape_and_spacing_labels_translated(self):
+        labels = ('widget_corner_soft', 'widget_corner_pill', 'widget_corner_custom',
+                  'widget_corner_radius', 'widget_config_spacing',
+                  'widget_spacing_normal', 'widget_spacing_compact', 'widget_spacing_none')
+        for locale in ('values','values-en','values-de','values-es','values-it'):
+            strings = ET.parse(RES_DIR / locale / 'strings_widget.xml').getroot()
+            values = {el.get('name') for el in strings.findall('string')}
+            self.assertTrue(set(labels).issubset(values), locale)
+
     def test_picker_labels_localized(self):
         for locale in ('values','values-en','values-de','values-es','values-it'):
             strings = ET.parse(RES_DIR / locale / 'strings_widget.xml').getroot()

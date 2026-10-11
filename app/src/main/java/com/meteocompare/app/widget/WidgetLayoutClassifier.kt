@@ -45,3 +45,27 @@ internal fun classifyWidgetLayout(widthDp: Float, heightDp: Float): WidgetLayout
  */
 internal fun extendedForecastItemCount(widthDp: Float): Int =
     if (widthDp >= MEDIUM_MAX_WIDTH_DP) 5 else 4
+
+/**
+ * A pill keeps its full colored surface, but its usable rectangle is smaller.
+ * Prefer a simpler weather summary over shrinking/cropping five columns or a
+ * 12-hour chart into the round ends of a narrow widget.
+ */
+internal fun classifyWidgetLayoutForShape(
+    widthDp: Float,
+    heightDp: Float,
+    style: WidgetCornerStyle,
+    horizontalInsetDp: Float,
+    verticalInsetDp: Float
+): WidgetLayoutKind {
+    val standard = classifyWidgetLayout(widthDp, heightDp)
+    if (style != WidgetCornerStyle.PILL) return standard
+    val usableWidth = (widthDp - horizontalInsetDp * 2f).coerceAtLeast(0f)
+    val usableHeight = (heightDp - verticalInsetDp * 2f).coerceAtLeast(0f)
+    return when {
+        usableWidth < 118f || usableHeight < 45f -> WidgetLayoutKind.TINY
+        heightDp >= EXTRA_LARGE_MIN_HEIGHT_DP && usableWidth < 240f -> WidgetLayoutKind.COMPACT_TALL
+        heightDp < EXTRA_LARGE_MIN_HEIGHT_DP && usableWidth < 185f -> WidgetLayoutKind.SMALL
+        else -> standard
+    }
+}

@@ -55,7 +55,15 @@
     <string name="widget_config_corner_style">Esquinas del widget</string>
     <string name="widget_corner_rounded">Redondeadas</string>
     <string name="widget_corner_square">Cuadradas</string>
-    <string name="widget_corner_launcher_note">El modo cuadrado solicita un fondo con esquinas rectas. El lanzador puede imponer su propia forma.</string>
+    <string name="widget_corner_soft">Suave</string>
+    <string name="widget_corner_pill">Píldora</string>
+    <string name="widget_corner_custom">Personalizado</string>
+    <string name="widget_corner_radius">Radio: %1$d dp</string>
+    <string name="widget_config_spacing">Espacio interior</string>
+    <string name="widget_spacing_normal">Normal</string>
+    <string name="widget_spacing_compact">Compacto</string>
+    <string name="widget_spacing_none">Ninguno</string>
+    <string name="widget_corner_launcher_note">El fondo ocupa todo el widget, sin margen exterior. El lanzador puede seguir recortando o redondeando las esquinas.</string>
     <string name="widget_color_wheel_title">Elegir un color</string>
     <string name="widget_color_wheel_hint">Tono y saturación</string>
     <string name="widget_color_brightness">Brillo</string>

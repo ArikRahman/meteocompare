@@ -104,6 +104,37 @@ class WidgetConfigurationTest {
         assertEquals(123456789L, prefs[WidgetPreferences.RefreshTickKey])
     }
 
+    @Test fun custom_shape_and_zero_spacing_survive_reconfiguration() {
+        val config = WidgetConfiguration(
+            cityId = paris.id,
+            cornerStyle = WidgetCornerStyle.CUSTOM,
+            cornerRadiusDp = 37,
+            contentSpacing = WidgetContentSpacing.NONE
+        )
+        val prefs = preferencesOf(
+            WidgetPreferences.RefreshTickKey to 19L,
+            WidgetPreferences.LastDispatchAtKey to 20L
+        ).toMutablePreferences()
+        config.writeTo(prefs)
+        assertEquals(config, WidgetConfiguration.fromPreferences(prefs))
+        assertEquals(19L, prefs[WidgetPreferences.RefreshTickKey])
+        assertEquals(20L, prefs[WidgetPreferences.LastDispatchAtKey])
+    }
+
+    @Test fun invalid_persisted_shape_settings_use_safe_defaults() {
+        val corrupted = WidgetConfiguration.fromPreferences(preferencesOf(
+            WidgetPreferences.CornerStyleKey to "UNKNOWN",
+            WidgetPreferences.CornerRadiusDpKey to 300,
+            WidgetPreferences.ContentSpacingKey to "UNKNOWN"
+        ))
+        assertEquals(WidgetCornerStyle.ROUNDED, corrupted.cornerStyle)
+        assertEquals(WidgetPreferences.MAX_CORNER_RADIUS_DP, corrupted.cornerRadiusDp)
+        assertEquals(WidgetContentSpacing.NORMAL, corrupted.contentSpacing)
+        assertEquals(0, WidgetConfiguration.fromPreferences(preferencesOf(
+            WidgetPreferences.CornerRadiusDpKey to -999
+        )).cornerRadiusDp)
+    }
+
     @Test fun legacy_and_unknown_corner_values_default_to_rounded() {
         assertEquals(WidgetCornerStyle.ROUNDED,
             WidgetConfiguration.fromPreferences(emptyPreferences()).cornerStyle)

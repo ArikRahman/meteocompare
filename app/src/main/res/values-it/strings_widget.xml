@@ -55,7 +55,15 @@
     <string name="widget_config_corner_style">Angoli del widget</string>
     <string name="widget_corner_rounded">Arrotondati</string>
     <string name="widget_corner_square">Quadrati</string>
-    <string name="widget_corner_launcher_note">La modalità quadrata richiede uno sfondo con angoli retti. Il launcher può comunque imporre la propria forma degli angoli.</string>
+    <string name="widget_corner_soft">Morbidi</string>
+    <string name="widget_corner_pill">Pillola</string>
+    <string name="widget_corner_custom">Personalizzato</string>
+    <string name="widget_corner_radius">Raggio: %1$d dp</string>
+    <string name="widget_config_spacing">Spaziatura interna</string>
+    <string name="widget_spacing_normal">Normale</string>
+    <string name="widget_spacing_compact">Compatta</string>
+    <string name="widget_spacing_none">Nessuna</string>
+    <string name="widget_corner_launcher_note">Lo sfondo riempie il widget senza margini esterni. Il launcher può comunque ritagliare o arrotondare gli angoli.</string>
     <string name="widget_color_wheel_title">Scegli un colore</string>
     <string name="widget_color_wheel_hint">Tonalità e saturazione</string>
     <string name="widget_color_brightness">Luminosità</string>

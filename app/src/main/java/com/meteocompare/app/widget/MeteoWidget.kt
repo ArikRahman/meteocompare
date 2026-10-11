@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -57,7 +56,6 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.meteocompare.app.R
-import com.meteocompare.app.BuildConfig
 import com.meteocompare.app.core.locale.applyPersistedLocale
 import com.meteocompare.app.core.locale.weatherConditionLabelRes
 import com.meteocompare.app.core.network.OPEN_METEO_LICENSE_URL
@@ -78,11 +76,9 @@ private val LargePadding = WidgetPadding(18.dp, 12.dp)
 private val CompactTallPadding = WidgetPadding(12.dp, 12.dp)
 private val ExtraLargePadding = WidgetPadding(16.dp, 12.dp)
 
-// Espace explicite entre deux cartes de prévision. Un vrai Spacer est plus
-// fiable qu'un padding porté par un enfant pondéré : selon le launcher et la
-// traduction RemoteViews de Glance, ce padding pouvait être absorbé dans la
-// largeur de la surface et les fonds arrondis semblaient encore se toucher.
-private val ForecastCardSpacing = 8.dp
+// Espacement entre les prévisions intégrées à un bandeau horizontal.
+// Les modes à cinq échéances utilisent plutôt des colonnes et séparateurs.
+private val ForecastColumnSpacing = 5.dp
 
 /**
  * Thème résolu (dark/light) — passé via [CompositionLocal] pour éviter que
@@ -169,17 +165,9 @@ internal class MeteoWidget : GlanceAppWidget() {
             val customBgArgb = prefs[WidgetPreferences.BackgroundColorKey]
             val customTextArgb = prefs[WidgetPreferences.TextColorKey]
             val cornerStyle = WidgetCornerStyle.fromStored(prefs[WidgetPreferences.CornerStyleKey])
-            // Diagnostic ponctuel pour confirmer que la vraie surface Glance
-            // relit la forme sauvegardée, et pas seulement l'aperçu Compose.
-            LaunchedEffect(cornerStyle) {
-                if (BuildConfig.DEBUG) {
-                    Log.d("MeteoCompare/WidgetShape", "widget=$id style=${cornerStyle.name} " +
-                        "render=${if (cornerStyle == WidgetCornerStyle.SQUARE) "INSET_RECTANGLE" else "ROUNDED"} " +
-                        "launcherClip=unverified")
-                }
-            }
-
-
+            val customCornerRadiusDp = (prefs[WidgetPreferences.CornerRadiusDpKey]
+                ?: WidgetPreferences.DEFAULT_CORNER_RADIUS_DP).coerceIn(0, WidgetPreferences.MAX_CORNER_RADIUS_DP)
+            val contentSpacing = WidgetContentSpacing.fromStored(prefs[WidgetPreferences.ContentSpacingKey])
             // Chargement des données asynchrone. `remember` persiste la
             // dernière donnée bonne à travers les recompositions ; LaunchedEffect
             // re-fetch quand cityId/forecastMode/refreshTick change.
@@ -211,7 +199,9 @@ internal class MeteoWidget : GlanceAppWidget() {
                         opacityPct = opacityPct,
                         customBgArgb = customBgArgb,
                         customTextArgb = customTextArgb,
-                        cornerStyle = cornerStyle
+                        cornerStyle = cornerStyle,
+                        customCornerRadiusDp = customCornerRadiusDp,
+                        contentSpacing = contentSpacing
                     )
                 }
             }
@@ -229,7 +219,9 @@ private fun WidgetContent(
     opacityPct: Int,
     customBgArgb: Int?,
     customTextArgb: Int?,
-    cornerStyle: WidgetCornerStyle
+    cornerStyle: WidgetCornerStyle,
+    customCornerRadiusDp: Int,
+    contentSpacing: WidgetContentSpacing
 ) {
     // Material 3 / Material Expressive : le mode Auto s'appuie directement
     // sur les rôles de couleur Glance. Sur Android 12+, ils suivent la palette
@@ -288,15 +280,14 @@ private fun WidgetContent(
     }
 
     val size = LocalSize.current
-    // Le layout est choisi d'après le panneau réellement visible, pas le host.
-    val panel = widgetPanelGeometryDp(size.width.value, size.height.value, cornerStyle)
-    val widthDp = panel.widthDp
-    val heightDp = panel.heightDp
-    val layoutKind = classifyWidgetLayout(widthDp, heightDp)
-    val padding = when (layoutKind) {
+    // La surface colorée occupe tout l'espace réellement alloué par le launcher.
+    val widthDp = size.width.value
+    val heightDp = size.height.value
+    val launcherLayoutKind = classifyWidgetLayout(widthDp, heightDp)
+    val padding = when (launcherLayoutKind) {
         WidgetLayoutKind.TINY -> WidgetPadding(
             horizontal = TinyPadding.horizontal,
-            vertical = singleRowContainerVerticalPaddingDp(heightDp, layoutKind).dp
+            vertical = singleRowContainerVerticalPaddingDp(heightDp, launcherLayoutKind).dp
         )
         WidgetLayoutKind.COMPACT_TALL -> WidgetPadding(
             horizontal = CompactTallPadding.horizontal,
@@ -308,22 +299,35 @@ private fun WidgetContent(
         )
         WidgetLayoutKind.MEDIUM -> WidgetPadding(
             horizontal = MediumPadding.horizontal,
-            vertical = singleRowContainerVerticalPaddingDp(heightDp, layoutKind).dp
+            vertical = singleRowContainerVerticalPaddingDp(heightDp, launcherLayoutKind).dp
         )
         WidgetLayoutKind.LARGE,
         WidgetLayoutKind.WIDE -> WidgetPadding(
             horizontal = LargePadding.horizontal,
-            vertical = singleRowContainerVerticalPaddingDp(heightDp, layoutKind).dp
+            vertical = singleRowContainerVerticalPaddingDp(heightDp, launcherLayoutKind).dp
         )
         WidgetLayoutKind.SMALL -> WidgetPadding(
             horizontal = SmallPadding.horizontal,
-            vertical = singleRowContainerVerticalPaddingDp(heightDp, layoutKind).dp
+            vertical = singleRowContainerVerticalPaddingDp(heightDp, launcherLayoutKind).dp
         )
     }
+
+    val (requestedHorizontal, requestedVertical) = widgetContentPadding(
+        padding.horizontal, padding.vertical, contentSpacing
+    )
+    val (rootHorizontalInsetDp, rootVerticalInsetDp) = widgetShapeSafeContentPaddingDp(
+        cornerStyle, widthDp, heightDp, requestedHorizontal.value, requestedVertical.value
+    )
+
+    val layoutKind = classifyWidgetLayoutForShape(
+        widthDp, heightDp, cornerStyle, rootHorizontalInsetDp, rootVerticalInsetDp
+    )
 
     WidgetSurface(
         background = container,
         cornerStyle = cornerStyle,
+        customCornerRadiusDp = customCornerRadiusDp,
+        contentSpacing = contentSpacing,
         horizontalPadding = padding.horizontal,
         verticalPadding = padding.vertical
     ) {
@@ -345,8 +349,12 @@ private fun WidgetContent(
                             softSurface = softSurface,
                             raisedSurface = raisedSurface,
                             onContainerArgb = baseOnContainerColor.toArgb(),
-                            showFiveItems = extendedForecastItemCount(widthDp) == 5,
-                            showExtras = widthDp >= MEDIUM_MAX_WIDTH_DP
+                            rootHorizontalInsetDp = rootHorizontalInsetDp,
+                            rootVerticalInsetDp = rootVerticalInsetDp,
+                            showFiveItems = extendedForecastItemCount(
+                                widthDp - 2f * rootHorizontalInsetDp
+                            ) == 5,
+                            showExtras = widthDp - 2f * rootHorizontalInsetDp >= MEDIUM_MAX_WIDTH_DP
                         )
                         WidgetLayoutKind.COMPACT_TALL -> CompactTallLayout(
                             data = data,
@@ -354,26 +362,26 @@ private fun WidgetContent(
                             onContainerMuted = onContainerMuted,
                             softSurface = softSurface,
                             raisedSurface = raisedSurface,
-                            onContainerArgb = baseOnContainerColor.toArgb()
+                            onContainerArgb = baseOnContainerColor.toArgb(),
+                            rootHorizontalInsetDp = rootHorizontalInsetDp,
+                            rootVerticalInsetDp = rootVerticalInsetDp
                         )
                         WidgetLayoutKind.WIDE -> LargeLayout(
                             data = data,
                             onContainer = onContainer,
                             onContainerMuted = onContainerMuted,
-                            softSurface = softSurface,
-                            raisedSurface = raisedSurface,
-                            inlineForecastItems = inlineForecastItemCount(widthDp)
+                            inlineForecastItems = inlineForecastItemCount(widthDp - 2f * rootHorizontalInsetDp)
                         )
                         WidgetLayoutKind.LARGE -> LargeLayout(
                             data = data,
                             onContainer = onContainer,
                             onContainerMuted = onContainerMuted,
-                            softSurface = softSurface,
-                            raisedSurface = raisedSurface,
                             inlineForecastItems = 0
                         )
                         WidgetLayoutKind.MEDIUM -> MediumLayout(data, onContainer, onContainerMuted)
-                        WidgetLayoutKind.SMALL -> SmallLayout(data, onContainer)
+                        WidgetLayoutKind.SMALL -> SmallLayout(
+                            data, onContainer, allowCity = widthDp - 2f * rootHorizontalInsetDp >= 142f
+                        )
                     }
                 }
             }
@@ -451,7 +459,7 @@ private fun WidgetOpenMeteoAttribution(
  */
 @Composable
 private fun TinyLayout(data: WidgetData, onContainer: ColorProvider, units: WeatherUnits = LocalWeatherUnits.current) {
-    val size = widgetPanelSize()
+    val size = LocalSize.current
     val micro = size.height.value < 52f || size.width.value < 52f
     val dense = size.height.value < 72f || size.width.value < 64f
     val glyphSize = when {
@@ -509,10 +517,15 @@ private fun TinyLayout(data: WidgetData, onContainer: ColorProvider, units: Weat
  * décoder le nombre.
  */
 @Composable
-private fun SmallLayout(data: WidgetData, onContainer: ColorProvider, units: WeatherUnits = LocalWeatherUnits.current) {
-    val size = widgetPanelSize()
+private fun SmallLayout(
+    data: WidgetData,
+    onContainer: ColorProvider,
+    allowCity: Boolean = true,
+    units: WeatherUnits = LocalWeatherUnits.current
+) {
+    val size = LocalSize.current
     val profile = singleRowWidgetHeightProfile(size.height.value)
-    val showCity = shouldShowCityInSmallWidget(size.width.value, size.height.value)
+    val showCity = allowCity && shouldShowCityInSmallWidget(size.width.value, size.height.value)
     val glyphSize = when (profile) {
         SingleRowWidgetHeightProfile.VERY_DENSE -> 26
         SingleRowWidgetHeightProfile.DENSE -> 30
@@ -588,7 +601,7 @@ private fun MediumLayout(
     onContainerMuted: ColorProvider,
     units: WeatherUnits = LocalWeatherUnits.current
 ) {
-    val profile = singleRowWidgetHeightProfile(widgetPanelSize().height.value)
+    val profile = singleRowWidgetHeightProfile(LocalSize.current.height.value)
     val glyphSize = when (profile) {
         SingleRowWidgetHeightProfile.VERY_DENSE -> 30
         SingleRowWidgetHeightProfile.DENSE -> 34
@@ -681,12 +694,10 @@ private fun LargeLayout(
     data: WidgetData,
     onContainer: ColorProvider,
     onContainerMuted: ColorProvider,
-    softSurface: ColorProvider,
-    raisedSurface: ColorProvider,
     inlineForecastItems: Int = 0,
     units: WeatherUnits = LocalWeatherUnits.current
 ) {
-    val size = widgetPanelSize()
+    val size = LocalSize.current
     val profile = singleRowWidgetHeightProfile(size.height.value)
     val glyphSize = when (profile) {
         SingleRowWidgetHeightProfile.VERY_DENSE -> 32
@@ -777,17 +788,15 @@ private fun LargeLayout(
             val leadingSpacing =
                 if (profile == SingleRowWidgetHeightProfile.VERY_DENSE) 5.dp else 8.dp
             val itemSpacing =
-                if (profile == SingleRowWidgetHeightProfile.REGULAR) ForecastCardSpacing else 5.dp
+                if (profile == SingleRowWidgetHeightProfile.REGULAR) ForecastColumnSpacing else 5.dp
             Spacer(GlanceModifier.width(leadingSpacing))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 data.forecasts.take(inlineForecastItems).forEachIndexed { index, item ->
                     if (index > 0) Spacer(GlanceModifier.width(itemSpacing))
-                    ForecastItemCard(
+                    ForecastTimelineItem(
                         item = item,
                         onContainer = onContainer,
                         onContainerMuted = onContainerMuted,
-                        softSurface = softSurface,
-                        raisedSurface = raisedSurface,
                         mode = data.forecastMode,
                         compact = true,
                         heightProfile = ForecastCardHeightProfile.DENSE,
@@ -824,9 +833,11 @@ private fun CompactTallLayout(
     softSurface: ColorProvider,
     raisedSurface: ColorProvider,
     onContainerArgb: Int,
+    rootHorizontalInsetDp: Float,
+    rootVerticalInsetDp: Float,
     units: WeatherUnits = LocalWeatherUnits.current
 ) {
-    val size = widgetPanelSize()
+    val size = LocalSize.current
     val narrow = size.width.value < 150f
     val headerBudgetDp = compactTallHeaderHeightBudgetDp(narrow)
     val sectionGapDp = 6f
@@ -837,7 +848,8 @@ private fun CompactTallLayout(
             showHeader = showPanelHeader,
             compact = true
         ),
-        sectionGapDp = sectionGapDp
+        sectionGapDp = sectionGapDp,
+        rootVerticalPaddingDp = rootVerticalInsetDp
     )
 
     Column(modifier = GlanceModifier.fillMaxSize()) {
@@ -907,22 +919,21 @@ private fun CompactTallLayout(
 
             data.next12hTemps.isNotEmpty() -> TwelveHourForecastStrip(
                 data = data,
-                softSurface = softSurface,
                 compact = true,
                 textColorArgb = onContainerArgb,
-                outerHorizontalPadding = CompactTallPadding.horizontal,
+                rootHorizontalInsetDp = rootHorizontalInsetDp,
+                rootVerticalInsetDp = rootVerticalInsetDp,
                 headerHeightBudgetDp = headerBudgetDp,
                 modifier = GlanceModifier.defaultWeight()
             )
 
-            data.forecasts.isNotEmpty() -> ForecastCardsPanel(
+            data.forecasts.isNotEmpty() -> ForecastTimelinePanel(
                 items = data.forecasts,
                 mode = data.forecastMode,
                 itemCount = 2,
                 onContainer = onContainer,
                 onContainerMuted = onContainerMuted,
                 softSurface = softSurface,
-                raisedSurface = raisedSurface,
                 compact = true,
                 veryCompact = narrow,
                 heightProfile = forecastCardProfile,
@@ -996,11 +1007,13 @@ private fun ExtraLargeLayout(
     // ARGB brut de la couleur de texte "onContainer", résolu au niveau widget
     // root en tenant compte du night mode + des overrides utilisateur.
     onContainerArgb: Int,
+    rootHorizontalInsetDp: Float,
+    rootVerticalInsetDp: Float,
     showFiveItems: Boolean = false,
     showExtras: Boolean = true,
     units: WeatherUnits = LocalWeatherUnits.current
 ) {
-    val size = widgetPanelSize()
+    val size = LocalSize.current
     val widthDp = size.width.value
     val heightDp = size.height.value
     val itemCount = if (showFiveItems) 5 else 4
@@ -1024,7 +1037,8 @@ private fun ExtraLargeLayout(
             showHeader = showPanelHeader,
             compact = compactHeight
         ),
-        sectionGapDp = sectionGapDp
+        sectionGapDp = sectionGapDp,
+        rootVerticalPaddingDp = rootVerticalInsetDp
     )
 
     Column(modifier = GlanceModifier.fillMaxSize()) {
@@ -1123,9 +1137,10 @@ private fun ExtraLargeLayout(
             )
             hasMiniForecast -> TwelveHourForecastStrip(
                 data = data,
-                softSurface = softSurface,
                 compact = compactHeight,
                 textColorArgb = onContainerArgb,
+                rootHorizontalInsetDp = rootHorizontalInsetDp,
+                rootVerticalInsetDp = rootVerticalInsetDp,
                 headerHeightBudgetDp = headerHeightBudgetDp,
                 modifier = GlanceModifier.defaultWeight()
             )
@@ -1138,14 +1153,13 @@ private fun ExtraLargeLayout(
                     style = TextStyle(color = onContainerMuted, fontSize = 12.sp)
                 )
             }
-            else -> ForecastCardsPanel(
+            else -> ForecastTimelinePanel(
                 items = data.forecasts,
                 mode = data.forecastMode,
                 itemCount = itemCount,
                 onContainer = onContainer,
                 onContainerMuted = onContainerMuted,
                 softSurface = softSurface,
-                raisedSurface = raisedSurface,
                 compact = compactHeight,
                 veryCompact = veryCompact,
                 heightProfile = forecastCardProfile,
@@ -1167,29 +1181,28 @@ private fun ExtraLargeLayout(
 @Composable
 private fun TwelveHourForecastStrip(
     data: WidgetData,
-    softSurface: ColorProvider,
     compact: Boolean,
     textColorArgb: Int,
-    outerHorizontalPadding: Dp = ExtraLargePadding.horizontal,
+    rootHorizontalInsetDp: Float,
+    rootVerticalInsetDp: Float,
     headerHeightBudgetDp: Float,
     modifier: GlanceModifier = GlanceModifier,
     units: WeatherUnits = LocalWeatherUnits.current
 ) {
     val context = LocalContext.current
-    val size = widgetPanelSize()
+    val size = LocalSize.current
     val density = context.resources.displayMetrics.density
     val renderDensity = density.coerceAtMost(2f)
-    val profile = miniForecastProfileForWidth(size.width.value)
+    val usableWidthDp = (size.width.value - 2f * rootHorizontalInsetDp).coerceAtLeast(1f)
+    val profile = miniForecastProfileForWidth(usableWidthDp)
+    // Only a small bitmap inset: the host widget is now the single surface.
     val chartHorizontalPaddingDp = when (profile) {
-        MiniForecastSizeProfile.COMPACT_2X2 -> 4f
-        MiniForecastSizeProfile.MEDIUM_3X2 -> 6f
-        MiniForecastSizeProfile.EXPANDED_4X2 -> 8f
+        MiniForecastSizeProfile.COMPACT_2X2 -> 2f
+        MiniForecastSizeProfile.MEDIUM_3X2 -> 3f
+        MiniForecastSizeProfile.EXPANDED_4X2 -> 4f
     }
-    val availableWidthDp = (
-        size.width.value -
-            outerHorizontalPadding.value * 2f -
-            chartHorizontalPaddingDp * 2f
-        ).coerceAtLeast(80f)
+    val availableWidthDp = (usableWidthDp - chartHorizontalPaddingDp * 2f)
+        .coerceAtLeast(1f)
     val widthPx = (availableWidthDp * renderDensity).toInt().coerceAtLeast(1)
     // La hauteur du bitmap suit désormais la hauteur exacte du widget. Le
     // calcul retire le bandeau courant et les paddings, puis laisse les deux
@@ -1198,7 +1211,8 @@ private fun TwelveHourForecastStrip(
         widgetHeightDp = size.height.value,
         headerHeightDp = headerHeightBudgetDp,
         sectionGapDp = if (compact) 6f else 10f,
-        profile = profile
+        profile = profile,
+        rootVerticalPaddingDp = rootVerticalInsetDp
     )
     val heightPx = (chartHeightDp * renderDensity).toInt().coerceAtLeast(1)
     val precipColorArgb = 0xFF1976D2.toInt()
@@ -1277,8 +1291,6 @@ private fun TwelveHourForecastStrip(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(softSurface)
-            .cornerRadius(if (compact) 16.dp else 20.dp)
             .padding(
                 horizontal = chartHorizontalPaddingDp.dp,
                 vertical = miniForecastContainerVerticalPaddingDp(profile).dp
@@ -1295,19 +1307,18 @@ private fun TwelveHourForecastStrip(
 
 /**
  * Panneau moderne commun aux vues « prochaines heures » et « prochains jours ».
- * L'en-tête donne immédiatement le contexte, tandis que les cartes utilisent
+ * L'en-tête donne immédiatement le contexte, tandis que les colonnes utilisent
  * un accent thermique ponctuel, une hiérarchie typographique plus nette et
  * des métriques secondaires volontairement légères.
  */
 @Composable
-private fun ForecastCardsPanel(
+private fun ForecastTimelinePanel(
     items: List<WidgetForecastItem>,
     mode: ForecastMode?,
     itemCount: Int,
     onContainer: ColorProvider,
     onContainerMuted: ColorProvider,
     softSurface: ColorProvider,
-    raisedSurface: ColorProvider,
     compact: Boolean,
     veryCompact: Boolean,
     heightProfile: ForecastCardHeightProfile,
@@ -1358,22 +1369,20 @@ private fun ForecastCardsPanel(
         Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
             visibleItems.forEachIndexed { index, item ->
                 if (index > 0) {
-                    Spacer(
-                        GlanceModifier.width(
-                            when {
-                                veryCompact -> 4.dp
-                                compact -> 6.dp
-                                else -> ForecastCardSpacing
-                            }
-                        )
-                    )
+                    Spacer(GlanceModifier.width(if (veryCompact) 2.dp else 4.dp))
+                    // Hairline divider instead of individual rounded tiles.
+                    Box(
+                        modifier = GlanceModifier.width(1.dp)
+                            .fillMaxHeight()
+                            .padding(vertical = if (veryCompact) 4.dp else 8.dp)
+                            .background(softSurface)
+                    ) {}
+                    Spacer(GlanceModifier.width(if (veryCompact) 2.dp else 4.dp))
                 }
-                ForecastItemCard(
+                ForecastTimelineItem(
                     item = item,
                     onContainer = onContainer,
                     onContainerMuted = onContainerMuted,
-                    softSurface = softSurface,
-                    raisedSurface = raisedSurface,
                     mode = normalizedMode,
                     compact = compact,
                     heightProfile = heightProfile,
@@ -1594,7 +1603,7 @@ private fun ErrorLayout(
     softSurface: ColorProvider
 ) {
     val ctx = LocalContext.current
-    val size = widgetPanelSize()
+    val size = LocalSize.current
     val widthDp = size.width.value
     val heightDp = size.height.value
     val message = when (error) {
@@ -1726,12 +1735,10 @@ private fun WeatherGlyph(
 }
 
 @Composable
-private fun ForecastItemCard(
+private fun ForecastTimelineItem(
     item: WidgetForecastItem,
     onContainer: ColorProvider,
     onContainerMuted: ColorProvider,
-    softSurface: ColorProvider,
-    raisedSurface: ColorProvider,
     mode: ForecastMode?,
     compact: Boolean,
     heightProfile: ForecastCardHeightProfile? = null,
@@ -1787,7 +1794,6 @@ private fun ForecastItemCard(
         ForecastCardHeightProfile.COMFORTABLE -> 8.sp
         ForecastCardHeightProfile.EXPANDED -> 8.sp
     }
-    val cardBackground = if (emphasized) raisedSurface else softSurface
     val accentColor = remember(item.temp, night) {
         ColorProvider(forecastTemperatureAccent(item.temp, night))
     }
@@ -1797,15 +1803,6 @@ private fun ForecastItemCard(
 
     Column(
         modifier = modifier
-            .background(cardBackground)
-            .cornerRadius(
-                when (profile) {
-                    ForecastCardHeightProfile.DENSE -> 12.dp
-                    ForecastCardHeightProfile.COMPACT -> 15.dp
-                    ForecastCardHeightProfile.COMFORTABLE -> 17.dp
-                    ForecastCardHeightProfile.EXPANDED -> 19.dp
-                }
-            )
             .padding(horizontal = horizontalPadding, vertical = verticalPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically

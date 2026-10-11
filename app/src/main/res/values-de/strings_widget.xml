@@ -54,7 +54,15 @@
     <string name="widget_config_corner_style">Widget-Ecken</string>
     <string name="widget_corner_rounded">Abgerundet</string>
     <string name="widget_corner_square">Eckig</string>
-    <string name="widget_corner_launcher_note">Der quadratische Modus fordert einen Hintergrund mit geraden Ecken an. Der Launcher kann trotzdem eine eigene Eckform vorgeben.</string>
+    <string name="widget_corner_soft">Sanft</string>
+    <string name="widget_corner_pill">Pille</string>
+    <string name="widget_corner_custom">Benutzerdefiniert</string>
+    <string name="widget_corner_radius">Radius: %1$d dp</string>
+    <string name="widget_config_spacing">Innenabstand</string>
+    <string name="widget_spacing_normal">Normal</string>
+    <string name="widget_spacing_compact">Kompakt</string>
+    <string name="widget_spacing_none">Keiner</string>
+    <string name="widget_corner_launcher_note">Der Hintergrund füllt das Widget ohne äußeren Abstand. Der Launcher kann die Ecken dennoch abrunden oder beschneiden.</string>
     <string name="widget_color_wheel_title">Farbe wählen</string>
     <string name="widget_color_wheel_hint">Farbton und Sättigung</string>
     <string name="widget_color_brightness">Helligkeit</string>
