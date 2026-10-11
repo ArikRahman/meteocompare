@@ -14,11 +14,13 @@ import com.meteocompare.app.domain.model.HourlyForecast
 import com.meteocompare.app.domain.model.MarineForecast
 import com.meteocompare.app.domain.model.NotificationSettings
 import com.meteocompare.app.domain.model.RefreshInterval
+import com.meteocompare.app.domain.model.UvForecast
 import com.meteocompare.app.domain.model.WeatherCondition
 import com.meteocompare.app.domain.model.WeatherModel
 import com.meteocompare.app.domain.repository.CityRepository
 import com.meteocompare.app.domain.repository.ForecastRepository
 import com.meteocompare.app.domain.repository.MarineRepository
+import com.meteocompare.app.domain.repository.UvIndexRepository
 import com.meteocompare.app.domain.repository.UserPreferencesRepository
 import com.meteocompare.app.domain.repository.VigilanceRepository
 import com.meteocompare.app.domain.usecase.ConfidenceCalculator
@@ -41,6 +43,7 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.ArrayDeque
 import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -110,6 +113,7 @@ class CityListViewModelTest {
     }
     private val forecastRepo: ForecastRepository = mockk(relaxed = true)
     private val marineRepo: MarineRepository = mockk(relaxed = true)
+    private val uvRepo: UvIndexRepository = mockk(relaxed = true)
     private val vigilanceRepo: VigilanceRepository = mockk(relaxed = true) {
         coEvery { getVigilance(any(), any(), any()) } returns ApiResult.Success(null)
     }
@@ -149,7 +153,8 @@ class CityListViewModelTest {
         userPreferences: UserPreferencesRepository = prefs,
         clock: Clock = testClock,
         computationDispatcher: CoroutineDispatcher = dispatcher,
-        engineContextProvider: ForecastEngineContextProvider = this.engineContextProvider
+        engineContextProvider: ForecastEngineContextProvider = this.engineContextProvider,
+        uvIndexRepository: UvIndexRepository = uvRepo
     ): CityListViewModel = CityListViewModel(
         appContext = appContext,
         cityRepository = cityRepository,
@@ -162,7 +167,7 @@ class CityListViewModelTest {
         clock = clock,
         computationDispatcher = computationDispatcher,
         engineContextProvider = engineContextProvider,
-        uvIndexRepository = mockk(relaxed = true)
+        uvIndexRepository = uvIndexRepository
     ).also(createdViewModels::add)
 
     /**
@@ -212,6 +217,47 @@ class CityListViewModelTest {
     fun tearDown() {
         unmockkObject(WeatherNotificationScheduler)
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `uv lookup follows coordinates rather than the favorite display name`() = runViewModelTest {
+        favoritesFlow.value = listOf(paris)
+        runCurrent()
+        coVerify(exactly = 1) { uvRepo.get(paris) }
+
+        // Rename: identical UV location, so don't perform a new lookup.
+        val renamed = paris.copy(name = "Paris Centre")
+        favoritesFlow.value = listOf(renamed)
+        runCurrent()
+        coVerify(exactly = 1) { uvRepo.get(any()) }
+
+        // Same ID, new coordinates: the old UV forecast must be invalidated.
+        val relocated = renamed.copy(latitude = 48.88)
+        favoritesFlow.value = listOf(relocated)
+        runCurrent()
+        coVerify(exactly = 1) { uvRepo.get(relocated) }
+        coVerify(exactly = 2) { uvRepo.get(any()) }
+    }
+
+    @Test
+    fun `pending uv from an old location cannot overwrite the new favorite`() = runViewModelTest {
+        val moved = paris.copy(latitude = 48.88)
+        val oldUv = UvForecast(mapOf(testNow to 2.0), emptyMap())
+        val newUv = UvForecast(mapOf(testNow to 7.0), emptyMap())
+        val oldRequest = CompletableDeferred<UvForecast?>()
+        coEvery { uvRepo.get(paris) } coAnswers { oldRequest.await() }
+        coEvery { uvRepo.get(moved) } returns newUv
+        backgroundScope.launch { viewModel.uiState.collect {} }
+
+        favoritesFlow.value = listOf(paris)
+        runCurrent()
+        favoritesFlow.value = listOf(moved)
+        runCurrent()
+        assertEquals(newUv, viewModel.uiState.value.items.single().uvForecast)
+
+        oldRequest.complete(oldUv)
+        runCurrent()
+        assertEquals(newUv, viewModel.uiState.value.items.single().uvForecast)
     }
 
     // ──────────────── uiState ────────────────

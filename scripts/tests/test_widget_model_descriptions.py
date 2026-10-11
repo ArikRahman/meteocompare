@@ -45,7 +45,7 @@ class ModelAndWidgetDescriptionsTest(unittest.TestCase):
             self.assertIn('%1$s', values['model_metadata_provider_resolution'])
 
     def test_widget_typography_has_consistent_heading_levels(self):
-        text = (ROOT / 'app/src/main/java/com/meteocompare/app/widget/MeteoWidgetConfigActivity.kt').read_text()
+        text = (ROOT / 'app/src/main/java/com/meteocompare/app/widget/MeteoWidgetConfigActivity.kt').read_text(encoding='utf-8')
         for key in ('widget_config_pick_city', 'widget_config_forecast_mode', 'widget_config_appearance'):
             self.assertRegex(text, rf'R.string.{key}\),\s*style = MaterialTheme.typography.titleLarge')
         for key in ('widget_config_corner_style', 'widget_config_spacing', 'widget_config_colors_section', 'widget_config_opacity', 'widget_config_preview_title'):

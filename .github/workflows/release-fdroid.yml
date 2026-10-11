@@ -95,7 +95,7 @@ jobs:
       # Ton app/build.gradle.kts produira donc app-release-unsigned.apk.
       # Cela évite que Gradle/AGP signe l’APK avec apksigner 36.
       # L’AAB sera signé ensuite avec jarsigner et le même keystore.
-      - name: Validate tests and lint, then build unsigned release APK/AAB
+      - name: Validate tests, Hilt instrumentation build and lint, then build release APK/AAB
         shell: bash
         run: |
           set -euo pipefail
@@ -116,6 +116,7 @@ jobs:
             clean \
             :app:testDebugUnitTest \
             :app:testReleaseUnitTest \
+            :app:assembleDebugAndroidTest \
             :app:lintDebug \
             :app:assembleRelease \
             :app:bundleRelease

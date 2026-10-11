@@ -1,0 +1,1 @@
+Indice UV sur l'accueil, le résumé du jour, les chronologies et les graphiques. Widgets redimensionnables : nouvelles formes, marges et présentation modernisée. Descriptions détaillées des modèles météo. Correctifs de stabilité et de configuration.

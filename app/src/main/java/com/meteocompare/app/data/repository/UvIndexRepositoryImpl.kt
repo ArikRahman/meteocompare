@@ -73,9 +73,15 @@ class UvIndexRepositoryImpl @Inject constructor(
             inFlight[key]?.takeIf { !it.isCompleted } ?: scope.async(start = CoroutineStart.LAZY) {
                 // Check again after another subscriber may have completed the fetch.
                 val recent = read(key)
-                if (recent != null && isUvCacheFresh(recent.fetchedAtMs, clock.millis())) {
+                val requestTime = clock.millis()
+                if (recent != null && isUvCacheFresh(recent.fetchedAtMs, requestTime)) {
                     return@async recent.response.toDomainOrNull()
                 }
+                // Another caller may have failed or connectivity may have changed
+                // after our initial check but before this deferred started.
+                if (!networkMonitor.isOnline() ||
+                    (lastFailure[key]?.let { requestTime - it in 0 until UV_FAILURE_BACKOFF_MS } == true)
+                ) return@async recent?.response?.toDomainOrNull()
                 try {
                     val response = api.getUvForecast(city.latitude, city.longitude)
                     val parsed = response.toDomainOrNull()

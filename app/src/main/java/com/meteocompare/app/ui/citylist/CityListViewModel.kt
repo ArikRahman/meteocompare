@@ -94,7 +94,10 @@ class CityListViewModel @Inject constructor(
     private val rawForecastsById = MutableStateFlow<Map<String, CityForecast>>(emptyMap())
     private val vigilanceById = MutableStateFlow<Map<String, VigilanceForecast>>(emptyMap())
     private val uvById = MutableStateFlow<Map<String, UvForecast>>(emptyMap())
-    private val requestedUvIds = mutableSetOf<String>()
+    // UV belongs to coordinates, not to a favorite's display name or model selection.
+    // Tracking only the city ID would leave the previous location's UV on screen
+    // if a favorite is replaced while retaining the same ID.
+    private val requestedUvLocations = mutableMapOf<String, Pair<Double, Double>>()
     private val vigilanceJobs = mutableMapOf<String, Job>()
     private val vigilanceCoastModeById = mutableMapOf<String, Boolean>()
     private val _isRefreshing = MutableStateFlow(false)
@@ -476,7 +479,12 @@ class CityListViewModel @Inject constructor(
     private fun loadUv(city: City) {
         viewModelScope.launch {
             val uv = runSuspendCatching { uvIndexRepository.get(city) }.getOrNull()
-            if (uv != null && favoriteCitiesById[city.id] == city) {
+            // A rename during an in-flight fetch is harmless; a location change
+            // must never let the old city's result overwrite the new one.
+            val current = favoriteCitiesById[city.id]
+            if (uv != null && current != null &&
+                current.latitude == city.latitude && current.longitude == city.longitude
+            ) {
                 uvById.update { it + (city.id to uv) }
             }
         }
@@ -489,12 +497,19 @@ class CityListViewModel @Inject constructor(
     ) {
         favoriteCitiesById = cities.associateBy(City::id)
         val currentIds = favoriteCitiesById.keys
-        // UV is fetched once per favorite when first shown, independently of
-        // weather model changes. Cached results are shared with other screens.
+        // Only first presentation or a real coordinate change requests UV.
+        // Renaming a favorite, changing weather models or refreshing the forecast
+        // does not restart the UV lookup. The shared repository handles its TTL.
         cities.forEach { city ->
-            if (requestedUvIds.add(city.id)) loadUv(city)
+            val location = city.latitude to city.longitude
+            if (requestedUvLocations[city.id] != location) {
+                requestedUvLocations[city.id] = location
+                // Do not show UV belonging to the old location while loading.
+                uvById.update { it - city.id }
+                loadUv(city)
+            }
         }
-        requestedUvIds.retainAll(currentIds)
+        requestedUvLocations.keys.retainAll(currentIds)
         uvById.update { it.filterKeys(currentIds::contains) }
 
         // 1. Cancel les streams pour les villes retirées + purge cache. On le

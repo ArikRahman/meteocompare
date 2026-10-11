@@ -1,0 +1,1 @@
+UV index on Home, today's summary, timelines and charts. Resizable widgets with customizable shapes, spacing and refreshed layouts. More detailed weather-model descriptions. Stability and configuration fixes.

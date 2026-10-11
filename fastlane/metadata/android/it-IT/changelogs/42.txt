@@ -1,0 +1,1 @@
+Indice UV nella home, nel riepilogo giornaliero, nelle cronologie e nei grafici. Widget ridimensionabili con forme, spaziatura e design rinnovati. Descrizioni più precise dei modelli meteo. Correzioni di stabilità e configurazione.

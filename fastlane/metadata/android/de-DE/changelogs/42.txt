@@ -1,0 +1,1 @@
+UV-Index auf Startseite, Tagesübersicht, Zeitleisten und Diagrammen. Größenänderbare Widgets mit neuen Formen, Abständen und modernisiertem Design. Genauere Wettermodell-Infos. Stabilitäts- und Konfigurationskorrekturen.
