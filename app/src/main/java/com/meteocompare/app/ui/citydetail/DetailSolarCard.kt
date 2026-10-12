@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.ui.components.UvIndexGauge
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -87,6 +89,7 @@ internal fun DetailSolarCard(
     timezone: ZoneId,
     date: LocalDate,
     now: Instant,
+    uvIndex: Double? = null,
     modifier: Modifier = Modifier
 ) {
     val locale = LocalConfiguration.current.locales[0]
@@ -188,6 +191,13 @@ internal fun DetailSolarCard(
                 tint = sunsetColor,
                 iconAtEnd = true
             )
+        }
+
+        // L'indice UV fait partie de la même section que la trajectoire solaire,
+        // sous les heures de lever/coucher et sans nouvelle carte ni séparateur.
+        if (uvIndex != null) {
+            Spacer(Modifier.height(10.dp))
+            UvIndexGauge(value = uvIndex, modifier = Modifier.fillMaxWidth())
         }
     }
 }

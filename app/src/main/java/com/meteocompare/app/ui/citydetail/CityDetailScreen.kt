@@ -1706,17 +1706,14 @@ internal fun TodaySummaryCard(
                         }
                     }
 
-                    if (uvIndex != null) {
-                        Spacer(Modifier.height(10.dp))
-                        UvIndexGauge(value = uvIndex, modifier = Modifier.fillMaxWidth())
-                    }
                     if (solarWindow != null) {
                         Spacer(Modifier.height(8.dp))
                         DetailSolarCard(
                             window = solarWindow,
                             timezone = solarZone,
                             date = today.date,
-                            now = now
+                            now = now,
+                            uvIndex = uvIndex
                         )
                         if (today.tempMin != null || today.tempMax != null ||
                             today.precipitation != null || today.windMax != null ||
@@ -1725,6 +1722,11 @@ internal fun TodaySummaryCard(
                             SummarySectionDivider()
                             Spacer(Modifier.height(6.dp))
                         }
+                    } else if (uvIndex != null) {
+                        // Sans données solaires (prévisions absentes), conserver
+                        // l'indice UV accessible au lieu de le masquer.
+                        Spacer(Modifier.height(10.dp))
+                        UvIndexGauge(value = uvIndex, modifier = Modifier.fillMaxWidth())
                     }
                     DetailMetricGrid(
                         today = today,

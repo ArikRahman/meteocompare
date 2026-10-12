@@ -32,7 +32,8 @@ class TodaySummaryCardTest {
     private fun render(
         today: DayConfidence,
         modelCount: Int = 5,
-        forecast: CityForecast? = null
+        forecast: CityForecast? = null,
+        uvIndex: Double? = null
     ) {
         composeRule.setContent {
             MeteoCompareTheme {
@@ -41,7 +42,8 @@ class TodaySummaryCardTest {
                         today = today,
                         modelCount = modelCount,
                         currentTemp = null,
-                        forecast = forecast
+                        forecast = forecast,
+                        uvIndex = uvIndex
                     )
                 }
             }
@@ -79,6 +81,73 @@ class TodaySummaryCardTest {
         composeRule.onNodeWithText(sunriseTime.format(format), useUnmergedTree = true)
             .assertIsDisplayed()
         composeRule.onNodeWithText(sunsetTime.format(format), useUnmergedTree = true)
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun uv_graph_is_below_sun_times_within_the_solar_section() {
+        render(
+            today = DayConfidence(
+                date = TestFixtures.today,
+                tempMax = null,
+                tempMin = null,
+                precipitation = null,
+                windMax = null
+            ),
+            forecast = TestFixtures.forecast(),
+            uvIndex = 6.5
+        )
+
+        val solar = composeRule.onNodeWithTag(TAG_DETAIL_SOLAR_CARD, useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        val sunset = composeRule.onNodeWithTag(TAG_DETAIL_SOLAR_SUNSET_ICON, useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        val uv = composeRule.onNodeWithTag("uv_gauge", useUnmergedTree = true)
+            .assertIsDisplayed()
+            .getUnclippedBoundsInRoot()
+
+        assertTrue("Le graphique UV doit être sous les heures solaires", uv.top > sunset.bottom)
+        assertTrue("Le graphique UV doit rester dans la section solaire", uv.bottom <= solar.bottom)
+        composeRule.onAllNodesWithTag("uv_gauge", useUnmergedTree = true)
+            .assertCountEquals(1)
+        composeRule.onAllNodesWithTag(
+            TAG_TODAY_SUMMARY_SECTION_DIVIDER, useUnmergedTree = true
+        ).assertCountEquals(0)
+    }
+
+    @Test
+    fun solar_section_omits_uv_graph_when_uv_is_missing() {
+        render(
+            today = DayConfidence(
+                date = TestFixtures.today,
+                tempMax = null,
+                tempMin = null,
+                precipitation = null,
+                windMax = null
+            ),
+            forecast = TestFixtures.forecast()
+        )
+        composeRule.onNodeWithTag(TAG_DETAIL_SOLAR_CARD, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag("uv_gauge", useUnmergedTree = true)
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun uv_graph_remains_visible_when_solar_forecast_is_missing() {
+        render(
+            today = DayConfidence(
+                date = TestFixtures.today,
+                tempMax = null,
+                tempMin = null,
+                precipitation = null,
+                windMax = null
+            ),
+            uvIndex = 4.0
+        )
+        composeRule.onNodeWithTag(TAG_DETAIL_SOLAR_CARD, useUnmergedTree = true)
+            .assertDoesNotExist()
+        composeRule.onNodeWithTag("uv_gauge", useUnmergedTree = true)
             .assertIsDisplayed()
     }
 
