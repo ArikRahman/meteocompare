@@ -140,12 +140,16 @@ class TodaySummaryCardTest {
         composeRule.onAllNodesWithTag(
             TAG_TODAY_SUMMARY_SECTION_DIVIDER, useUnmergedTree = true
         ).assertCountEquals(3)
-        val sectionWidth = composeRule.onNodeWithTag(
+        val sectionBounds = composeRule.onNodeWithTag(
             TAG_DETAIL_SOLAR_CARD, useUnmergedTree = true
-        ).getUnclippedBoundsInRoot().width.value
-        val dividerWidth = composeRule.onAllNodesWithTag(
+        ).getUnclippedBoundsInRoot()
+        val dividerBounds = composeRule.onAllNodesWithTag(
             TAG_TODAY_SUMMARY_SECTION_DIVIDER, useUnmergedTree = true
-        )[0].getUnclippedBoundsInRoot().width.value
+        )[0].getUnclippedBoundsInRoot()
+        // getUnclippedBoundsInRoot() renvoie un DpRect : calculer la largeur
+        // avec right - left (la propriété width n'existe pas sur DpRect).
+        val sectionWidth = (sectionBounds.right - sectionBounds.left).value
+        val dividerWidth = (dividerBounds.right - dividerBounds.left).value
         assertTrue(dividerWidth < sectionWidth * 0.85f)
         assertTrue(dividerWidth > sectionWidth * 0.65f)
     }
@@ -209,6 +213,8 @@ class TodaySummaryCardTest {
         composeRule.onNodeWithTag(TAG_TODAY_SUMMARY_PRECIP_CENTRAL, useUnmergedTree = true)
             .assertTextEquals("0.0 mm")
             .assertIsDisplayed()
+        composeRule.onNodeWithTag(TAG_TODAY_SUMMARY_PRECIP_CONVERGENCE, useUnmergedTree = true)
+            .assertDoesNotExist()
         // Chaque frise possède son propre libellé « Convergence ». On cible donc
         // le pourcentage de la métrique attendue plutôt qu'un texte global ambigu.
         composeRule.onNodeWithTag(TAG_TODAY_SUMMARY_TEMP_MAX_CONVERGENCE, useUnmergedTree = true)
@@ -303,6 +309,8 @@ class TodaySummaryCardTest {
             substring = true,
             useUnmergedTree = true
         ).assertIsDisplayed()
+        composeRule.onNodeWithTag(TAG_TODAY_SUMMARY_PRECIP_CONVERGENCE, useUnmergedTree = true)
+            .assertDoesNotExist()
         composeRule.onNodeWithText(
             context.getString(R.string.metric_precip_if_rain, "4.0 mm"),
             substring = true,
@@ -347,6 +355,8 @@ class TodaySummaryCardTest {
             substring = true,
             useUnmergedTree = true
         ).assertIsDisplayed()
+        composeRule.onNodeWithTag(TAG_TODAY_SUMMARY_PRECIP_CONVERGENCE, useUnmergedTree = true)
+            .assertDoesNotExist()
     }
     @Test
     fun dispersion_central_value_at_min_remains_prominent() {

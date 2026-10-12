@@ -1933,6 +1933,9 @@ private fun DetailMetricGrid(
                     unit = WeatherUnit.PRECIPITATION,
                     digits = 1,
                     convergence = precipitation.amountConvergencePercent,
+                    // La probabilité et la répartition des moteurs décrivent déjà la pluie.
+                    // Pas de pastille « convergence » supplémentaire ici.
+                    showConvergence = false,
                     nonNegative = true,
                     centralTestTag = TAG_TODAY_SUMMARY_PRECIP_CENTRAL,
                     convergenceTestTag = TAG_TODAY_SUMMARY_PRECIP_CONVERGENCE
@@ -2271,6 +2274,7 @@ private fun DispersionMetricRow(
     unit: WeatherUnit,
     digits: Int,
     convergence: Int?,
+    showConvergence: Boolean = true,
     subLabel: String? = null,
     nonNegative: Boolean = false,
     domainOverride: DispersionDomain? = null,
@@ -2331,11 +2335,13 @@ private fun DispersionMetricRow(
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            Spacer(Modifier.width(8.dp))
-            ConvergenceTonalChip(
-                convergence = convergence,
-                testTag = convergenceTestTag
-            )
+            if (showConvergence) {
+                Spacer(Modifier.width(8.dp))
+                ConvergenceTonalChip(
+                    convergence = convergence,
+                    testTag = convergenceTestTag
+                )
+            }
         }
 
         DispersionRail(
