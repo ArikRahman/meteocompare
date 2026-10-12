@@ -4,6 +4,7 @@ import com.meteocompare.app.ui.citydetail.SimplifiedTimelinePoint
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -134,6 +135,24 @@ class GraphicForecastChartMathTest {
         assertEquals(GraphicViewportRange(0, 11), graphicViewportRange(0, 360, 40f, 240))
         assertEquals(GraphicViewportRange(98, 111), graphicViewportRange(4_000, 360, 40f, 240))
         assertEquals(GraphicViewportRange(228, 239), graphicViewportRange(9_200, 360, 40f, 240))
+    }
+
+    @Test
+    fun `time axis labels are built once and preserve local DST transitions`() {
+        // In Paris the local clock jumps from 01:00 to 03:00 on 29 March 2026.
+        val zone = ZoneId.of("Europe/Paris")
+        val points = listOf(
+            "2026-03-28T23:00:00Z",
+            "2026-03-29T00:00:00Z",
+            "2026-03-29T01:00:00Z",
+            "2026-03-29T02:00:00Z"
+        ).map { SimplifiedTimelinePoint(instant = Instant.parse(it)) }
+        val labels = buildGraphicTimeAxisLabels(points, zone, Locale.FRANCE)
+
+        assertEquals(listOf("00h", "01h", "03h", "04h"), labels.hourLabels)
+        assertEquals(listOf(0, 1, 3, 4), labels.hours)
+        assertEquals(listOf(GraphicDaySpan(0, 3, LocalDate.of(2026, 3, 29), 0)), labels.daySpans)
+        assertTrue(labels.dayLabels[LocalDate.of(2026, 3, 29)]!!.isNotBlank())
     }
 
     @Test

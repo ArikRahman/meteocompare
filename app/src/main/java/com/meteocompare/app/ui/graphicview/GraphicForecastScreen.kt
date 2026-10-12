@@ -1584,6 +1584,38 @@ internal fun selectionBadgeStartPx(
         .toInt()
 }
 
+/**
+ * Preformatted labels for the virtualized chart axis. A scroll or selection
+ * change must not repeatedly allocate ZonedDateTime objects and formatters.
+ * All labels are recomputed only when the data, time zone or locale changes.
+ */
+internal data class GraphicTimeAxisLabels(
+    val dates: List<LocalDate?>,
+    val hours: List<Int?>,
+    val hourLabels: List<String>,
+    val daySpans: List<GraphicDaySpan>,
+    val dayLabels: Map<LocalDate, String>
+)
+
+internal fun buildGraphicTimeAxisLabels(
+    points: List<SimplifiedTimelinePoint>,
+    zone: ZoneId,
+    locale: Locale
+): GraphicTimeAxisLabels {
+    val hourFormatter = DateTimeFormatter.ofPattern("HH'h'", locale)
+    val dayFormatter = DateTimeFormatter.ofPattern("EEE d MMM", locale)
+    val zoned = points.map { it.instant?.atZone(zone) }
+    val dates = zoned.map { it?.toLocalDate() }
+    val spans = graphicDaySpans(dates)
+    return GraphicTimeAxisLabels(
+        dates = dates,
+        hours = zoned.map { it?.hour },
+        hourLabels = zoned.map { it?.format(hourFormatter).orEmpty() },
+        daySpans = spans,
+        dayLabels = spans.mapNotNull { it.date }.distinct().associateWith { it.format(dayFormatter) }
+    )
+}
+
 @Composable
 private fun GraphicTimeAxis(
     points: List<SimplifiedTimelinePoint>,
@@ -1593,18 +1625,15 @@ private fun GraphicTimeAxis(
     visibleRange: IntRange,
     modifier: Modifier = Modifier
 ) {
-    val hourFormatter = remember(locale) { DateTimeFormatter.ofPattern("HH'h'", locale) }
-    val dayFormatter = remember(locale) { DateTimeFormatter.ofPattern("EEE d MMM", locale) }
-    val dates = remember(points, zone) { points.map { it.instant?.atZone(zone)?.toLocalDate() } }
-    val daySpans = remember(dates) { graphicDaySpans(dates) }
-    val selectedDate = dates.getOrNull(selectedIndex)
+    val labels = remember(points, zone, locale) { buildGraphicTimeAxisLabels(points, zone, locale) }
+    val selectedDate = labels.dates.getOrNull(selectedIndex)
     val primary = MaterialTheme.colorScheme.primary
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val separator = primary.copy(alpha = 0.30f)
 
     Column(modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainerLowest)) {
         Box(Modifier.fillMaxWidth().height(28.dp)) {
-            daySpans.forEach { span ->
+            labels.daySpans.forEach { span ->
                 if (span.last < visibleRange.first || span.first > visibleRange.last) return@forEach
                 val isSelectedDay = span.date != null && span.date == selectedDate
                 val background = when {
@@ -1630,7 +1659,7 @@ private fun GraphicTimeAxis(
                         )
                     }
                     Text(
-                        text = span.date?.format(dayFormatter) ?: "",
+                        text = span.date?.let(labels.dayLabels::get).orEmpty(),
                         modifier = Modifier.align(Alignment.CenterStart).padding(start = 9.dp, end = 6.dp),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
@@ -1648,11 +1677,11 @@ private fun GraphicTimeAxis(
                 .background(MaterialTheme.colorScheme.surfaceContainerLowest)
         ) {
             visibleRange.forEach { index ->
-                val point = points.getOrNull(index) ?: return@forEach
-                val zdt = point.instant?.atZone(zone)
+                if (index !in labels.hourLabels.indices) return@forEach
+                val hourLabel = labels.hourLabels[index]
                 val isSelected = index == selectedIndex
-                val isDayStart = index > 0 && dates.getOrNull(index) != dates.getOrNull(index - 1)
-                val isMidnight = zdt?.hour == 0
+                val isDayStart = index > 0 && labels.dates.getOrNull(index) != labels.dates.getOrNull(index - 1)
+                val isMidnight = labels.hours[index] == 0
                 Box(
                     modifier = Modifier
                         .offset(x = GraphicHourWidth * index.toFloat())
@@ -1677,7 +1706,7 @@ private fun GraphicTimeAxis(
                             contentColor = primary
                         ) {
                             Text(
-                                text = zdt?.format(hourFormatter) ?: "",
+                                text = hourLabel,
                                 modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
@@ -1686,7 +1715,7 @@ private fun GraphicTimeAxis(
                         }
                     } else {
                         Text(
-                            text = zdt?.format(hourFormatter) ?: "",
+                            text = hourLabel,
                             style = MaterialTheme.typography.labelSmall,
                             color = if (isMidnight) primary else onSurfaceVariant,
                             fontWeight = if (isMidnight) FontWeight.SemiBold else FontWeight.Normal,

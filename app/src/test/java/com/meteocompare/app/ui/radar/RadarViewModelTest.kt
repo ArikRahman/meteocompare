@@ -69,6 +69,18 @@ class RadarViewModelTest {
     }
 
     @Test
+    fun `automatic playback does not request the first frame twice`() = runTest(dispatcher) {
+        val repo = FakeRadarRepository()
+        val vm = viewModel(repo)
+        runCurrent()
+
+        assertTrue((vm.state.value as RadarUiState.Ready).isPlaying)
+        // One display request + one nowcast-analysis request. Previously
+        // load() started and cancelled an extra display request here.
+        assertEquals(2, repo.radarFramePaths.count { it == "/v2/radar/frame0" })
+    }
+
+    @Test
     fun `only supported projection horizons are accepted`() = runTest(dispatcher) {
         val vm = viewModel(FakeRadarRepository())
         runCurrent()
@@ -270,6 +282,7 @@ class RadarViewModelTest {
     ) : RadarRepository {
         val metadataForceFlags = mutableListOf<Boolean>()
         val radarZooms = mutableListOf<Int>()
+        val radarFramePaths = mutableListOf<String>()
         val baseZooms = mutableListOf<Int>()
         val baseViewports = mutableListOf<Pair<Int, Int>>()
         private val image = RadarImage(8, 8, IntArray(64))
@@ -283,6 +296,7 @@ class RadarViewModelTest {
 
         override suspend fun radarImage(metadata: RadarMetadata, frame: RadarFrame, city: City, zoom: Int): RadarImage {
             radarZooms += zoom
+            radarFramePaths += frame.path
             return image
         }
 

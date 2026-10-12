@@ -261,9 +261,15 @@ class RadarViewModel @Inject constructor(
                     isAnalyzing = true,
                     isFullscreen = persistedFullscreen
                 )
-                loadDisplayImage()
+                // togglePlayback() already loads the first frame. Starting it here
+                // as well would cancel the first OkHttp call and download the
+                // same frame twice on initial entry to the radar screen.
+                if (mode == RadarMode.OBSERVATION && frames.size > 1) {
+                    togglePlayback()
+                } else {
+                    loadDisplayImage()
+                }
                 analyzeNowcast()
-                if (mode == RadarMode.OBSERVATION && frames.size > 1) togglePlayback()
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {
