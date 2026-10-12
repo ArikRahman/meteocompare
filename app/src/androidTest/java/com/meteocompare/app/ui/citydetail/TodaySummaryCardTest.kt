@@ -1,9 +1,12 @@
 package com.meteocompare.app.ui.citydetail
 
 import androidx.compose.material3.Surface
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.platform.app.InstrumentationRegistry
@@ -12,8 +15,13 @@ import com.meteocompare.app.domain.model.CityForecast
 import com.meteocompare.app.domain.model.ConfidenceScore
 import com.meteocompare.app.domain.model.DayConfidence
 import com.meteocompare.app.domain.model.PrecipitationConfidence
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import com.meteocompare.app.testutil.TestFixtures
 import com.meteocompare.app.ui.theme.MeteoCompareTheme
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -41,6 +49,108 @@ class TodaySummaryCardTest {
     }
 
     @Test
+    fun shows_solar_curve_with_api_sunrise_and_sunset() {
+        val zone = ZoneId.of("Europe/Paris")
+        val sunriseTime = TestFixtures.today.atTime(6, 42)
+        val sunsetTime = TestFixtures.today.atTime(20, 18)
+        val original = TestFixtures.forecast()
+        val forecast = original.copy(
+            seriesByModel = original.seriesByModel.mapValues { (_, series) ->
+                series.copy(daily = series.daily.copy(
+                    sunrise = listOf(sunriseTime.atZone(zone).toInstant()),
+                    sunset = listOf(sunsetTime.atZone(zone).toInstant())
+                ))
+            }
+        )
+        render(
+            today = DayConfidence(
+                date = TestFixtures.today,
+                tempMax = null,
+                tempMin = null,
+                precipitation = null,
+                windMax = null
+            ),
+            forecast = forecast
+        )
+        val format = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+            .withLocale(context.resources.configuration.locales[0])
+        composeRule.onNodeWithTag(TAG_DETAIL_SOLAR_CARD, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithText(sunriseTime.format(format), useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithText(sunsetTime.format(format), useUnmergedTree = true)
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun solar_sunrise_and_sunset_icons_align_with_curve_endpoints() {
+        val zone = ZoneId.of("Europe/Paris")
+        val original = TestFixtures.forecast()
+        val forecast = original.copy(
+            seriesByModel = original.seriesByModel.mapValues { (_, series) ->
+                series.copy(daily = series.daily.copy(
+                    sunrise = listOf(TestFixtures.today.atTime(6, 42).atZone(zone).toInstant()),
+                    sunset = listOf(TestFixtures.today.atTime(20, 18).atZone(zone).toInstant())
+                ))
+            }
+        )
+        render(
+            today = DayConfidence(
+                date = TestFixtures.today,
+                tempMax = null,
+                tempMin = null,
+                precipitation = null,
+                windMax = null
+            ),
+            forecast = forecast
+        )
+        val curve = composeRule.onNodeWithTag(TAG_DETAIL_SOLAR_CURVE, useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        val sunrise = composeRule.onNodeWithTag(TAG_DETAIL_SOLAR_SUNRISE_ICON, useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        val sunset = composeRule.onNodeWithTag(TAG_DETAIL_SOLAR_SUNSET_ICON, useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        val sunriseCenter = (sunrise.left.value + sunrise.right.value) / 2f
+        val sunsetCenter = (sunset.left.value + sunset.right.value) / 2f
+        assertEquals(curve.left.value + 12f, sunriseCenter, 1.5f)
+        assertEquals(curve.right.value - 12f, sunsetCenter, 1.5f)
+    }
+
+    @Test
+    fun solar_uses_the_same_section_style_and_short_dividers_as_weather_metrics() {
+        render(
+            today = DayConfidence(
+                date = TestFixtures.today,
+                tempMax = ConfidenceScore(85, 21.0, 24.0, 22.5, 0.8, 5),
+                tempMin = ConfidenceScore(78, 14.0, 17.0, 15.5, 1.0, 5),
+                precipitation = PrecipitationConfidence.NoRain(100, 5, 0.0),
+                windMax = ConfidenceScore(72, 12.0, 18.0, 15.0, 2.5, 5)
+            ),
+            forecast = TestFixtures.forecast()
+        )
+
+        composeRule.onNodeWithTag(TAG_DETAIL_SOLAR_CARD, useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText(
+            context.getString(R.string.detail_solar_title), useUnmergedTree = true
+        ).assertExists()
+        composeRule.onNodeWithTag(TAG_TODAY_SUMMARY_TEMP_PANEL, useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag(TAG_TODAY_SUMMARY_PRECIP_PANEL, useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag(TAG_TODAY_SUMMARY_WIND_PANEL, useUnmergedTree = true).assertExists()
+        // Solar + trois sections météo : trois séparateurs, centrés et plus courts.
+        composeRule.onAllNodesWithTag(
+            TAG_TODAY_SUMMARY_SECTION_DIVIDER, useUnmergedTree = true
+        ).assertCountEquals(3)
+        val sectionWidth = composeRule.onNodeWithTag(
+            TAG_DETAIL_SOLAR_CARD, useUnmergedTree = true
+        ).getUnclippedBoundsInRoot().width.value
+        val dividerWidth = composeRule.onAllNodesWithTag(
+            TAG_TODAY_SUMMARY_SECTION_DIVIDER, useUnmergedTree = true
+        )[0].getUnclippedBoundsInRoot().width.value
+        assertTrue(dividerWidth < sectionWidth * 0.85f)
+        assertTrue(dividerWidth > sectionWidth * 0.65f)
+    }
+
+    @Test
     fun displays_all_present_variables() {
         render(
             DayConfidence(
@@ -52,6 +162,14 @@ class TodaySummaryCardTest {
                 windGustMax = ConfidenceScore(68, 28.0, 36.0, 32.0, 3.2, 5)
             )
         )
+
+        // Les trois nouvelles tuiles restent présentes sans sacrifier les valeurs.
+        composeRule.onNodeWithTag(TAG_TODAY_SUMMARY_TEMP_PANEL, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(TAG_TODAY_SUMMARY_PRECIP_PANEL, useUnmergedTree = true)
+            .assertExists()
+        composeRule.onNodeWithTag(TAG_TODAY_SUMMARY_WIND_PANEL, useUnmergedTree = true)
+            .assertExists()
 
         composeRule.onNodeWithText(
             context.getString(R.string.models_analysed_many, 5),
@@ -318,6 +436,13 @@ class TodaySummaryCardTest {
             modelCount = 3,
             forecast = gustForecast
         )
+
+        composeRule.onNodeWithTag(TAG_TODAY_SUMMARY_WIND_PANEL, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(TAG_TODAY_SUMMARY_TEMP_PANEL, useUnmergedTree = true)
+            .assertDoesNotExist()
+        composeRule.onNodeWithTag(TAG_TODAY_SUMMARY_PRECIP_PANEL, useUnmergedTree = true)
+            .assertDoesNotExist()
 
         composeRule.onNodeWithText("30 km/h", useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithText("34 km/h", useUnmergedTree = true).assertIsDisplayed()

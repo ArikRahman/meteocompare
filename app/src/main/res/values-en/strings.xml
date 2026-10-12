@@ -991,4 +991,12 @@
     <string name="uv_index_value">%1$.1f</string>
     <string name="uv_accessibility">UV index %1$s, %2$s</string>
     <string name="uv_compact">UV %1$s</string>
+
+    <string name="detail_action_radar_short">Radar</string>
+    <string name="detail_action_models_short">Engines</string>
+    <string name="detail_action_charts_short">Charts</string>
+    <string name="detail_solar_title">Sun path</string>
+    <string name="detail_solar_sunrise">Sunrise</string>
+    <string name="detail_solar_sunset">Sunset</string>
+    <string name="detail_solar_daylight">%1$dh %2$02dm daylight</string>
 </resources>

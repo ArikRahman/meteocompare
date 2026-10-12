@@ -22,12 +22,14 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -58,8 +60,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -88,6 +88,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -362,100 +363,112 @@ private fun CityDetailScaffold(
         Scaffold(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
             topBar = {
-                TopAppBar(
-                    title = {
+                // Deux niveaux : l'identité ne partage plus sa largeur avec les
+                // 3 raccourcis, quelle que soit la taille de l'écran / de la police.
+                // Le Scaffold ne fournit pas les insets à une topBar personnalisée.
+                // L'arrière-plan s'étend sous la barre système, mais les boutons
+                // et le titre restent en dessous des icônes Android (edge-to-edge).
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.statusBarsPadding()) {
                         val loaded = state as? CityDetailUiState.Loaded
                         val city = loaded?.forecast?.city
                         val subtitle = city?.country.orEmpty()
-                        val conditionAccent = MaterialTheme.colorScheme.primary
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .width(3.dp)
-                                    .height(if (subtitle.isNotBlank()) 38.dp else 28.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(conditionAccent)
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = city?.name
-                                        ?: stringResource(R.string.title_detail_fallback),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = if (showBackButton) 4.dp else 16.dp, end = 4.dp)
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (showBackButton) {
+                                IconButton(onClick = onBack) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = stringResource(R.string.nav_back)
+                                    )
+                                }
+                            }
+                            Row(
+                                modifier = Modifier.weight(1f).padding(start = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(3.dp)
+                                        .height(if (subtitle.isNotBlank()) 38.dp else 28.dp)
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(MaterialTheme.colorScheme.primary)
                                 )
-                                if (subtitle.isNotBlank()) {
+                                Spacer(Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = subtitle,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1
+                                        text = city?.name ?: stringResource(R.string.title_detail_fallback),
+                                        modifier = Modifier.testTag(TAG_DETAIL_CITY_TITLE),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    if (subtitle.isNotBlank()) {
+                                        Text(
+                                            text = subtitle,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                            IconButton(onClick = onRefresh, enabled = !isRefreshing) {
+                                if (isRefreshing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp), strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.Refresh,
+                                        contentDescription = stringResource(R.string.action_refresh)
                                     )
                                 }
                             }
                         }
-                    },
-                    navigationIcon = {
-                        if (showBackButton) {
-                            IconButton(onClick = onBack) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = stringResource(R.string.nav_back)
+                        if (loaded != null) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 1.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                DetailHeaderAction(
+                                    icon = Icons.Default.Radar,
+                                    label = stringResource(R.string.detail_action_radar_short),
+                                    description = stringResource(R.string.radar_open),
+                                    tag = TAG_RADAR_ACTION,
+                                    onClick = onRadarClick
+                                )
+                                DetailHeaderAction(
+                                    icon = Icons.AutoMirrored.Filled.CompareArrows,
+                                    label = stringResource(R.string.detail_action_models_short),
+                                    description = stringResource(R.string.engine_comparison_open),
+                                    tag = TAG_ENGINE_COMPARISON_ACTION,
+                                    onClick = onEngineComparisonClick
+                                )
+                                DetailHeaderAction(
+                                    icon = Icons.AutoMirrored.Filled.ShowChart,
+                                    label = stringResource(R.string.detail_action_charts_short),
+                                    description = stringResource(R.string.graphic_view_open),
+                                    tag = TAG_GRAPHIC_VIEW_ACTION,
+                                    onClick = onGraphicViewClick
                                 )
                             }
                         }
-                    },
-                    actions = {
-                        if (state is CityDetailUiState.Loaded) {
-                            IconButton(
-                                onClick = onRadarClick,
-                                modifier = Modifier.testTag(TAG_RADAR_ACTION)
-                            ) {
-                                Icon(
-                                    Icons.Default.Radar,
-                                    contentDescription = stringResource(R.string.radar_open)
-                                )
-                            }
-                            IconButton(
-                                onClick = onEngineComparisonClick,
-                                modifier = Modifier.testTag(TAG_ENGINE_COMPARISON_ACTION)
-                            ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.CompareArrows,
-                                    contentDescription = stringResource(R.string.engine_comparison_open)
-                                )
-                            }
-                            IconButton(
-                                onClick = onGraphicViewClick,
-                                modifier = Modifier.testTag(TAG_GRAPHIC_VIEW_ACTION)
-                            ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ShowChart,
-                                    contentDescription = stringResource(R.string.graphic_view_open)
-                                )
-                            }
-                        }
-                        IconButton(onClick = onRefresh, enabled = !isRefreshing) {
-                            if (isRefreshing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Refresh,
-                                    contentDescription = stringResource(R.string.action_refresh)
-                                )
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest
-                    )
-                )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    }
+                }
             },
             snackbarHost = {
                 if (snackbarHostState != null) SnackbarHost(snackbarHostState)
@@ -489,6 +502,35 @@ private fun CityDetailScaffold(
                     }
                 }
             }
+        }
+    }
+}
+
+/** Accès directs, avec libellé visible et zone tactile Material 3. */
+@Composable
+private fun RowScope.DetailHeaderAction(
+    icon: ImageVector,
+    label: String,
+    description: String,
+    tag: String,
+    onClick: () -> Unit
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.weight(1f).testTag(tag).semantics {
+            contentDescription = description
+        },
+        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -653,7 +695,7 @@ private fun LoadedView(
     val contentListState = rememberLazyListState()
     // Items preceding the timeline: optional offline banner, today summary,
     // optional official vigilance, then optional insights. The engine comparison
-    // action lives in the TopAppBar and therefore no longer affects this index.
+    // action lives in the fixed two-level header and does not affect this index.
     val timelineItemIndex = simplifiedTimelineItemIndex(
         isOnline = isOnline,
         hasInsights = hasInsightSection,
@@ -742,7 +784,9 @@ private fun LoadedView(
         modifier = Modifier.fillMaxSize().testTag(TAG_DETAIL_LOADED),
         contentPadding = PaddingValues(
             start = 8.dp,
-            top = padding.calculateTopPadding(),
+            // Respiration sous l'en-tête fixe : la première carte ne doit pas
+            // toucher visuellement la barre d'actions, y compris en edge-to-edge.
+            top = padding.calculateTopPadding() + 12.dp,
             end = 8.dp,
             bottom = padding.calculateBottomPadding() + 16.dp
         ),
@@ -760,6 +804,7 @@ private fun LoadedView(
                     today = today,
                     modelCount = forecast.availableModels.size,
                     forecast = forecast,
+                    now = presentationNow,
                     currentTemp = currentTemp,
                     currentCondition = currentCondition,
                     currentCloudCover = currentCloudCover,
@@ -1533,8 +1578,15 @@ internal fun TodaySummaryCard(
     onExpandedChange: (Boolean) -> Unit = {},
     onConfidenceClick: () -> Unit = {},
     forecast: CityForecast? = null,
-    units: WeatherUnits = LocalWeatherUnits.current
+    units: WeatherUnits = LocalWeatherUnits.current,
+    now: Instant = Instant.now()
 ) {
+    val solarWindow = remember(forecast, today.date) {
+        forecast?.let { detailSolarWindow(it, today.date) }
+    }
+    val solarZone = remember(forecast?.city?.timezone) {
+        resolveCityZone(forecast?.city?.timezone)
+    }
     val resources = LocalResources.current
     val baseDescription = A11yFormatter
         .todaySummaryDescription(resources, today, modelCount, units = units)
@@ -1546,7 +1598,18 @@ internal fun TodaySummaryCard(
         val riskRes = com.meteocompare.app.ui.components.uvRiskLabelRes(it)
         resources.getString(R.string.uv_accessibility, uvValue, resources.getString(riskRes))
     }
-    val a11yDescription = temperatureDescription + (uvDescription?.let { ". $it" } ?: "")
+    val solarDescription = if (expanded && solarWindow != null) {
+        val formatter = DateTimeFormatter.ofLocalizedTime(java.time.format.FormatStyle.SHORT)
+            .withLocale(LocalConfiguration.current.locales[0])
+        stringResource(
+            R.string.sun_times_a11y,
+            solarWindow.sunrise?.atZone(solarZone)?.toLocalTime()?.format(formatter) ?: "—",
+            solarWindow.sunset?.atZone(solarZone)?.toLocalTime()?.format(formatter) ?: "—"
+        )
+    } else null
+    val a11yDescription = temperatureDescription +
+        (uvDescription?.let { ". $it" } ?: "") +
+        (solarDescription?.let { ". $it" } ?: "")
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val weatherAccent = WeatherAccent.of(currentCondition, isDark)
     val dateLocale = LocalConfiguration.current.locales[0]
@@ -1646,6 +1709,22 @@ internal fun TodaySummaryCard(
                     if (uvIndex != null) {
                         Spacer(Modifier.height(10.dp))
                         UvIndexGauge(value = uvIndex, modifier = Modifier.fillMaxWidth())
+                    }
+                    if (solarWindow != null) {
+                        Spacer(Modifier.height(8.dp))
+                        DetailSolarCard(
+                            window = solarWindow,
+                            timezone = solarZone,
+                            date = today.date,
+                            now = now
+                        )
+                        if (today.tempMin != null || today.tempMax != null ||
+                            today.precipitation != null || today.windMax != null ||
+                            today.windGustMax != null) {
+                            Spacer(Modifier.height(6.dp))
+                            SummarySectionDivider()
+                            Spacer(Modifier.height(6.dp))
+                        }
                     }
                     DetailMetricGrid(
                         today = today,
@@ -1776,13 +1855,11 @@ private fun DetailMetricGrid(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+            .padding(top = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (today.tempMin != null || today.tempMax != null) {
-            Spacer(Modifier.height(4.dp))
-
-            SummaryMetricSection {
+            SummaryMetricSection(tag = TAG_TODAY_SUMMARY_TEMP_PANEL) {
                 SummaryMetricGroupHeader(
                     title = stringResource(R.string.metric_temperature),
                     icon = Icons.Outlined.Thermostat,
@@ -1807,7 +1884,7 @@ private fun DetailMetricGrid(
                 }
 
                 if (today.tempMin != null && today.tempMax != null) {
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(5.dp))
                 }
 
                 today.tempMax?.let { score ->
@@ -1831,16 +1908,14 @@ private fun DetailMetricGrid(
 
         today.precipitation?.let { precipitation ->
             if (today.tempMin != null || today.tempMax != null) {
-                Spacer(Modifier.height(2.dp))
-                SummaryMetricSeparator()
-                Spacer(Modifier.height(2.dp))
+                SummarySectionDivider()
             }
             val rain = precipitationDispersionPresentation(precipitation)
             val rainHeaderDetail = rain.probabilityPercent?.let { probability ->
                 stringResource(R.string.metric_precip_probability_only, probability)
             }
 
-            SummaryMetricSection {
+            SummaryMetricSection(tag = TAG_TODAY_SUMMARY_PRECIP_PANEL) {
                 SummaryMetricGroupHeader(
                     title = stringResource(R.string.var_precipitation),
                     icon = Icons.Outlined.WaterDrop,
@@ -1871,14 +1946,12 @@ private fun DetailMetricGrid(
 
         if (today.windMax != null || today.windGustMax != null) {
             if (today.tempMin != null || today.tempMax != null || today.precipitation != null) {
-                Spacer(Modifier.height(2.dp))
-                SummaryMetricSeparator()
-                Spacer(Modifier.height(2.dp))
+                SummarySectionDivider()
             }
             val isGustOnly = today.windMax == null
             val sharedDomain = windDispersionDomain(today, samples)
 
-            SummaryMetricSection {
+            SummaryMetricSection(tag = TAG_TODAY_SUMMARY_WIND_PANEL) {
                 SummaryMetricGroupHeader(
                     title = stringResource(
                         if (isGustOnly) R.string.var_wind_gust_max else R.string.var_wind_max
@@ -1907,7 +1980,7 @@ private fun DetailMetricGrid(
                 }
 
                 if (today.windMax != null && today.windGustMax != null) {
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(5.dp))
                 }
 
                 today.windGustMax?.let { score ->
@@ -1941,49 +2014,51 @@ private fun DetailMetricGrid(
     }
 }
 
+/** Séparation raccourcie et plus lisible, commune à tous les groupes du résumé. */
 @Composable
-private fun SummaryMetricSection(content: @Composable () -> Unit) {
+internal fun SummarySectionDivider() {
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        HorizontalDivider(
+            modifier = Modifier
+                .fillMaxWidth(0.78f)
+                .testTag(TAG_TODAY_SUMMARY_SECTION_DIVIDER),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.90f),
+            thickness = 1.dp
+        )
+    }
+}
+
+/** Groupes intégrés au fond de TodaySummary : pas de tuiles imbriquées. */
+@Composable
+internal fun SummaryMetricSection(
+    tag: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 2.dp, vertical = 1.dp)
+            .testTag(tag)
+            .padding(horizontal = 3.dp, vertical = 3.dp)
     ) {
         content()
     }
 }
 
 @Composable
-private fun SummaryMetricSeparator() {
-    HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 50.dp, vertical = 2.dp),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.20f)
-    )
-}
-
-@Composable
-private fun SummaryMetricGroupHeader(
+internal fun SummaryMetricGroupHeader(
     title: String,
     icon: ImageVector,
     accent: Color,
     trailing: String? = null
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 5.dp),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 3.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Surface(
-            color = accent.copy(alpha = 0.13f),
-            shape = RoundedCornerShape(10.dp)
-        ) {
-            Box(modifier = Modifier.size(30.dp), contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(18.dp)
-                )
+        Surface(color = accent.copy(alpha = 0.12f), shape = RoundedCornerShape(9.dp)) {
+            Box(modifier = Modifier.size(27.dp), contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(17.dp))
             }
         }
         Spacer(Modifier.width(8.dp))
@@ -1992,21 +2067,21 @@ private fun SummaryMetricGroupHeader(
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
         trailing?.let { detail ->
-            Spacer(Modifier.width(10.dp))
-            Surface(
-                color = accent.copy(alpha = 0.12f),
-                shape = CircleShape
-            ) {
+            Spacer(Modifier.width(6.dp))
+            Surface(color = accent.copy(alpha = 0.10f), shape = CircleShape) {
                 Text(
                     text = detail,
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.SemiBold,
                     color = accent,
                     maxLines = 1,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                 )
             }
         }
@@ -2129,7 +2204,7 @@ private fun RainModelVoteRail(
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
-            .height(7.dp)
+            .height(5.dp)
             .semantics { this.contentDescription = contentDescription }
     ) {
         val count = modelCount.coerceAtLeast(1)
@@ -2227,7 +2302,7 @@ private fun DispersionMetricRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 1.dp),
+            .padding(vertical = 0.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         Row(
@@ -2243,9 +2318,11 @@ private fun DispersionMetricRow(
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(6.dp))
                 Text(
                     text = centralLabel,
                     modifier = if (centralTestTag != null) Modifier.testTag(centralTestTag) else Modifier,
@@ -2302,15 +2379,15 @@ private fun ConvergenceTonalChip(
         }
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(6.dp)
+                    .size(5.dp)
                     .background(tint, CircleShape)
             )
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(5.dp))
             Text(
                 text = convergenceLabel,
                 modifier = if (testTag != null) Modifier.testTag(testTag) else Modifier,
@@ -2330,10 +2407,12 @@ private fun DispersionBoundsLabels(
     max: Double,
     domain: DispersionDomain
 ) {
-    // Une frise sans dispersion est déjà résumée par la valeur centrale mise
-    // en avant. Répéter deux fois la même borne créerait un chevauchement.
-    if (abs(max - min) <= 0.0001) return
+    // Une même valeur affichée (arrondis inclus) n'a pas besoin d'être
+    // répétée deux fois : le consensus est déjà visible dans l'en-tête.
+    if (abs(max - min) <= 0.0001 || minLabel == maxLabel) return
     val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val labelGap = 8.dp
+    val verticalGap = 2.dp
 
     Layout(
         modifier = Modifier.fillMaxWidth(),
@@ -2341,12 +2420,16 @@ private fun DispersionBoundsLabels(
             Text(
                 text = minLabel,
                 style = MaterialTheme.typography.labelSmall,
-                color = mutedColor
+                color = mutedColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = maxLabel,
                 style = MaterialTheme.typography.labelSmall,
                 color = mutedColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.End
             )
         }
@@ -2357,23 +2440,29 @@ private fun DispersionBoundsLabels(
         val minPlaceable = placeables[0]
         val maxPlaceable = placeables[1]
         val width = constraints.maxWidth
-        val height = placeables.maxOf { it.height }
         val railStart = width * DISPERSION_RAIL_START_FRACTION
         val railEnd = width * DISPERSION_RAIL_END_FRACTION
         val minCenter = railStart + (railEnd - railStart) * dispersionRatio(min, domain.min, domain.max)
         val maxCenter = railStart + (railEnd - railStart) * dispersionRatio(max, domain.min, domain.max)
-
-        fun clampedStart(centerX: Float, childWidth: Int): Int =
-            (centerX - childWidth / 2f)
-                .roundToInt()
-                .coerceIn(0, (width - childWidth).coerceAtLeast(0))
-
-        val minX = clampedStart(minCenter, minPlaceable.width)
-        val maxX = clampedStart(maxCenter, maxPlaceable.width)
-
+        val placement = dispersionBoundsPlacement(
+            width = width,
+            minLabelWidth = minPlaceable.width,
+            maxLabelWidth = maxPlaceable.width,
+            minCenter = minCenter,
+            maxCenter = maxCenter,
+            gap = labelGap.roundToPx()
+        )
+        val height = if (placement.maxOnSecondLine) {
+            minPlaceable.height + verticalGap.roundToPx() + maxPlaceable.height
+        } else {
+            max(minPlaceable.height, maxPlaceable.height)
+        }
         layout(width, height) {
-            minPlaceable.placeRelative(minX, 0)
-            maxPlaceable.placeRelative(maxX, 0)
+            minPlaceable.placeRelative(placement.minX, 0)
+            maxPlaceable.placeRelative(
+                placement.maxX,
+                if (placement.maxOnSecondLine) minPlaceable.height + verticalGap.roundToPx() else 0
+            )
         }
     }
 }
@@ -2404,7 +2493,7 @@ private fun DispersionRail(
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
-            .height(27.dp)
+            .height(20.dp)
             .semantics { this.contentDescription = contentDescription }
     ) {
         val startX = size.width * DISPERSION_RAIL_START_FRACTION
@@ -2448,8 +2537,8 @@ private fun DispersionRail(
         val centerX = xFor(central)
         drawRoundRect(
             color = centerColor,
-            topLeft = Offset(centerX - 1.5.dp.toPx(), 2.dp.toPx()),
-            size = Size(3.dp.toPx(), size.height - 4.dp.toPx()),
+            topLeft = Offset(centerX - 1.5.dp.toPx(), 1.dp.toPx()),
+            size = Size(3.dp.toPx(), size.height - 2.dp.toPx()),
             cornerRadius = CornerRadius(3.dp.toPx())
         )
     }
@@ -2538,6 +2627,10 @@ internal const val TAG_RADAR_ACTION = "radar_action"
 internal const val TAG_ENGINE_COMPARISON_ACTION = "engine_comparison_action"
 internal const val TAG_GRAPHIC_VIEW_ACTION = "graphic_view_action"
 internal const val TAG_CONFIDENCE_BADGE = "confidence_badge"
+internal const val TAG_TODAY_SUMMARY_SECTION_DIVIDER = "today_summary_section_divider"
+internal const val TAG_TODAY_SUMMARY_TEMP_PANEL = "today_summary_temp_panel"
+internal const val TAG_TODAY_SUMMARY_PRECIP_PANEL = "today_summary_precip_panel"
+internal const val TAG_TODAY_SUMMARY_WIND_PANEL = "today_summary_wind_panel"
 internal const val TAG_TODAY_SUMMARY_TEMP_MIN_CENTRAL = "today_summary_temp_min_central"
 internal const val TAG_TODAY_SUMMARY_TEMP_MAX_CENTRAL = "today_summary_temp_max_central"
 internal const val TAG_TODAY_SUMMARY_PRECIP_CENTRAL = "today_summary_precip_central"
@@ -2788,3 +2881,5 @@ internal const val TAG_BIAS_HISTORY_FETCH = "bias_history_fetch"
  */
 private inline fun <reified T : Enum<T>> enumValueOrNull(name: String): T? =
     runCatching { enumValueOf<T>(name) }.getOrNull()
+
+internal const val TAG_DETAIL_CITY_TITLE = "detail_city_title"

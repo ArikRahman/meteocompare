@@ -2,6 +2,7 @@ package com.meteocompare.app.ui.citydetail
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -143,6 +144,41 @@ class CityDetailContentTest {
         composeRule.onNodeWithTag(TAG_CONFIDENCE_BADGE, useUnmergedTree = true).performClick()
         assertEquals(TestFixtures.today.toString(), clickedDate)
         assertTrue(clickedDate != null)
+    }
+
+    @Test
+    fun long_city_name_keeps_its_own_header_space_and_shortcuts() {
+        val city = TestFixtures.paris.copy(name = "Saint-Étienne-du-Rouvray")
+        val forecast = TestFixtures.forecast(city = city)
+        val calculator = ConfidenceCalculator(EqualWeighting())
+        composeRule.setContent {
+            MeteoCompareTheme {
+                CityDetailContent(
+                    state = CityDetailUiState.Loaded(
+                        forecast = forecast,
+                        weeklyConfidence = calculator.weeklyConfidence(forecast),
+                        hourlyBands = calculator.hourlyTemperatureConfidence(forecast),
+                        hourlyPrecipBands = calculator.hourlyPrecipitationConfidence(forecast),
+                        hourlyWindBands = calculator.hourlyWindConfidence(forecast),
+                        currentTemp = calculator.currentTemperature(forecast),
+                        currentCondition = calculator.currentWeatherCondition(forecast),
+                        currentCloudCover = calculator.currentCloudCover(forecast),
+                        dailyConditions = calculator.dailyConditionsByModel(forecast),
+                        calculatedAt = TestFixtures.now,
+                        fetchedAt = forecast.fetchedAt
+                    ),
+                    isRefreshing = false,
+                    biasState = BiasScreenState.EMPTY,
+                    snackbarHostState = SnackbarHostState(),
+                    onBack = {}, onRefresh = {}
+                )
+            }
+        }
+        composeRule.onNodeWithTag(TAG_DETAIL_CITY_TITLE, useUnmergedTree = true)
+            .assertTextEquals(city.name)
+        composeRule.onNodeWithTag(TAG_RADAR_ACTION).assertIsDisplayed()
+        composeRule.onNodeWithTag(TAG_ENGINE_COMPARISON_ACTION).assertIsDisplayed()
+        composeRule.onNodeWithTag(TAG_GRAPHIC_VIEW_ACTION).assertIsDisplayed()
     }
 
     @Test

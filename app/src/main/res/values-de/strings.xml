@@ -974,4 +974,12 @@ Daten</string>
     <string name="uv_index_value">%1$.1f</string>
     <string name="uv_accessibility">UV-Index %1$s, %2$s</string>
     <string name="uv_compact">UV %1$s</string>
+
+    <string name="detail_action_radar_short">Radar</string>
+    <string name="detail_action_models_short">Motoren</string>
+    <string name="detail_action_charts_short">Diagramme</string>
+    <string name="detail_solar_title">Sonnenlauf</string>
+    <string name="detail_solar_sunrise">Aufgang</string>
+    <string name="detail_solar_sunset">Untergang</string>
+    <string name="detail_solar_daylight">%1$d Std. %2$02d Min. Tageslicht</string>
 </resources>
