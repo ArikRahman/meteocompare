@@ -264,7 +264,14 @@ Par défaut, le build utilise `https://meteocompare.app/` comme base du Worker. 
 ./gradlew testDebugUnitTest             # tests JVM rapides
 ./gradlew connectedDebugAndroidTest     # UI, navigation, Room et DataStore sur appareil
 ./gradlew lintDebug assembleDebug        # analyse statique + compilation APK
+python3 scripts/check_android_strings.py   # ressources textuelles inutilisées, orphelines ou absentes (sans Gradle)
 ```
+
+Le contrôle des ressources prend en compte les références `R.string`, `R.plurals`,
+`R.array` et leurs équivalents XML, dans les sources, tests et widgets. Les
+traductions peuvent volontairement manquer dans une langue : Android utilise
+alors les ressources par défaut. Une ressource obtenue dynamiquement par son
+nom doit être déclarée dans la liste d'exceptions documentée du script.
 
 La suite instrumentée utilise des repositories Hilt factices : aucune requête
 Open-Meteo ou Worker Vigilance n’est effectuée pendant `androidTest`. Elle couvre les parcours de

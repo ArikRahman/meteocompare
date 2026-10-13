@@ -1,6 +1,5 @@
 package com.meteocompare.app.ui.components
 
-import com.meteocompare.app.core.units.WeatherUnit
 import com.meteocompare.app.core.units.LocalWeatherUnits
 import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.core.units.weatherString

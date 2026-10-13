@@ -161,8 +161,6 @@ Daten</string>
     <string name="toast_refresh_all_success">Alle Vorhersagen sind aktuell</string>
     <string name="toast_refresh_all_partial">Einige Orte konnten nicht aktualisiert werden</string>
     <string name="toast_refresh_all_error">Kein Ort konnte aktualisiert werden: %1$s</string>
-    <string name="toast_model_enabled">%1$s aktiviert</string>
-    <string name="toast_model_disabled">%1$s deaktiviert</string>
     <string name="toast_theme_updated">Design aktualisiert</string>
     <string name="toast_refresh_interval_updated">Aktualisierungsintervall aktualisiert</string>
     <string name="toast_forecast_engine_updated">Vorhersagemodell aktualisiert</string>
@@ -201,7 +199,6 @@ Daten</string>
     <string name="action_remove_from_favorites">Aus Favoriten entfernen</string>
     <string name="action_more_options">Optionen</string>
     <string name="precip_dry">Trocken</string>
-    <string name="precip_divided">%1$d/%2$d Modelle ⚠</string>
     <string name="metric_home_temperature">Temperatur</string>
     <string name="metric_home_precipitation">Niederschlag</string>
     <string name="metric_home_wind">Wind</string>
@@ -213,12 +210,8 @@ Daten</string>
     <string name="metric_precip_models_rain">%1$d von %2$d Modellen</string>
     <string name="metric_detail_wind">Wind</string>
     <string name="metric_detail_gusts">Böen</string>
-    <string name="metric_confidence_high">Hohe Konvergenz · %1$d%%</string>
-    <string name="metric_confidence_medium">Mittlere Konvergenz · %1$d%%</string>
-    <string name="metric_confidence_low">Geringe Konvergenz · %1$d%%</string>
     <string name="metric_summary_average">Zentraler Konsens</string>
     <string name="metric_summary_range">Spanne %1$s</string>
-    <string name="metric_summary_range_and_spread">Spanne %1$s · Streuung %2$s</string>
     <string name="metric_summary_max_model_precip">Höchstes Modell %1$s %2$s</string>
 
     <string name="search_city_placeholder">Ort suchen…</string>
@@ -451,8 +444,6 @@ Daten</string>
     <string name="timeline_today">Heute</string>
     <string name="timeline_tomorrow">Morgen</string>
     <string name="timeline_tomorrow_at">Morgen · %1$s</string>
-    <string name="timeline_precip_probability_source">Median</string>
-    <string name="timeline_precip_models_source">%1$d/%2$d Modelle</string>
     <string name="timeline_precip_amount">%1$s %2$s</string>
     <string name="timeline_precip_amount_if_rain">%1$s %2$s bei Regen</string>
     <string name="timeline_wind_gust">Böe %1$s %2$s</string>
@@ -569,7 +560,6 @@ Daten</string>
     <string name="model_coverage_europe">Europa</string>
     <string name="model_coverage_united_states">Vereinigte Staaten</string>
     <string name="model_coverage_global">Global</string>
-    <string name="model_metadata">%1$s · %2$s</string>
     <string name="model_horizon_days">%1$d T.</string>
     <string name="model_horizon_days_decimal">%1$.1f T.</string>
     <string name="model_horizon_hours">%1$d Std.</string>
@@ -580,15 +570,9 @@ Daten</string>
     </plurals>
     <string name="home_cloud_cover">Bewölkung %d%%</string>
     <string name="home_agreement_label">Konvergenz</string>
-
-    <string name="home_scenarios_title">Szenarien · nächste 12 Std.</string>
     <plurals name="home_scenarios_count">
         <item quantity="one">%d Szenario</item>
         <item quantity="other">%d Szenarien</item>
-    </plurals>
-    <plurals name="home_scenarios_models">
-        <item quantity="one">%d Modell</item>
-        <item quantity="other">%d Modelle</item>
     </plurals>
     <string name="home_scenario_gust_short">Böen %1$s</string>
     <string name="home_scenarios_show">Wetterszenarien anzeigen</string>
@@ -665,10 +649,8 @@ Daten</string>
     <string name="marine_intro">Wellen, Dünung, Meer &amp; Gezeiten</string>
     <string name="marine_current_conditions">Aktuelle Bedingungen</string>
     <string name="marine_distance">Meeresdaten in %1$s %2$s</string>
-    <string name="marine_loading">Wird geladen…</string>
     <string name="marine_wave_height">Wellenhöhe</string>
     <string name="marine_wave_period">Periode</string>
-    <string name="marine_wave_direction">Richtung</string>
     <string name="marine_swell_height">Dünung</string>
     <string name="marine_sea_temp">Meerestemp.</string>
     <string name="marine_wave_evolution">Wellenentwicklung</string>
@@ -699,10 +681,6 @@ Daten</string>
     <string name="historical_confidence_meta">Beobachtete D+1-Leistung · %1$d Familien</string>
     <string name="home_scenario_family_support">%1$d%%</string>
     <string name="metric_precip_probability_only">Regenrisiko %1$d%%</string>
-    <string name="metric_precip_probability_conditional">Regenrisiko %1$d%% · %2$.1f mm bei Regen</string>
-    <string name="metric_precip_expected_range">Geschätztes Mittel %1$.1f mm · bei Regen %2$s</string>
-    <string name="metric_precip_rain_range">Regenszenarien %1$s</string>
-
     <plurals name="summary_dispersion_models">
         <item quantity="one">%d Modell</item>
         <item quantity="many">%d Modelle</item>
@@ -726,7 +704,6 @@ Daten</string>
     <string name="graphic_view_subtitle">10 Tage · stündlich</string>
     <string name="graphic_view_touch_hint">Tippen Sie auf eine Stunde im Diagramm, um Detailwerte anzuzeigen.</string>
     <string name="graphic_view_show_convergence">Übereinstimmung anzeigen</string>
-    <string name="graphic_view_show_convergence_desc">Färbt die Diagramme leicht nach der Übereinstimmung der Modellfamilien.</string>
     <string name="graphic_view_no_data">Keine stündlichen Daten verfügbar.</string>
     <string name="graphic_view_central_forecast">Zentrale Prognose</string>
     <string name="graphic_view_models_count">%1$d Modelle</string>
@@ -735,9 +712,6 @@ Daten</string>
     <string name="graphic_view_wind">Wind</string>
     <string name="graphic_view_gust_short">Böe</string>
     <string name="graphic_view_gusts">Böen</string>
-    <string name="graphic_view_model_range_value">Modelle: %1$s</string>
-    <string name="graphic_view_show_models">Modelldetails</string>
-    <string name="graphic_view_hide_models">Modelle ausblenden</string>
     <string name="graphic_view_dispersion">Min–Max-Spanne</string>
     <string name="graphic_view_night">Nacht</string>
     <string name="graphic_view_divergence">Abweichung</string>
@@ -765,7 +739,6 @@ Daten</string>
     <string name="engine_divergence_low">Geringe Abweichung</string>
     <string name="engine_divergence_medium">Mittlere Abweichung</string>
     <string name="engine_divergence_high">Deutliche Abweichung</string>
-    <string name="engine_comparison_row_values">Min. %1$s° · Max. %2$s° · Regen %3$s mm · Wahrscheinlichkeit %4$s%%</string>
     <string name="engine_metric_temp_max">Max Temp.</string>
     <string name="engine_metric_temp_min">Min Temp.</string>
     <string name="engine_metric_precipitation">Regen</string>
@@ -795,9 +768,6 @@ Daten</string>
     <string name="help_engine_scenarios_body">Hebt mehrere mögliche Entwicklungen hervor statt nur einen gemittelten Wert zu zeigen.</string>
     <string name="help_engine_adaptive_title">Adaptiv</string>
     <string name="help_engine_adaptive_body">Kombiniert die drei anderen Motoren dynamisch je nach Kontext und Datenqualität.</string>
-    <string name="help_variable_rain">Regen</string>
-    <string name="help_variable_humidity">Luftfeuchtigkeit</string>
-    <string name="help_variable_cloud_cover">Bewölkung</string>
     <string name="help_section_3_title">Wetterzustände</string>
     <string name="help_section_3_body">Die angezeigte Wetterlage bevorzugt native WMO-Wettercodes: Liegen sie aus mindestens zwei unabhängigen Modellfamilien vor, gehen nur diese Codes in den Konsens ein. Andernfalls wird eine einzige Wetterlage aus den zentralen Werten für Niederschlag, Temperatur und Bewölkung abgeleitet.</string>
     <string name="help_hierarchical_dry">Ohne Niederschlag</string>
@@ -811,18 +781,6 @@ Daten</string>
     <string name="help_convergence_strong_body">Wenn die Modelle eine ähnliche Geschichte erzählen, zeigt MeteoCompare engere Bereiche und höheres Vertrauen.</string>
     <string name="help_convergence_uncertain_title">Divergenz / Unsicherheit</string>
     <string name="help_convergence_uncertain_body">Wenn die Modelle auseinanderlaufen, macht die App die Unterschiede sichtbar und weist auf Unsicherheit hin.</string>
-    <string name="help_section_5_title">Regenradar</string>
-    <string name="help_section_5_body">Im sehr kurzen Zeitraum ergänzt das Radar die Modelle, um die aktuelle Beobachtung zu verfolgen und die wahrscheinliche Entwicklung der Regenzellen zu projizieren.</string>
-    <string name="help_radar_step_now">Aktuelle Beobachtung</string>
-    <string name="help_radar_note">Das Radar ist ein kurzfristiges Hilfsmittel, um die unmittelbare Entwicklung des Regens besser abzuschätzen.</string>
-    <string name="help_section_6_title">Lesen und Entscheiden</string>
-    <string name="help_section_6_body">Ziel ist es, dabei zu helfen, Szenarien zu vergleichen, zu verdichten und vor einer wetterbezogenen Entscheidung mehr Überblick zu gewinnen.</string>
-    <string name="help_decision_compare_title">Mehrere Modelle vergleichen</string>
-    <string name="help_decision_compare_body">Klare Bündelung der besten verfügbaren Vorhersagen.</string>
-    <string name="help_decision_synthesize_title">Mit Motoren + Konsens verdichten</string>
-    <string name="help_decision_synthesize_body">Fortgeschrittene Algorithmen verdichten die nützlichen Signale zu gut lesbaren Hinweisen.</string>
-    <string name="help_decision_understand_title">Unsicherheit besser verstehen</string>
-    <string name="help_decision_understand_body">Visualisieren Sie Übereinstimmungen, Abweichungen und Vertrauensniveaus, um mehr Überblick zu gewinnen.</string>
     <string name="help_footer_note">MeteoCompare ist ein Hilfsmittel für die Wetteranalyse. Es hebt Konvergenzen und Divergenzen zwischen Modellen hervor, ersetzt aber keine menschliche Expertise.</string>
 
     <string name="help_engines_compute_variables">Diese Motoren berechnen anschließend die Variablen</string>
@@ -838,7 +796,6 @@ Daten</string>
     <string name="vigilance_updated_at">Aktualisiert %1$s</string>
     <string name="vigilance_timing_approximate">Ungefähre Zeitangaben</string>
     <string name="vigilance_cached_warning">Zwischengespeicherte Daten: bei fehlender Verbindung bitte Aktualität prüfen.</string>
-    <string name="vigilance_interval_compact">%1$s–%2$s</string>
     <string name="vigilance_marine_title">Warnstufe %1$s · Küste</string>
     <string name="vigilance_marine_timing">Wellen / Überflutung · %1$s</string>
     <string name="vigilance_color_green">grün</string>

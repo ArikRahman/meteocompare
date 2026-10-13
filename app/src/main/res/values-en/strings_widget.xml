@@ -68,7 +68,6 @@
 
     <string name="widget_config_load_error">Unable to load this widget’s settings. Try again.</string>
     <!-- Personnalisation libre des couleurs et de la forme -->
-    <string name="widget_color_custom">Custom color</string>
     <string name="widget_color_picker_hint">Open the color wheel</string>
     <string name="widget_config_appearance">Appearance</string>
     <string name="widget_config_appearance_note">Customize shape, spacing, colors and transparency.</string>

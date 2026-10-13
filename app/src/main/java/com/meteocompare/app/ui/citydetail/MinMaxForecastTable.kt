@@ -1,6 +1,5 @@
 package com.meteocompare.app.ui.citydetail
 
-import com.meteocompare.app.core.units.WeatherUnit
 import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.core.units.LocalWeatherUnits
 
@@ -37,7 +36,6 @@ import com.meteocompare.app.ui.theme.color
 import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import kotlin.math.roundToInt
 
 private val WarmTempColor = Color(0xFFE53935)
 private val CoolTempColor = Color(0xFF1E88E5)

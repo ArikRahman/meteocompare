@@ -1,6 +1,5 @@
 package com.meteocompare.app.ui.citylist
 
-import com.meteocompare.app.core.units.WeatherUnit
 import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.core.units.LocalWeatherUnits
 
@@ -48,7 +47,6 @@ import com.meteocompare.app.ui.components.temperatureHeatmapColor
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.max
-import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**

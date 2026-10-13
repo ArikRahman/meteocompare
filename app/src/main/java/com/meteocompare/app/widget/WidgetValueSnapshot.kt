@@ -1,6 +1,5 @@
 package com.meteocompare.app.widget
 
-import com.meteocompare.app.core.units.WeatherUnit
 import com.meteocompare.app.core.units.WeatherUnits
 
 import com.meteocompare.app.core.units.weatherString
@@ -30,7 +29,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
 internal enum class WidgetInsightIcon {
     RAIN,

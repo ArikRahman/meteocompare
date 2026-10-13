@@ -1,6 +1,5 @@
 package com.meteocompare.app.widget
 
-import com.meteocompare.app.core.units.WeatherUnit
 import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.core.units.LocalWeatherUnits
 
@@ -56,7 +55,6 @@ import com.meteocompare.app.core.locale.weatherConditionLabelRes
 import com.meteocompare.app.core.network.OPEN_METEO_LICENSE_URL
 import com.meteocompare.app.domain.model.WeatherCondition
 import com.meteocompare.app.ui.citydetail.ForecastInsightLevel
-import kotlin.math.roundToInt
 
 /**
  * Widget éditorial « À retenir ». Il partage les mêmes préférences de ville,

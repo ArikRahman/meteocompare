@@ -78,7 +78,6 @@ import com.meteocompare.app.ui.theme.windMetricAccent
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 /**

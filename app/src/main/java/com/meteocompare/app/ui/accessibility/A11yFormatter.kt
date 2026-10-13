@@ -17,7 +17,6 @@ import com.meteocompare.app.domain.model.PrecipitationConfidence
 import com.meteocompare.app.ui.citylist.CityCardState
 import com.meteocompare.app.ui.citylist.ForecastState
 import java.time.Duration
-import kotlin.math.roundToInt
 
 /**
  * Helpers pour générer des descriptions accessibles cohérentes.

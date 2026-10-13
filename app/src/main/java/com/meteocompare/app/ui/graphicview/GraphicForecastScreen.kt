@@ -3,7 +3,6 @@ package com.meteocompare.app.ui.graphicview
 import com.meteocompare.app.ui.components.UvIndexCompact
 
 import com.meteocompare.app.core.charts.metricPlotValue
-import com.meteocompare.app.core.charts.canonicalChartRange
 import com.meteocompare.app.core.units.WeatherUnit
 import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.core.units.LocalWeatherUnits

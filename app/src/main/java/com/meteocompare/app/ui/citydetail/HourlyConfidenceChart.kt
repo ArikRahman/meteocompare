@@ -61,7 +61,6 @@ import java.time.ZoneId
 import java.time.format.TextStyle as JavaTextStyle
 import kotlin.math.ceil
 import kotlin.math.floor
-import kotlin.math.roundToInt
 
 // ─── Constantes de layout du chart ─────────────────────────────────────────
 private val ChartCanvasPadding = 8.dp

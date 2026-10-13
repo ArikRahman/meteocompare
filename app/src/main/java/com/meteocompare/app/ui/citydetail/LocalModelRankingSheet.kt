@@ -54,7 +54,6 @@ import com.meteocompare.app.ui.theme.confidenceColor
 import com.meteocompare.app.ui.theme.precipitationMetricAccent
 import com.meteocompare.app.ui.theme.temperatureMetricAccent
 import com.meteocompare.app.ui.theme.windMetricAccent
-import kotlin.math.abs
 
 internal const val TAG_LOCAL_RANKING_SHEET = "local-ranking-sheet"
 internal const val TAG_LOCAL_RANKING_ROW_PREFIX = "local-ranking-row-"

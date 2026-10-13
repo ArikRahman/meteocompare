@@ -2,7 +2,6 @@ package com.meteocompare.app.widget
 
 import com.meteocompare.app.core.charts.metricPlotValue
 
-import com.meteocompare.app.core.units.WeatherUnit
 import com.meteocompare.app.core.units.WeatherUnits
 
 import android.graphics.Bitmap

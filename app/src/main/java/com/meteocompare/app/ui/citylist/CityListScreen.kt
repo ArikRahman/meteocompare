@@ -1,7 +1,6 @@
 package com.meteocompare.app.ui.citylist
 
 import com.meteocompare.app.ui.components.UvIndexGauge
-import com.meteocompare.app.domain.model.UvForecast
 
 import com.meteocompare.app.core.units.WeatherUnit
 import com.meteocompare.app.core.units.WeatherUnits

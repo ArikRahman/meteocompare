@@ -37,7 +37,6 @@ import com.meteocompare.app.domain.model.WeatherNotification
 import com.meteocompare.app.widget.WidgetWeatherIconRenderer
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**

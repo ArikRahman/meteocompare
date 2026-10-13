@@ -59,7 +59,6 @@ import com.meteocompare.app.ui.theme.WeatherAccentTheme
 import com.meteocompare.app.ui.theme.color
 import com.meteocompare.app.ui.theme.confidenceColor
 import java.time.format.DateTimeFormatter
-import kotlin.math.roundToInt
 
 // ============================================================================
 //  Public screen entry

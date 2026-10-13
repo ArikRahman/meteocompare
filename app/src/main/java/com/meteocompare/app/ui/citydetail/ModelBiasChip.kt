@@ -32,7 +32,6 @@ import com.meteocompare.app.domain.model.BiasDirection
 import com.meteocompare.app.domain.model.BiasSignificance
 import com.meteocompare.app.domain.model.BiasVariable
 import com.meteocompare.app.domain.model.ModelBias
-import kotlin.math.abs
 
 /**
  * Badge compact affichant le biais d'un modèle sous son nom.
