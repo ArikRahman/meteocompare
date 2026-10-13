@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.core.locale.WeatherTimeFormat
+
 import com.meteocompare.app.core.charts.metricPlotValue
 import com.meteocompare.app.core.charts.canonicalChartRange
 import com.meteocompare.app.core.units.WeatherUnit
@@ -315,7 +317,7 @@ private fun MarineDashboard(
                 )
             } ?: "—",
             nextExtremumDetail = tideEvents.firstOrNull()?.let {
-                "${eventTime(it)} · ${formatMarine(it.value, WeatherUnit.HEIGHT, 2, locale, units = units)}"
+                "${eventTime(it, locale)} · ${formatMarine(it.value, WeatherUnit.HEIGHT, 2, locale, units = units)}"
             } ?: stringResource(R.string.marine_tide_unavailable),
             tideRange = tideRange?.let { formatMarine(it.range, WeatherUnit.HEIGHT, 2, locale, units = units) } ?: "—",
             accent = tideAccent,
@@ -746,13 +748,13 @@ private fun eventDateTime(event: TideEvent): String {
     val locale = LocalLocale.current.platformLocale
     return runCatching {
         LocalDateTime.parse(event.timestamp)
-            .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT).withLocale(locale))
+            .format(WeatherTimeFormat.dateTime(locale))
     }.getOrDefault(event.timestamp)
 }
 
-private fun eventTime(event: TideEvent): String = runCatching {
-    LocalDateTime.parse(event.timestamp).format(DateTimeFormatter.ofPattern("HH:mm"))
-}.getOrDefault(event.timestamp.takeLast(5))
+private fun eventTime(event: TideEvent, locale: java.util.Locale): String = runCatching {
+    LocalDateTime.parse(event.timestamp).format(WeatherTimeFormat.clock(locale))
+}.getOrDefault(event.timestamp)
 
 @Composable
 private fun MarineLineChart(
@@ -806,7 +808,7 @@ private fun MarineLineChart(
             (minX + (maxX - minX) * fraction).toLong()
         }
     }
-    val timeFormatter = remember(locale) { DateTimeFormatter.ofPattern("EEE\nHH:mm", locale) }
+    val timeFormatter = remember(locale) { WeatherTimeFormat.dayClockLines(locale) }
     val chartZone = remember(timezone) {
         runCatching { ZoneId.of(timezone) }.getOrElse { ZoneId.systemDefault() }
     }

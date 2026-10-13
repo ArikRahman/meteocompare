@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.graphicview
 
+import com.meteocompare.app.core.locale.WeatherTimeFormat
+
 import com.meteocompare.app.ui.components.UvIndexCompact
 
 import com.meteocompare.app.core.charts.metricPlotValue
@@ -71,6 +73,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -600,7 +603,7 @@ private fun GraphicSelectionHeader(
     isNight: Boolean = false
 ) {
     val instant = point.instant
-    val dateTimeFormatter = remember(locale) { DateTimeFormatter.ofPattern("EEE d MMM · HH:mm", locale) }
+    val dateTimeFormatter = remember(locale) { WeatherTimeFormat.dateClock(locale) }
     val dateLabel = instant?.atZone(zone)?.format(dateTimeFormatter).orEmpty()
     var showModels by remember(instant) { mutableStateOf(false) }
     val condition = point.condition
@@ -1604,7 +1607,7 @@ internal fun buildGraphicTimeAxisLabels(
     zone: ZoneId,
     locale: Locale
 ): GraphicTimeAxisLabels {
-    val hourFormatter = DateTimeFormatter.ofPattern("HH'h'", locale)
+    val hourFormatter = WeatherTimeFormat.hourPadded(locale)
     val dayFormatter = DateTimeFormatter.ofPattern("EEE d MMM", locale)
     val zoned = points.map { it.instant?.atZone(zone) }
     val dates = zoned.map { it?.toLocalDate() }
@@ -1701,6 +1704,7 @@ private fun GraphicTimeAxis(
                                 .background(separator)
                         )
                     }
+                    val compactEnglish = locale.language == "en"
                     if (isSelected) {
                         Surface(
                             shape = RoundedCornerShape(9.dp),
@@ -1709,8 +1713,9 @@ private fun GraphicTimeAxis(
                         ) {
                             Text(
                                 text = hourLabel,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp),
-                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = if (compactEnglish) 3.dp else 7.dp, vertical = 5.dp),
+                                style = if (compactEnglish) MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
+                                    else MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1
                             )
@@ -1718,7 +1723,8 @@ private fun GraphicTimeAxis(
                     } else {
                         Text(
                             text = hourLabel,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = if (compactEnglish) MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
+                                else MaterialTheme.typography.labelSmall,
                             color = if (isMidnight) primary else onSurfaceVariant,
                             fontWeight = if (isMidnight) FontWeight.SemiBold else FontWeight.Normal,
                             maxLines = 1

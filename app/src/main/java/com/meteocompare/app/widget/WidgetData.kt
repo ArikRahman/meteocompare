@@ -1,5 +1,7 @@
 package com.meteocompare.app.widget
 
+import com.meteocompare.app.core.locale.WeatherTimeFormat
+
 import com.meteocompare.app.core.units.WeatherUnit
 import com.meteocompare.app.core.units.WeatherUnits
 
@@ -455,7 +457,8 @@ private suspend fun loadWidgetDataInternal(
                     timezone = effectiveTimezone,
                     now = currentInstant,
                     forecastConfidence = forecastConfidence,
-                    engineContext = engineContext
+                    engineContext = engineContext,
+                    locale = localizedContext.resources.configuration.locales[0]
                 )
             }
             val confidenceStrips = if (forecastMode.isConfidenceBand())
@@ -564,13 +567,13 @@ internal fun buildForecasts(
     timezone: String?,
     now: java.time.Instant = java.time.Instant.now(),
     forecastConfidence: WidgetForecastConfidence = WidgetForecastConfidence.Empty,
-    engineContext: ForecastEngineContext = ForecastEngineContext.DEFAULT
+    engineContext: ForecastEngineContext = ForecastEngineContext.DEFAULT,
+    locale: java.util.Locale = java.util.Locale.getDefault()
 ): List<WidgetForecastItem> {
     val zone = resolveZoneOrUtc(timezone)
-    val locale = java.util.Locale.getDefault()
     return when (mode) {
         ForecastMode.HOURLY -> {
-            val formatter = java.time.format.DateTimeFormatter.ofPattern("H'h'", locale)
+            val formatter = WeatherTimeFormat.hour(locale)
             buildSimplifiedTimeline(forecast, DisplayMode.HOURLY, now, engineContext)
                 .filter { it.instant != null && it.instant >= now.minusSeconds(30 * 60L) }
                 .take(5)
@@ -624,14 +627,15 @@ internal fun buildHourlyForecasts(
     hourly: com.meteocompare.app.domain.model.HourlyForecast,
     zone: java.time.ZoneId,
     now: java.time.Instant = java.time.Instant.now(),
-    forecastConfidenceByTimestamp: Map<java.time.Instant, Int> = emptyMap()
+    forecastConfidenceByTimestamp: Map<java.time.Instant, Int> = emptyMap(),
+    locale: java.util.Locale = java.util.Locale.getDefault()
 ): List<WidgetForecastItem> {
     if (hourly.timestamps.isEmpty()) return emptyList()
     val startIdx = hourly.timestamps.indexOfFirst { it >= now }
     // Un cache dont tout l'horizon horaire est déjà passé ne doit pas afficher
     // les cinq premières heures historiques comme si elles étaient futures.
     if (startIdx < 0) return emptyList()
-    val formatter = java.time.format.DateTimeFormatter.ofPattern("H'h'", java.util.Locale.getDefault())
+    val formatter = WeatherTimeFormat.hour(locale)
     return (startIdx until minOf(startIdx + 5, hourly.timestamps.size)).map { i ->
         val ts = hourly.timestamps[i]
         val label = ts.atZone(zone).format(formatter)

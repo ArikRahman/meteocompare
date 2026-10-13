@@ -192,7 +192,13 @@ internal object WidgetHeatmapTrendForecastRenderer {
                     withAlpha(textColorArgb, 0xD0)
                 }
                 val hourLabel = timelineLabels.getOrNull(index) ?: "+${index}h"
+                val naturalSize = labelPaint.textSize
+                val textWidth = labelPaint.measureText(hourLabel)
+                if (textWidth > columnWidth * 0.90f && textWidth > 0f) {
+                    labelPaint.textSize = (naturalSize * columnWidth * 0.90f / textWidth).coerceAtLeast(6f)
+                }
                 canvas.drawText(hourLabel, centerX, axisY + labelAreaHeight * 0.55f, labelPaint)
+                labelPaint.textSize = naturalSize
             }
         }
 

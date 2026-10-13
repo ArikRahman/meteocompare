@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.core.locale.WeatherTimeFormat
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -104,7 +106,7 @@ fun HourlyWeatherByModelTable(
     // si l'heure courante manque, aucune colonne ne doit prétendre être « maintenant ».
     val currentHour = startHour
     val locale = LocalConfiguration.current.locales[0]
-    val hourFmt = remember(locale) { DateTimeFormatter.ofPattern("HH'h'", locale) }
+    val hourFmt = remember(locale) { WeatherTimeFormat.hourPadded(locale) }
     val modelWidth = DetailTableDimensions.modelColumnWidth
     val timeWidth = DetailTableDimensions.temporalColumnWidth
     val headerHeight = DetailTableDimensions.headerHeight

@@ -1,5 +1,7 @@
 package com.meteocompare.app.widget
 
+import com.meteocompare.app.core.locale.WeatherTimeFormat
+
 import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.core.units.LocalWeatherUnits
 
@@ -1217,14 +1219,8 @@ private fun TwelveHourForecastStrip(
     val heightPx = (chartHeightDp * renderDensity).toInt().coerceAtLeast(1)
     val precipColorArgb = 0xFF1976D2.toInt()
 
-    val is24 = android.text.format.DateFormat.is24HourFormat(context)
     val displayLocale = context.resources.configuration.locales[0]
-    val formatter = remember(is24, displayLocale) {
-        java.time.format.DateTimeFormatter.ofPattern(
-            if (is24) "H'h'" else "h a",
-            displayLocale
-        )
-    }
+    val formatter = remember(displayLocale) { WeatherTimeFormat.hour(displayLocale) }
     val timelineLabels = data.hourlyStartTime?.let { start ->
         List(12) { offset -> start.plusHours(offset.toLong()).format(formatter) }
     } ?: List(12) { offset -> "+${offset}h" }

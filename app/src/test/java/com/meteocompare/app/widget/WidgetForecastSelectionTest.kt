@@ -12,6 +12,7 @@ import com.meteocompare.app.domain.model.PrecipitationConfidence
 import com.meteocompare.app.domain.model.WeatherModel
 import java.time.Instant
 import java.time.LocalDate
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -410,6 +411,30 @@ class WidgetForecastSelectionTest {
         )
 
         assertTrue(buildHourlyForecasts(hourly, java.time.ZoneId.of("UTC"), now).isEmpty())
+    }
+
+    @Test
+    fun `english widget hourly labels use uppercase am pm`() {
+        val now = Instant.parse("2026-07-17T00:00:00Z")
+        val hourly = HourlyForecast(
+            timestamps = listOf(now, now.plusSeconds(12 * 3600L), now.plusSeconds(23 * 3600L)),
+            temperature2m = listOf(10.0, 21.0, 13.0),
+            precipitation = List(3) { 0.0 },
+            windSpeed10m = List(3) { 8.0 }
+        )
+        val labels = buildHourlyForecasts(
+            hourly = hourly,
+            zone = java.time.ZoneId.of("UTC"),
+            now = now,
+            locale = Locale.UK
+        ).map { it.label }
+
+        assertEquals(listOf("12 AM", "12 PM", "11 PM"), labels)
+        assertEquals(
+            listOf("0h", "12h", "23h"),
+            buildHourlyForecasts(hourly, java.time.ZoneId.of("UTC"), now, locale = Locale.FRANCE)
+                .map { it.label }
+        )
     }
 
     @Test

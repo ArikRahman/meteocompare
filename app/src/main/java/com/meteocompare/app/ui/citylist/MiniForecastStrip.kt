@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.citylist
 
+import com.meteocompare.app.core.locale.WeatherTimeFormat
+
 import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.core.units.LocalWeatherUnits
 
@@ -29,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import com.meteocompare.app.core.units.weatherStringResource as stringResource
@@ -45,7 +46,6 @@ import com.meteocompare.app.ui.components.WeatherOutlineIconDecorative
 import com.meteocompare.app.ui.components.blendedHeatmapColor
 import com.meteocompare.app.ui.components.temperatureHeatmapColor
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import kotlin.math.max
 import kotlin.math.sqrt
 
@@ -77,12 +77,8 @@ internal fun MiniForecastStrip(
     val a11yLabel = buildA11yLabel(hourlyTemps, hourlyPrecipProb)
     val scrollState = rememberScrollState()
 
-    val context = LocalContext.current
-    val is24 = remember { android.text.format.DateFormat.is24HourFormat(context) }
     val platformLocale = LocalLocale.current.platformLocale
-    val hourFormatter = remember(is24, platformLocale) {
-        DateTimeFormatter.ofPattern(if (is24) "H'h'" else "h a", platformLocale)
-    }
+    val hourFormatter = remember(platformLocale) { WeatherTimeFormat.hour(platformLocale) }
 
     BoxWithConstraints(
         modifier = modifier

@@ -226,12 +226,21 @@ internal object WidgetMiniForecastRenderer {
             tempPaint.color = withAlpha(textColorArgb, 0xF2)
 
             val tempZoneHeight = tempBottom - tempTop
+            // Le texte AM/PM est plus long qu'une heure 24 h ; adapter la
+            // taille par cellule évite qu'il déborde sur la cellule suivante.
+            val naturalTimeSize = timePaint.textSize
+            val labelWidth = timePaint.measureText(label)
+            if (labelWidth > (right - left) * 0.88f && labelWidth > 0f) {
+                timePaint.textSize = (naturalTimeSize * (right - left) * 0.88f / labelWidth)
+                    .coerceAtLeast(6f)
+            }
             canvas.drawText(
                 label,
                 centerX,
                 tempTop + tempZoneHeight * metrics.timeBaselineFraction,
                 timePaint
             )
+            timePaint.textSize = naturalTimeSize
             val temperatureText = temp?.let { units.temp(it) } ?: "—"
             val condition = conditions.getOrNull(index)
                 ?.takeUnless { it == WeatherCondition.UNKNOWN }

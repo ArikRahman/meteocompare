@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.core.locale.WeatherTimeFormat
+
 import com.meteocompare.app.domain.model.UvForecast
 import com.meteocompare.app.ui.components.UvIndexGauge
 
@@ -1603,8 +1605,7 @@ internal fun TodaySummaryCard(
         resources.getString(R.string.uv_accessibility, uvValue, resources.getString(riskRes))
     }
     val solarDescription = if (expanded && solarWindow != null) {
-        val formatter = DateTimeFormatter.ofLocalizedTime(java.time.format.FormatStyle.SHORT)
-            .withLocale(LocalConfiguration.current.locales[0])
+        val formatter = WeatherTimeFormat.clock(LocalConfiguration.current.locales[0])
         stringResource(
             R.string.sun_times_a11y,
             solarWindow.sunrise?.atZone(solarZone)?.toLocalTime()?.format(formatter) ?: "—",

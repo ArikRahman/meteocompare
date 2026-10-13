@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.core.locale.WeatherTimeFormat
+
 import com.meteocompare.app.ui.components.UvIndexGauge
 
 import androidx.compose.foundation.Canvas
@@ -40,8 +42,6 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import kotlin.math.max
 
 /** Instants absolus : la durée reste juste lors des changements d'heure (DST). */
@@ -73,7 +73,7 @@ internal fun DetailSolarCard(
     modifier: Modifier = Modifier
 ) {
     val locale = LocalConfiguration.current.locales[0]
-    val formatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale)
+    val formatter = WeatherTimeFormat.clock(locale)
     val sunriseTime = window.sunrise?.atZone(timezone)?.toLocalTime()
     val sunsetTime = window.sunset?.atZone(timezone)?.toLocalTime()
     val minutesOfDaylight = if (window.sunrise != null && window.sunset != null &&

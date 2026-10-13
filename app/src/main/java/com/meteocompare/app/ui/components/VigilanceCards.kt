@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.components
 
+import com.meteocompare.app.core.locale.WeatherTimeFormat
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -325,7 +327,7 @@ internal fun formatVigilanceWindows(
 ): String {
     val zone = resolveZone(timezone)
     val dateFormatter = DateTimeFormatter.ofPattern("EEE d MMM", locale)
-    val timeFormatter = DateTimeFormatter.ofPattern("HH'h'", locale)
+    val timeFormatter = WeatherTimeFormat.hourPadded(locale)
     val validWindows = windows
         .filter { (begin, end) -> end.isAfter(begin) }
         .sortedBy { it.first }
@@ -414,7 +416,7 @@ private fun VigilanceTimeline(
     val totalMs = max(1L, end.toEpochMilli() - start.toEpochMilli())
     val locale = LocalLocale.current.platformLocale
     val zone = resolveZone(timezone)
-    val tickFormatter = DateTimeFormatter.ofPattern("EEE HH'h'", locale).withZone(zone)
+    val tickFormatter = WeatherTimeFormat.dayHour(locale).withZone(zone)
 
     Column {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -525,8 +527,10 @@ private fun compactIntervalLabel(interval: VigilanceInterval, timezone: String?)
     return formatVigilanceWindows(listOf(begin to end), timezone, locale)
 }
 
+@Composable
 private fun vigilanceUpdateLabel(instant: Instant, timezone: String?): String {
-    val formatter = DateTimeFormatter.ofPattern("dd/MM · HH:mm").withZone(resolveZone(timezone))
+    val locale = LocalLocale.current.platformLocale
+    val formatter = WeatherTimeFormat.shortDateClock(locale).withZone(resolveZone(timezone))
     return formatter.format(instant)
 }
 

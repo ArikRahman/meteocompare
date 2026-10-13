@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.citylist
 
+import com.meteocompare.app.core.locale.WeatherTimeFormat
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,22 +20,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.meteocompare.app.R
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 /**
  * Duo lever/coucher du soleil affiché sous l'identité de chaque CityCard.
  *
  * ─── Formatage HH:mm sensible à la locale ──────────────────────────────────
- * Utilise [DateTimeFormatter.ofLocalizedTime] en SHORT → HH:mm (24h) en FR,
- * "6:12 AM" en EN. Le formatter tient compte de la locale runtime du device
- * — pas besoin de dupliquer côté string resource.
+ * Le formateur partagé suit la langue de MeteoCompare : 24 h en français,
+ * 12 h AM/PM en anglais, même si l’horloge Android reste réglée sur 24 h.
  *
  * ─── A11y ──────────────────────────────────────────────────────────────────
  * Chaque icône est décorative (contentDescription null au niveau Icon), la
@@ -62,7 +62,7 @@ internal fun SunTimesRow(
     modifier: Modifier = Modifier,
     iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant
 ) {
-    val formatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+    val formatter = WeatherTimeFormat.clock(LocalConfiguration.current.locales[0])
     // Résolution des textes AVANT la Row — on est encore en scope @Composable
     // ici, donc stringResource(...) est légal. À l'intérieur de .semantics { }
     // le scope est SemanticsPropertyReceiver et les appels @Composable y sont

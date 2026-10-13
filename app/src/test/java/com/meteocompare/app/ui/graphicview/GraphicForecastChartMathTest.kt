@@ -156,6 +156,18 @@ class GraphicForecastChartMathTest {
     }
 
     @Test
+    fun `english chart hour labels display am pm in the city timezone`() {
+        val points = listOf(
+            "2026-10-13T00:00:00Z",
+            "2026-10-13T12:00:00Z",
+            "2026-10-13T23:00:00Z"
+        ).map { SimplifiedTimelinePoint(instant = Instant.parse(it)) }
+        val labels = buildGraphicTimeAxisLabels(points, ZoneId.of("UTC"), Locale.UK)
+        assertEquals(listOf("12 AM", "12 PM", "11 PM"), labels.hourLabels)
+        assertEquals(listOf(0, 12, 23), labels.hours)
+    }
+
+    @Test
     fun day_spans_keep_global_indices_for_virtualized_timeline() {
         val start = LocalDate.of(2026, 9, 16)
         val dates = List(48) { index -> start.plusDays((index / 24).toLong()) }
