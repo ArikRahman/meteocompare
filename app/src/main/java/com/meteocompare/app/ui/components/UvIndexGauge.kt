@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import com.meteocompare.app.core.units.weatherStringResource as stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -37,21 +38,27 @@ private val uvColors = listOf(
     Color(0xFFE65257), Color(0xFF8F53BA)
 )
 
-internal fun uvIntensityColor(value: Double): Color = when {
-    value < 3 -> uvColors[0]
-    value < 6 -> uvColors[1]
-    value < 8 -> uvColors[2]
-    value < 11 -> uvColors[3]
-    else -> uvColors[4]
+/** Palette de niveaux partagée entre la frise, les colonnes et Chart View. */
+internal enum class UvRisk(val labelRes: Int, val barColor: Color, val lightTextColor: Color) {
+    LOW(R.string.uv_risk_low, uvColors[0], Color(0xFF197A43)),
+    MODERATE(R.string.uv_risk_moderate, uvColors[1], Color(0xFF8B6900)),
+    HIGH(R.string.uv_risk_high, uvColors[2], Color(0xFFAA4B00)),
+    VERY_HIGH(R.string.uv_risk_very_high, uvColors[3], Color(0xFFC02F37)),
+    EXTREME(R.string.uv_risk_extreme, uvColors[4], Color(0xFF7846A4))
 }
 
-internal fun uvRiskLabelRes(value: Double): Int = when {
-    value < 3 -> R.string.uv_risk_low
-    value < 6 -> R.string.uv_risk_moderate
-    value < 8 -> R.string.uv_risk_high
-    value < 11 -> R.string.uv_risk_very_high
-    else -> R.string.uv_risk_extreme
+internal fun uvRisk(value: Double): UvRisk = when {
+    value < 3 -> UvRisk.LOW
+    value < 6 -> UvRisk.MODERATE
+    value < 8 -> UvRisk.HIGH
+    value < 11 -> UvRisk.VERY_HIGH
+    else -> UvRisk.EXTREME
 }
+
+internal fun uvRiskLabelRes(value: Double): Int = uvRisk(value).labelRes
+
+internal fun uvIntensityColor(value: Double, darkBackground: Boolean = false): Color =
+    uvRisk(value).let { if (darkBackground) it.barColor else it.lightTextColor }
 
 /** Shared UV gauge for home and today's summary. Absent values are not shown as zero. */
 @Composable
@@ -60,6 +67,7 @@ fun UvIndexGauge(value: Double?, modifier: Modifier = Modifier) {
     val label = stringResource(uvRiskLabelRes(safeValue))
     val formattedValue = stringResource(R.string.uv_index_value, safeValue)
     val accessibility = stringResource(R.string.uv_accessibility, formattedValue, label)
+    val darkBackground = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     Column(
         modifier = modifier.testTag("uv_gauge").semantics(mergeDescendants = true) {
             contentDescription = accessibility
@@ -73,7 +81,10 @@ fun UvIndexGauge(value: Double?, modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.width(8.dp))
-            Text(formattedValue, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(
+                formattedValue, style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold, color = uvIntensityColor(safeValue, darkBackground)
+            )
             Spacer(Modifier.width(6.dp))
             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -100,6 +111,7 @@ fun UvIndexCompact(value: Double?, modifier: Modifier = Modifier, small: Boolean
     val description = stringResource(
         R.string.uv_accessibility, formatted, stringResource(uvRiskLabelRes(safeValue))
     )
+    val darkBackground = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     Text(
         text = stringResource(R.string.uv_compact, formatted),
         modifier = modifier.testTag("uv_compact").semantics {
@@ -108,7 +120,7 @@ fun UvIndexCompact(value: Double?, modifier: Modifier = Modifier, small: Boolean
         style = if (small) MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
             else MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
         textAlign = TextAlign.Center,
-        color = uvIntensityColor(safeValue),
+        color = uvIntensityColor(safeValue, darkBackground),
         maxLines = 1
     )
 }

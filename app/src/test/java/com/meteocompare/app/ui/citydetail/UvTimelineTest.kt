@@ -22,4 +22,17 @@ class UvTimelineTest {
         assertEquals(7.2, result[2].uvIndex)
         assertEquals(3, result.size)
     }
+
+    @Test fun repeated_local_hour_at_fall_dst_keeps_distinct_utc_uv_measurements() {
+        val first = Instant.parse("2026-10-25T00:00:00Z")
+        val second = Instant.parse("2026-10-25T01:00:00Z")
+        // Les deux heures valent 02h locales à Paris, mais les instants sont distincts.
+        val forecast = UvForecast(mapOf(first to 1.2, second to 2.8), emptyMap())
+        val result = listOf(
+            SimplifiedTimelinePoint(instant = first),
+            SimplifiedTimelinePoint(instant = second)
+        ).withUvIndex(forecast)
+        assertEquals(1.2, result[0].uvIndex)
+        assertEquals(2.8, result[1].uvIndex)
+    }
 }

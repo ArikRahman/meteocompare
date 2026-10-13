@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.meteocompare.app.R
 import com.meteocompare.app.core.units.weatherStringResource as stringResource
 import com.meteocompare.app.domain.model.CityForecast
-import com.meteocompare.app.domain.util.SolarTimes
+import com.meteocompare.app.domain.util.forecastSolarWindow
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -49,35 +49,15 @@ internal data class DetailSolarWindow(val sunrise: Instant?, val sunset: Instant
 
 /** Même priorité que la carte Home : heures Open-Meteo, sinon calcul NOAA local. */
 internal fun detailSolarWindow(forecast: CityForecast, date: LocalDate): DetailSolarWindow {
-    val zone = resolveCityZone(forecast.city.timezone)
-    val sunrise = forecast.seriesByModel.values.asSequence().mapNotNull { series ->
-        val index = series.daily.dates.indexOf(date)
-        if (index < 0) null else series.daily.sunrise.getOrNull(index)
-    }.firstOrNull()
-    val sunset = forecast.seriesByModel.values.asSequence().mapNotNull { series ->
-        val index = series.daily.dates.indexOf(date)
-        if (index < 0) null else series.daily.sunset.getOrNull(index)
-    }.firstOrNull()
-
-    if (sunrise != null && sunset != null) return DetailSolarWindow(sunrise, sunset)
-
-    val fallback = SolarTimes.compute(
-        latitude = forecast.city.latitude,
-        longitude = forecast.city.longitude,
-        date = date,
-        zone = zone
-    )
-    return DetailSolarWindow(
-        sunrise = sunrise ?: fallback.sunrise?.atDate(date)?.atZone(zone)?.toInstant(),
-        sunset = sunset ?: fallback.sunset?.atDate(date)?.atZone(zone)?.toInstant()
-    )
+    val window = forecastSolarWindow(forecast, date)
+    return DetailSolarWindow(window.sunrise, window.sunset)
 }
 
 /** null en dehors de la journée solaire ; évite un soleil dessiné pendant la nuit. */
 internal fun solarProgress(window: DetailSolarWindow, now: Instant): Float? {
     val sunrise = window.sunrise ?: return null
     val sunset = window.sunset ?: return null
-    if (now.isBefore(sunrise) || now.isAfter(sunset)) return null
+    if (now.isBefore(sunrise) || !now.isBefore(sunset)) return null
     val duration = Duration.between(sunrise, sunset).toMillis().takeIf { it > 0 } ?: return null
     return (Duration.between(sunrise, now).toMillis().toFloat() / duration).coerceIn(0f, 1f)
 }
@@ -96,8 +76,9 @@ internal fun DetailSolarCard(
     val formatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale)
     val sunriseTime = window.sunrise?.atZone(timezone)?.toLocalTime()
     val sunsetTime = window.sunset?.atZone(timezone)?.toLocalTime()
-    val minutesOfDaylight = if (window.sunrise != null && window.sunset != null) {
-        Duration.between(window.sunrise, window.sunset).toMinutes().takeIf { it > 0 }
+    val minutesOfDaylight = if (window.sunrise != null && window.sunset != null &&
+        window.sunset.isAfter(window.sunrise)) {
+        Duration.between(window.sunrise, window.sunset).toMinutes()
     } else null
     val progress = if (now.atZone(timezone).toLocalDate() == date) {
         solarProgress(window, now)
@@ -195,7 +176,7 @@ internal fun DetailSolarCard(
 
         // L'indice UV fait partie de la même section que la trajectoire solaire,
         // sous les heures de lever/coucher et sans nouvelle carte ni séparateur.
-        if (uvIndex != null) {
+        if (uvIndex != null && uvIndex.isFinite() && uvIndex >= 0.0) {
             Spacer(Modifier.height(10.dp))
             UvIndexGauge(value = uvIndex, modifier = Modifier.fillMaxWidth())
         }

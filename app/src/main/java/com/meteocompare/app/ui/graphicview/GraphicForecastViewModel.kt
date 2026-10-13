@@ -20,7 +20,7 @@ import com.meteocompare.app.domain.repository.UserPreferencesRepository
 import com.meteocompare.app.domain.repository.VigilanceRepository
 import com.meteocompare.app.domain.repository.UvIndexRepository
 import com.meteocompare.app.domain.usecase.ForecastEngineContextProvider
-import com.meteocompare.app.domain.util.SolarTimes
+import com.meteocompare.app.domain.util.forecastSolarWindow
 import com.meteocompare.app.ui.citydetail.DisplayMode
 import com.meteocompare.app.ui.citydetail.SimplifiedTimelinePoint
 import com.meteocompare.app.ui.citydetail.buildSimplifiedTimeline
@@ -267,27 +267,8 @@ class GraphicForecastViewModel @Inject constructor(
         val zone = resolveCityZone(forecast.city.timezone)
         val dates = points.mapNotNull { it.instant?.atZone(zone)?.toLocalDate() }.distinct()
         return dates.associateWith { date ->
-            val apiWindow = forecast.seriesByModel.values.firstNotNullOfOrNull { series ->
-                val index = series.daily.dates.indexOf(date)
-                if (index < 0) return@firstNotNullOfOrNull null
-                val sunrise = series.daily.sunrise.getOrNull(index)
-                val sunset = series.daily.sunset.getOrNull(index)
-                if (sunrise != null && sunset != null && sunset.isAfter(sunrise)) {
-                    GraphicSolarWindow(sunrise, sunset)
-                } else null
-            }
-            apiWindow ?: run {
-                val fallback = SolarTimes.compute(
-                    latitude = forecast.city.latitude,
-                    longitude = forecast.city.longitude,
-                    date = date,
-                    zone = zone
-                )
-                GraphicSolarWindow(
-                    sunrise = fallback.sunrise?.let { date.atTime(it).atZone(zone).toInstant() },
-                    sunset = fallback.sunset?.let { date.atTime(it).atZone(zone).toInstant() }
-                )
-            }
+            val window = forecastSolarWindow(forecast, date)
+            GraphicSolarWindow(window.sunrise, window.sunset)
         }
     }
 

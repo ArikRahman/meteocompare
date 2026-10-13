@@ -1022,6 +1022,11 @@ private fun DrawScope.drawMoon(
             )
         }
         val crescent = Path.combine(PathOperation.Difference, outer, inner)
+        drawCircle(
+            color = palette.glow.copy(alpha = 0.42f),
+            radius = radius * 1.08f,
+            center = center
+        )
         drawPath(
             path = crescent,
             brush = Brush.radialGradient(
@@ -1034,11 +1039,6 @@ private fun DrawScope.drawMoon(
             path = crescent,
             color = palette.shadow.copy(alpha = 0.18f),
             style = Stroke(width = 2.2f * unit, join = StrokeJoin.Round, cap = StrokeCap.Round)
-        )
-        drawCircle(
-            color = palette.glow.copy(alpha = 0.42f),
-            radius = radius * 1.08f,
-            center = center
         )
     }
 }

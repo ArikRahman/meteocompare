@@ -61,6 +61,7 @@ class DetailSolarCardLogicTest {
         val window = DetailSolarWindow(sunrise, sunset)
         assertNull(solarProgress(window, sunrise.minusSeconds(1)))
         assertEquals(0.5f, solarProgress(window, sunrise.plusSeconds(8 * 3600))!!, .0001f)
+        assertNull(solarProgress(window, sunset))
         assertNull(solarProgress(window, sunset.plusSeconds(1)))
         assertNull(solarProgress(DetailSolarWindow(null, null), sunrise))
     }

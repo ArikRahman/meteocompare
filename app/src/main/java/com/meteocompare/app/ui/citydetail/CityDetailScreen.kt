@@ -1587,13 +1587,9 @@ internal fun TodaySummaryCard(
     val solarZone = remember(forecast?.city?.timezone) {
         resolveCityZone(forecast?.city?.timezone)
     }
-    val currentIsNight = remember(solarWindow, now) {
-        solarWindow?.let { window ->
-            val sunrise = window.sunrise
-            val sunset = window.sunset
-            sunrise != null && sunset != null && sunset.isAfter(sunrise) &&
-                (now.isBefore(sunrise) || !now.isBefore(sunset))
-        } == true
+    // Même décision jour/nuit que les widgets, y compris si la date change.
+    val currentIsNight = remember(forecast, now) {
+        forecast?.let { com.meteocompare.app.domain.util.forecastIsNightAt(it, now) } == true
     }
     val resources = LocalResources.current
     val baseDescription = A11yFormatter
@@ -1601,7 +1597,7 @@ internal fun TodaySummaryCard(
     val temperatureDescription = if (currentTemp != null) {
         com.meteocompare.app.core.units.weatherString(resources, units, R.string.a11y_now_temp, currentTemp) + ". $baseDescription"
     } else baseDescription
-    val uvDescription = uvIndex?.let {
+    val uvDescription = uvIndex?.takeIf { it.isFinite() && it >= 0.0 }?.let {
         val uvValue = resources.getString(R.string.uv_index_value, it)
         val riskRes = com.meteocompare.app.ui.components.uvRiskLabelRes(it)
         resources.getString(R.string.uv_accessibility, uvValue, resources.getString(riskRes))
@@ -1731,7 +1727,7 @@ internal fun TodaySummaryCard(
                             SummarySectionDivider()
                             Spacer(Modifier.height(6.dp))
                         }
-                    } else if (uvIndex != null) {
+                    } else if (uvIndex != null && uvIndex.isFinite() && uvIndex >= 0.0) {
                         // Sans données solaires (prévisions absentes), conserver
                         // l'indice UV accessible au lieu de le masquer.
                         Spacer(Modifier.height(10.dp))
