@@ -73,6 +73,21 @@ class WeatherTimeFormatTest {
     }
 
     @Test
+    fun `switching language does not override chosen clock format`() {
+        val time = LocalTime.of(18, 35)
+        val languages = listOf(Locale.US, Locale.FRANCE, Locale.GERMANY,
+            Locale.ITALY, Locale.forLanguageTag("es-ES"), Locale.UK)
+        // DataStore stores the choice independently; only the Locale changes
+        // when the activity is recreated after a language selection.
+        for (preference in listOf(ClockFormatPreference.HOUR_12, ClockFormatPreference.HOUR_24)) {
+            val expected = if (preference == ClockFormatPreference.HOUR_12) "6:35 PM" else "18:35"
+            for (locale in languages) {
+                assertEquals(expected, time.format(WeatherTimeFormat.clock(locale, preference)))
+            }
+        }
+    }
+
+    @Test
     fun `formatting respects destination city timezone and daylight saving time`() {
         val zone = ZoneId.of("Europe/Paris")
         val beforeJump = Instant.parse("2026-03-29T00:00:00Z").atZone(zone)

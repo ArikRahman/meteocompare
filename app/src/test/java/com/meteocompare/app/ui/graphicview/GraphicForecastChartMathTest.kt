@@ -1,6 +1,7 @@
 package com.meteocompare.app.ui.graphicview
 
 import com.meteocompare.app.ui.citydetail.SimplifiedTimelinePoint
+import com.meteocompare.app.domain.model.ClockFormatPreference
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -165,6 +166,31 @@ class GraphicForecastChartMathTest {
         val labels = buildGraphicTimeAxisLabels(points, ZoneId.of("UTC"), Locale.UK)
         assertEquals(listOf("12 AM", "12 PM", "11 PM"), labels.hourLabels)
         assertEquals(listOf(0, 12, 23), labels.hours)
+    }
+
+    @Test
+    fun `chart hour labels obey explicit clock choice regardless of language`() {
+        val points = listOf(
+            "2026-10-13T00:00:00Z",
+            "2026-10-13T12:00:00Z",
+            "2026-10-13T23:00:00Z"
+        ).map { SimplifiedTimelinePoint(instant = Instant.parse(it)) }
+        val zone = ZoneId.of("UTC")
+        val languages = listOf(Locale.FRANCE, Locale.UK, Locale.GERMANY,
+            Locale.ITALY, Locale.forLanguageTag("es-ES"))
+
+        for (language in languages) {
+            assertEquals(
+                listOf("12 AM", "12 PM", "11 PM"),
+                buildGraphicTimeAxisLabels(points, zone, language,
+                    ClockFormatPreference.HOUR_12).hourLabels
+            )
+            assertEquals(
+                listOf("00h", "12h", "23h"),
+                buildGraphicTimeAxisLabels(points, zone, language,
+                    ClockFormatPreference.HOUR_24).hourLabels
+            )
+        }
     }
 
     @Test

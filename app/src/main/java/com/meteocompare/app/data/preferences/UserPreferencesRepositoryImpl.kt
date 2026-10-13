@@ -155,7 +155,9 @@ class UserPreferencesRepositoryImpl @Inject constructor(
 
     override suspend fun setLanguagePreference(preference: LanguagePreference) =
         withContext(ioDispatcher) {
-            persistLocalePreference(context, preference.bcp47Tag)
+            check(persistLocalePreference(context, preference.bcp47Tag)) {
+                "Unable to persist the selected application language"
+            }
             Unit
         }
 

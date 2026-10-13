@@ -337,7 +337,9 @@ private fun EvolutionHighlightRow(highlight: ForecastEvolutionHighlight) {
         ForecastEvolutionVariable.WIND -> Icons.Outlined.Air
     }
     val title = stringResource(evolutionHighlightTitleRes(highlight))
-    val date = highlight.targetDate.format(DateTimeFormatter.ofPattern("EEE d"))
+    val locale = LocalConfiguration.current.locales[0]
+    val dateFormatter = remember(locale) { DateTimeFormatter.ofPattern("EEE d", locale) }
+    val date = highlight.targetDate.format(dateFormatter)
     Row(
         modifier = Modifier
             .fillMaxWidth()

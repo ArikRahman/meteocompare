@@ -341,12 +341,26 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `onLanguageSelected - délègue au repo sans appeler AppCompat`() = runTest(dispatcher) {
-        // La VM persiste dans l'unique source canonique. L'écran attend cette
-        // écriture avant Activity.recreate(), donc pas de course avec
-        // attachBaseContext().
-        viewModel.onLanguageSelected(LanguagePreference.ENGLISH)
-        coVerify { prefs.setLanguagePreference(LanguagePreference.ENGLISH) }
+    fun `language change refreshes widgets without resetting an explicit clock format`() = runTest(dispatcher) {
+        // The clock choice lives in DataStore and must survive a language
+        // change, including the Activity.recreate() performed by SettingsScreen.
+        clockFormatFlow.value = ClockFormatPreference.HOUR_24
+        assertTrue(viewModel.onLanguageSelected(LanguagePreference.ENGLISH))
+        coVerify(exactly = 1) { prefs.setLanguagePreference(LanguagePreference.ENGLISH) }
+        coVerify(exactly = 0) { prefs.setClockFormatPreference(any()) }
+        assertEquals(ClockFormatPreference.HOUR_24, clockFormatFlow.value)
+        verify(exactly = 1) { WidgetRefreshScheduler.triggerImmediateRefresh(appContext) }
+    }
+
+    @Test
+    fun `failed language update does not enqueue widget refresh or reset clock`() = runTest(dispatcher) {
+        clockFormatFlow.value = ClockFormatPreference.HOUR_12
+        coEvery { prefs.setLanguagePreference(LanguagePreference.ENGLISH) } throws IOException("failed commit")
+
+        assertFalse(viewModel.onLanguageSelected(LanguagePreference.ENGLISH))
+        assertEquals(ClockFormatPreference.HOUR_12, clockFormatFlow.value)
+        coVerify(exactly = 0) { prefs.setClockFormatPreference(any()) }
+        verify(exactly = 0) { WidgetRefreshScheduler.triggerImmediateRefresh(any<Context>()) }
     }
 
     @Test
@@ -411,6 +425,7 @@ class SettingsViewModelTest {
         runTest(dispatcher) {
             assertFalse(viewModel.onLanguageSelected(LanguagePreference.SYSTEM))
             coVerify(exactly = 0) { prefs.setLanguagePreference(any()) }
+            verify(exactly = 0) { WidgetRefreshScheduler.triggerImmediateRefresh(any<Context>()) }
         }
 
     // ────────────────────────────────────────────────────────────────────

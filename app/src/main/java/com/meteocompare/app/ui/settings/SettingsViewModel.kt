@@ -302,7 +302,15 @@ class SettingsViewModel @Inject constructor(
             persist = { prefs.setLanguagePreference(preference) }
         )) {
             PreferenceUpdateResult.UNCHANGED -> false
-            PreferenceUpdateResult.SAVED -> true
+            PreferenceUpdateResult.SAVED -> {
+                // A clock choice is stored separately in DataStore: changing the
+                // language must not overwrite it. Widget labels, however, are
+                // pre-rendered and must be refreshed in the new locale.
+                if (!triggerWidgetRefreshSafely()) {
+                    _feedback.send(AppToastEvent.warning(R.string.toast_widget_refresh_delayed))
+                }
+                true
+            }
             PreferenceUpdateResult.FAILED -> {
                 _feedback.send(AppToastEvent.error(R.string.toast_settings_save_error))
                 false

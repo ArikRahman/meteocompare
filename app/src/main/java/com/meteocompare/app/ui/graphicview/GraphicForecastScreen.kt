@@ -1635,6 +1635,7 @@ private fun GraphicTimeAxis(
     modifier: Modifier = Modifier
 ) {
     val clockPreference = LocalClockFormatPreference.current
+    val useCompactClockLabels = WeatherTimeFormat.usesTwelveHourClock(locale, clockPreference)
     val labels = remember(points, zone, locale, clockPreference) {
         buildGraphicTimeAxisLabels(points, zone, locale, clockPreference)
     }
@@ -1711,7 +1712,6 @@ private fun GraphicTimeAxis(
                                 .background(separator)
                         )
                     }
-                    val compactEnglish = locale.language == "en"
                     if (isSelected) {
                         Surface(
                             shape = RoundedCornerShape(9.dp),
@@ -1720,8 +1720,8 @@ private fun GraphicTimeAxis(
                         ) {
                             Text(
                                 text = hourLabel,
-                                modifier = Modifier.padding(horizontal = if (compactEnglish) 3.dp else 7.dp, vertical = 5.dp),
-                                style = if (compactEnglish) MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
+                                modifier = Modifier.padding(horizontal = if (useCompactClockLabels) 3.dp else 7.dp, vertical = 5.dp),
+                                style = if (useCompactClockLabels) MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
                                     else MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1
@@ -1730,7 +1730,7 @@ private fun GraphicTimeAxis(
                     } else {
                         Text(
                             text = hourLabel,
-                            style = if (compactEnglish) MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
+                            style = if (useCompactClockLabels) MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
                                 else MaterialTheme.typography.labelSmall,
                             color = if (isMidnight) primary else onSurfaceVariant,
                             fontWeight = if (isMidnight) FontWeight.SemiBold else FontWeight.Normal,
