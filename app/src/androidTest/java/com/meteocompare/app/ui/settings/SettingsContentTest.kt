@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.unit.dp
+import com.meteocompare.app.domain.model.ClockFormatPreference
 import com.meteocompare.app.domain.model.ForecastEngine
 import com.meteocompare.app.domain.model.LanguagePreference
 import com.meteocompare.app.domain.model.RefreshInterval
@@ -64,6 +65,20 @@ class SettingsContentTest {
     private fun scrollTo(tag: String) {
         composeRule.onNodeWithTag(TAG_SETTINGS_ROOT)
             .performScrollToNode(hasTestTag(tag))
+    }
+
+    @Test
+    fun clock_format_selector_exposes_selection_and_callback() {
+        val selected = androidx.compose.runtime.mutableStateOf(ClockFormatPreference.AUTO)
+        composeRule.setContent {
+            MeteoCompareTheme {
+                ClockFormatSelector(selected = selected.value, onSelect = { selected.value = it })
+            }
+        }
+        composeRule.onNodeWithTag("settings_clock_AUTO").assertIsSelected()
+        composeRule.onNodeWithTag("settings_clock_HOUR_12").performClick()
+        composeRule.runOnIdle { assertEquals(ClockFormatPreference.HOUR_12, selected.value) }
+        composeRule.onNodeWithTag("settings_clock_HOUR_12").assertIsSelected()
     }
 
     @Test

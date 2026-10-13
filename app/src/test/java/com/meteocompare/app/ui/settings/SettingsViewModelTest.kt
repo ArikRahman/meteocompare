@@ -8,6 +8,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import java.util.concurrent.ExecutionException
 import com.meteocompare.app.R
 import com.meteocompare.app.data.worker.BiasRefreshScheduler
+import com.meteocompare.app.domain.model.ClockFormatPreference
 import com.meteocompare.app.domain.model.City
 import com.meteocompare.app.domain.model.ForecastEngine
 import com.meteocompare.app.domain.model.LanguagePreference
@@ -73,6 +74,7 @@ class SettingsViewModelTest {
 
     private val modelsFlow = MutableStateFlow(WeatherModel.MVP_SELECTION)
     private val themeFlow = MutableStateFlow(ThemePreference.SYSTEM)
+    private val clockFormatFlow = MutableStateFlow(ClockFormatPreference.AUTO)
     private val languageFlow = MutableStateFlow(LanguagePreference.SYSTEM)
     private val refreshIntervalFlow = MutableStateFlow(RefreshInterval.DEFAULT)
     private val forecastEngineFlow = MutableStateFlow(ForecastEngine.DEFAULT)
@@ -89,6 +91,10 @@ class SettingsViewModelTest {
             Unit
         }
         every { observeUnitSystem() } returns kotlinx.coroutines.flow.flowOf(UnitSystem.METRIC)
+        every { observeClockFormatPreference() } returns clockFormatFlow
+        coEvery { setClockFormatPreference(any()) } answers {
+            clockFormatFlow.value = firstArg()
+        }
         coEvery { observeThemePreference() } returns themeFlow
         coEvery { observeLanguagePreference() } returns languageFlow
         coEvery { observeRefreshInterval() } returns refreshIntervalFlow
@@ -147,6 +153,24 @@ class SettingsViewModelTest {
         unmockkObject(BiasRefreshScheduler)
         unmockkObject(WidgetRefreshScheduler)
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `clock format choice persists and asks widgets for a refresh`() = runTest(dispatcher) {
+        viewModel.onClockFormatSelected(ClockFormatPreference.HOUR_12)
+
+        assertEquals(ClockFormatPreference.HOUR_12, clockFormatFlow.value)
+        coVerify(exactly = 1) { prefs.setClockFormatPreference(ClockFormatPreference.HOUR_12) }
+        verify(exactly = 1) { WidgetRefreshScheduler.triggerImmediateRefresh(appContext) }
+    }
+
+    @Test
+    fun `choosing the same clock format again does not rewrite preferences`() = runTest(dispatcher) {
+        clockFormatFlow.value = ClockFormatPreference.HOUR_24
+        viewModel.onClockFormatSelected(ClockFormatPreference.HOUR_24)
+
+        coVerify(exactly = 0) { prefs.setClockFormatPreference(any()) }
+        verify(exactly = 0) { WidgetRefreshScheduler.triggerImmediateRefresh(any<Context>()) }
     }
 
     @Test

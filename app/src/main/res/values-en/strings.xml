@@ -27,6 +27,11 @@
     <string name="tablet_detail_placeholder_subtitle">Select a location in the left column.</string>
 
     <string name="settings_appearance">Appearance</string>
+    <string name="settings_clock_format">Time format</string>
+    <string name="settings_clock_format_desc">Choose a clock format for every language, including widgets.</string>
+    <string name="settings_clock_auto">Automatic (based on language)</string>
+    <string name="settings_clock_12">12-hour (AM/PM)</string>
+    <string name="settings_clock_24">24-hour</string>
     <string name="settings_language">Language</string>
 
     <string name="settings_refresh_interval_title">Refresh interval</string>

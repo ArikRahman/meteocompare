@@ -1,5 +1,6 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
 import com.meteocompare.app.ui.components.UvIndexCompact
@@ -100,7 +101,8 @@ internal fun ChronoTimelineView(
     val zone = remember(timezone) { resolveCityZone(timezone) }
     val today = remember(timezone, now) { cityLocalDate(timezone, now) }
     val currentHour = remember(timezone, now) { computeHourlyHorizon(timezone, now).first }
-    val hourFormatter = remember(locale) { WeatherTimeFormat.hourPadded(locale) }
+    val clockPreference = LocalClockFormatPreference.current
+    val hourFormatter = remember(locale, clockPreference) { WeatherTimeFormat.hourPadded(locale, clockPreference) }
     val dayFormatter = remember(locale) { DateTimeFormatter.ofPattern("EEE d", locale) }
     val pointWidth = chronoPointWidth(mode)
     val contentWidth = pointWidth * points.size.toFloat()

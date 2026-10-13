@@ -7,6 +7,7 @@ import androidx.work.await
 import com.meteocompare.app.R
 import com.meteocompare.app.core.util.runSuspendCatching
 import com.meteocompare.app.data.worker.BiasRefreshScheduler
+import com.meteocompare.app.domain.model.ClockFormatPreference
 import com.meteocompare.app.domain.model.City
 import com.meteocompare.app.domain.model.ForecastEngine
 import com.meteocompare.app.domain.model.LanguagePreference
@@ -91,6 +92,9 @@ class SettingsViewModel @Inject constructor(
 
     val unitSystem: StateFlow<UnitSystem> = prefs.observeUnitSystem()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UnitSystem.METRIC)
+
+    val clockFormatPreference: StateFlow<ClockFormatPreference> = prefs.observeClockFormatPreference()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ClockFormatPreference.AUTO)
 
     val themePreference: StateFlow<ThemePreference> = prefs.observeThemePreference()
         .stateIn(
@@ -241,6 +245,26 @@ class SettingsViewModel @Inject constructor(
                             AppToastEvent.warning(R.string.toast_widget_refresh_delayed)
                         }
                     )
+                }
+            }
+        }
+    }
+
+    fun onClockFormatSelected(preference: ClockFormatPreference) {
+        viewModelScope.launch {
+            when (updatePreferenceIfChanged(
+                current = { prefs.observeClockFormatPreference().first() },
+                target = preference,
+                persist = { prefs.setClockFormatPreference(preference) }
+            )) {
+                PreferenceUpdateResult.UNCHANGED -> Unit
+                PreferenceUpdateResult.FAILED ->
+                    _feedback.send(AppToastEvent.error(R.string.toast_settings_save_error))
+                PreferenceUpdateResult.SAVED -> {
+                    // Widget labels are preformatted snapshots and must be rebuilt.
+                    if (!triggerWidgetRefreshSafely()) {
+                        _feedback.send(AppToastEvent.warning(R.string.toast_widget_refresh_delayed))
+                    }
                 }
             }
         }

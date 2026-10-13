@@ -1,5 +1,6 @@
 package com.meteocompare.app.ui.radar
 
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
 import android.graphics.Bitmap
@@ -798,7 +799,8 @@ private fun DrawScope.drawOutlinedRadarText(text: String, x: Float, y: Float, co
 private fun formatRadarTime(state: RadarUiState.Ready): String {
     val zone = remember(state.city.timezone) { runCatching { ZoneId.of(state.city.timezone ?: "UTC") }.getOrDefault(ZoneId.of("UTC")) }
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
-    val formatter = remember(locale) { WeatherTimeFormat.clock(locale) }
+    val clockPreference = LocalClockFormatPreference.current
+    val formatter = remember(locale, clockPreference) { WeatherTimeFormat.clock(locale, clockPreference) }
     return Instant.ofEpochSecond(state.selectedFrame.timeEpochSeconds).atZone(zone).format(formatter)
 }
 

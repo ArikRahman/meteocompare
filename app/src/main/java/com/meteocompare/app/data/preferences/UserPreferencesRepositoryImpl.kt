@@ -1,5 +1,6 @@
 package com.meteocompare.app.data.preferences
 
+import com.meteocompare.app.domain.model.ClockFormatPreference
 import com.meteocompare.app.domain.model.UnitSystem
 
 import android.content.Context
@@ -45,6 +46,7 @@ import kotlinx.coroutines.withContext
 private val Context.preferencesDataStore by preferencesDataStore(name = "user_prefs")
 
 private val ENABLED_MODELS_KEY = stringSetPreferencesKey("enabled_models")
+private val CLOCK_FORMAT_PREFERENCE_KEY = stringPreferencesKey("clock_format_preference")
 private val THEME_PREFERENCE_KEY = stringPreferencesKey("theme_preference")
 private val REFRESH_INTERVAL_KEY = stringPreferencesKey("refresh_interval")
 private val FORECAST_ENGINE_KEY = stringPreferencesKey("forecast_engine")
@@ -109,6 +111,16 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         context.preferencesDataStore.edit { it[UnitSystemPreferenceCodec.key] = system.storageKey }
         Unit
     }
+
+    override fun observeClockFormatPreference(): Flow<ClockFormatPreference> =
+        safePreferences.map { ClockFormatPreference.fromString(it[CLOCK_FORMAT_PREFERENCE_KEY]) }
+            .distinctUntilChanged()
+
+    override suspend fun setClockFormatPreference(preference: ClockFormatPreference) =
+        withContext(ioDispatcher) {
+            context.preferencesDataStore.edit { it[CLOCK_FORMAT_PREFERENCE_KEY] = preference.name }
+            Unit
+        }
 
     override fun observeThemePreference(): Flow<ThemePreference> =
         safePreferences.map { prefs ->

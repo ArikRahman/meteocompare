@@ -1220,7 +1220,9 @@ private fun TwelveHourForecastStrip(
     val precipColorArgb = 0xFF1976D2.toInt()
 
     val displayLocale = context.resources.configuration.locales[0]
-    val formatter = remember(displayLocale) { WeatherTimeFormat.hour(displayLocale) }
+    val formatter = remember(displayLocale, data.clockFormatPreference) {
+        WeatherTimeFormat.hour(displayLocale, data.clockFormatPreference)
+    }
     val timelineLabels = data.hourlyStartTime?.let { start ->
         List(12) { offset -> start.plusHours(offset.toLong()).format(formatter) }
     } ?: List(12) { offset -> "+${offset}h" }

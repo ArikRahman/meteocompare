@@ -1,5 +1,6 @@
 package com.meteocompare.app.ui.graphicview
 
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
 import com.meteocompare.app.ui.components.UvIndexCompact
@@ -603,7 +604,8 @@ private fun GraphicSelectionHeader(
     isNight: Boolean = false
 ) {
     val instant = point.instant
-    val dateTimeFormatter = remember(locale) { WeatherTimeFormat.dateClock(locale) }
+    val clockPreference = LocalClockFormatPreference.current
+    val dateTimeFormatter = remember(locale, clockPreference) { WeatherTimeFormat.dateClock(locale, clockPreference) }
     val dateLabel = instant?.atZone(zone)?.format(dateTimeFormatter).orEmpty()
     var showModels by remember(instant) { mutableStateOf(false) }
     val condition = point.condition
@@ -1605,9 +1607,11 @@ internal data class GraphicTimeAxisLabels(
 internal fun buildGraphicTimeAxisLabels(
     points: List<SimplifiedTimelinePoint>,
     zone: ZoneId,
-    locale: Locale
+    locale: Locale,
+    clockPreference: com.meteocompare.app.domain.model.ClockFormatPreference =
+        com.meteocompare.app.domain.model.ClockFormatPreference.AUTO
 ): GraphicTimeAxisLabels {
-    val hourFormatter = WeatherTimeFormat.hourPadded(locale)
+    val hourFormatter = WeatherTimeFormat.hourPadded(locale, clockPreference)
     val dayFormatter = DateTimeFormatter.ofPattern("EEE d MMM", locale)
     val zoned = points.map { it.instant?.atZone(zone) }
     val dates = zoned.map { it?.toLocalDate() }
@@ -1630,7 +1634,10 @@ private fun GraphicTimeAxis(
     visibleRange: IntRange,
     modifier: Modifier = Modifier
 ) {
-    val labels = remember(points, zone, locale) { buildGraphicTimeAxisLabels(points, zone, locale) }
+    val clockPreference = LocalClockFormatPreference.current
+    val labels = remember(points, zone, locale, clockPreference) {
+        buildGraphicTimeAxisLabels(points, zone, locale, clockPreference)
+    }
     val selectedDate = labels.dates.getOrNull(selectedIndex)
     val primary = MaterialTheme.colorScheme.primary
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant

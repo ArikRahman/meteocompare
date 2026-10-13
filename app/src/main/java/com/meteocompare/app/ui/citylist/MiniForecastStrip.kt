@@ -1,5 +1,6 @@
 package com.meteocompare.app.ui.citylist
 
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
 import com.meteocompare.app.core.units.WeatherUnits
@@ -78,7 +79,8 @@ internal fun MiniForecastStrip(
     val scrollState = rememberScrollState()
 
     val platformLocale = LocalLocale.current.platformLocale
-    val hourFormatter = remember(platformLocale) { WeatherTimeFormat.hour(platformLocale) }
+    val clockPreference = LocalClockFormatPreference.current
+    val hourFormatter = remember(platformLocale, clockPreference) { WeatherTimeFormat.hour(platformLocale, clockPreference) }
 
     BoxWithConstraints(
         modifier = modifier

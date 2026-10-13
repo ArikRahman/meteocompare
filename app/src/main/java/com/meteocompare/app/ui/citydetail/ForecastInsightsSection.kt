@@ -1,5 +1,6 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
 import androidx.compose.foundation.background
@@ -940,7 +941,8 @@ private fun forecastPointLabel(
     if (point == null) return null
     val locale = LocalConfiguration.current.locales[0]
     val zone = remember(timezone) { resolveCityZone(timezone) }
-    val hourFormatter = remember(locale) { WeatherTimeFormat.hourPadded(locale) }
+    val clockPreference = LocalClockFormatPreference.current
+    val hourFormatter = remember(locale, clockPreference) { WeatherTimeFormat.hourPadded(locale, clockPreference) }
     val shortDayFormatter = remember(locale) { DateTimeFormatter.ofPattern("EEE", locale) }
     val fullDayFormatter = remember(locale) { DateTimeFormatter.ofPattern("EEEE", locale) }
 

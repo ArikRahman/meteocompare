@@ -1,5 +1,6 @@
 package com.meteocompare.app.ui.settings
 
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
 import androidx.compose.foundation.layout.Arrangement
@@ -249,10 +250,11 @@ private fun DailySummaryTimeDialog(
     onConfirm: (LocalTime) -> Unit
 ) {
     val locale = LocalConfiguration.current.locales[0]
+    val clockPreference = LocalClockFormatPreference.current
     val state = rememberTimePickerState(
         initialHour = initial.hour,
         initialMinute = initial.minute,
-        is24Hour = locale.language != "en"
+        is24Hour = !WeatherTimeFormat.usesTwelveHourClock(locale, clockPreference)
     )
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -272,7 +274,7 @@ private fun DailySummaryTimeDialog(
 @Composable
 private fun formatTime(time: LocalTime): String {
     val locale = LocalConfiguration.current.locales[0]
-    return time.format(WeatherTimeFormat.clock(locale))
+    return time.format(WeatherTimeFormat.clock(locale, LocalClockFormatPreference.current))
 }
 
 internal const val TAG_SETTINGS_NOTIFICATIONS = "settings_notifications"

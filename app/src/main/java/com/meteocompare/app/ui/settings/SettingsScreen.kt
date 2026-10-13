@@ -6,6 +6,7 @@ import com.meteocompare.app.core.units.LocalWeatherUnits
 
 import androidx.compose.foundation.selection.selectable
 
+import com.meteocompare.app.domain.model.ClockFormatPreference
 import com.meteocompare.app.domain.model.UnitSystem
 
 import android.Manifest
@@ -125,6 +126,7 @@ fun SettingsScreen(
 ) {
     val enabled by viewModel.enabledModels.collectAsStateWithLifecycle()
     val unitSystem by viewModel.unitSystem.collectAsStateWithLifecycle()
+    val clockFormat by viewModel.clockFormatPreference.collectAsStateWithLifecycle()
     val theme by viewModel.themePreference.collectAsStateWithLifecycle()
     val language by viewModel.languagePreference.collectAsStateWithLifecycle()
     val refreshInterval by viewModel.refreshInterval.collectAsStateWithLifecycle()
@@ -224,6 +226,8 @@ fun SettingsScreen(
             enabledModels = enabled,
             onToggle = viewModel::onModelToggled,
             unitSystem = unitSystem,
+            clockFormat = clockFormat,
+            onClockFormatSelected = viewModel::onClockFormatSelected,
             onUnitSystemSelected = viewModel::onUnitSystemSelected,
             theme = theme,
             onThemeSelected = viewModel::onThemeSelected,
@@ -300,7 +304,9 @@ internal fun SettingsContent(
     /** Section Notifications, fournie par l'écran (état, permission, planification). */
     notificationSection: @Composable () -> Unit = {},
     unitSystem: UnitSystem = UnitSystem.METRIC,
-    onUnitSystemSelected: (UnitSystem) -> Unit = {}
+    onUnitSystemSelected: (UnitSystem) -> Unit = {},
+    clockFormat: ClockFormatPreference = ClockFormatPreference.AUTO,
+    onClockFormatSelected: (ClockFormatPreference) -> Unit = {}
 ) {
     // État du tri des modèles — survit à la rotation et au dark-mode toggle.
     // Défaut ZONE parce que 90% des utilisateurs raisonnent d'abord "modèles
@@ -339,6 +345,25 @@ internal fun SettingsContent(
                 )
                 Spacer(Modifier.height(8.dp))
                 LanguageSelector(selected = language, onSelect = onLanguageSelected)
+            }
+        }
+        item { HorizontalDivider() }
+
+        item {
+            Column(modifier = Modifier.padding(16.dp).testTag("settings_clock_format")) {
+                Text(
+                    stringResource(R.string.settings_clock_format),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.settings_clock_format_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                ClockFormatSelector(clockFormat, onClockFormatSelected)
             }
         }
         item { HorizontalDivider() }
@@ -845,6 +870,38 @@ private fun ModelSortSelector(
         modifier = Modifier.fillMaxWidth(),
         itemModifier = { mode -> Modifier.testTag("$TAG_SETTINGS_SORT${mode.name}") }
     )
+}
+
+@Composable
+internal fun ClockFormatSelector(
+    selected: ClockFormatPreference,
+    onSelect: (ClockFormatPreference) -> Unit
+) {
+    Column(Modifier.selectableGroup()) {
+        ClockFormatPreference.entries.forEach { preference ->
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .selectable(
+                        selected = selected == preference,
+                        role = androidx.compose.ui.semantics.Role.RadioButton,
+                        onClick = { onSelect(preference) }
+                    )
+                    .testTag("settings_clock_${preference.name}")
+                    .padding(vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                androidx.compose.material3.RadioButton(
+                    selected = selected == preference, onClick = null
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(when (preference) {
+                    ClockFormatPreference.AUTO -> R.string.settings_clock_auto
+                    ClockFormatPreference.HOUR_12 -> R.string.settings_clock_12
+                    ClockFormatPreference.HOUR_24 -> R.string.settings_clock_24
+                }))
+            }
+        }
+    }
 }
 
 @Composable

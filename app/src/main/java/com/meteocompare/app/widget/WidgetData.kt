@@ -1,6 +1,7 @@
 package com.meteocompare.app.widget
 
 import com.meteocompare.app.core.locale.WeatherTimeFormat
+import com.meteocompare.app.domain.model.ClockFormatPreference
 
 import com.meteocompare.app.core.units.WeatherUnit
 import com.meteocompare.app.core.units.WeatherUnits
@@ -44,6 +45,7 @@ import kotlinx.coroutines.withContext
  */
 internal data class WidgetData(
     val unitSystem: UnitSystem = UnitSystem.METRIC,
+    val clockFormatPreference: ClockFormatPreference = ClockFormatPreference.AUTO,
     val cityName: String?,
     val currentTemp: Double?,
     val currentCondition: WeatherCondition?,
@@ -353,7 +355,9 @@ private suspend fun loadWidgetDataInternal(
         WidgetEntryPoint::class.java
     )
 
-    val units = WeatherUnits(entry.userPreferencesRepository().observeUnitSystem().first())
+    val prefsRepo = entry.userPreferencesRepository()
+    val units = WeatherUnits(prefsRepo.observeUnitSystem().first())
+    val clockPreference = prefsRepo.observeClockFormatPreference().first()
     val favorites = entry.cityRepository().observeFavorites().first()
     val city = favorites.firstOrNull { it.id == cityId }
         ?: return WidgetData.empty(error = WidgetError.CityNoLongerInFavorites)
@@ -366,7 +370,6 @@ private suspend fun loadWidgetDataInternal(
     // MANUAL : Long.MAX_VALUE rend tout cache existant "frais". Un bootstrap
     // réseau reste possible si aucun cache n'existe encore, puis les mises à
     // jour suivantes sont exclusivement manuelles.
-    val prefsRepo = entry.userPreferencesRepository()
     val interval = prefsRepo.observeRefreshInterval().first()
     // Aligne les modèles du widget sur ceux que l'utilisateur a choisis dans
     // Settings. Sans ce lookup, `getCityForecastStream` retombait sur le
@@ -458,7 +461,8 @@ private suspend fun loadWidgetDataInternal(
                     now = currentInstant,
                     forecastConfidence = forecastConfidence,
                     engineContext = engineContext,
-                    locale = localizedContext.resources.configuration.locales[0]
+                    locale = localizedContext.resources.configuration.locales[0],
+                    clockPreference = clockPreference
                 )
             }
             val confidenceStrips = if (forecastMode.isConfidenceBand())
@@ -509,6 +513,7 @@ private suspend fun loadWidgetDataInternal(
             }.orEmpty()
             WidgetData(
                 unitSystem = units.system,
+                clockFormatPreference = clockPreference,
                 cityName = city.name,
                 currentTemp = calc.currentTemperature(forecast, currentInstant, engineContext),
                 currentCondition = calc.currentWeatherCondition(forecast, currentInstant, engineContext),
@@ -568,12 +573,13 @@ internal fun buildForecasts(
     now: java.time.Instant = java.time.Instant.now(),
     forecastConfidence: WidgetForecastConfidence = WidgetForecastConfidence.Empty,
     engineContext: ForecastEngineContext = ForecastEngineContext.DEFAULT,
-    locale: java.util.Locale = java.util.Locale.getDefault()
+    locale: java.util.Locale = java.util.Locale.getDefault(),
+    clockPreference: ClockFormatPreference = ClockFormatPreference.AUTO
 ): List<WidgetForecastItem> {
     val zone = resolveZoneOrUtc(timezone)
     return when (mode) {
         ForecastMode.HOURLY -> {
-            val formatter = WeatherTimeFormat.hour(locale)
+            val formatter = WeatherTimeFormat.hour(locale, clockPreference)
             buildSimplifiedTimeline(forecast, DisplayMode.HOURLY, now, engineContext)
                 .filter { it.instant != null && it.instant >= now.minusSeconds(30 * 60L) }
                 .take(5)
@@ -628,14 +634,15 @@ internal fun buildHourlyForecasts(
     zone: java.time.ZoneId,
     now: java.time.Instant = java.time.Instant.now(),
     forecastConfidenceByTimestamp: Map<java.time.Instant, Int> = emptyMap(),
-    locale: java.util.Locale = java.util.Locale.getDefault()
+    locale: java.util.Locale = java.util.Locale.getDefault(),
+    clockPreference: ClockFormatPreference = ClockFormatPreference.AUTO
 ): List<WidgetForecastItem> {
     if (hourly.timestamps.isEmpty()) return emptyList()
     val startIdx = hourly.timestamps.indexOfFirst { it >= now }
     // Un cache dont tout l'horizon horaire est déjà passé ne doit pas afficher
     // les cinq premières heures historiques comme si elles étaient futures.
     if (startIdx < 0) return emptyList()
-    val formatter = WeatherTimeFormat.hour(locale)
+    val formatter = WeatherTimeFormat.hour(locale, clockPreference)
     return (startIdx until minOf(startIdx + 5, hourly.timestamps.size)).map { i ->
         val ts = hourly.timestamps[i]
         val label = ts.atZone(zone).format(formatter)

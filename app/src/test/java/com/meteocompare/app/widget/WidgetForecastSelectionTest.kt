@@ -438,6 +438,31 @@ class WidgetForecastSelectionTest {
     }
 
     @Test
+    fun `hourly widget labels honor explicit clock format in all locales`() {
+        val now = Instant.parse("2026-07-17T00:00:00Z")
+        val hourly = HourlyForecast(
+            timestamps = listOf(now, now.plusSeconds(15 * 3600L)),
+            temperature2m = listOf(10.0, 21.0),
+            precipitation = listOf(0.0, 0.0),
+            windSpeed10m = listOf(8.0, 8.0)
+        )
+        assertEquals(
+            listOf("12 AM", "3 PM"),
+            buildHourlyForecasts(hourly, java.time.ZoneId.of("UTC"), now,
+                locale = Locale.FRANCE,
+                clockPreference = com.meteocompare.app.domain.model.ClockFormatPreference.HOUR_12
+            ).map { it.label }
+        )
+        assertEquals(
+            listOf("0h", "15h"),
+            buildHourlyForecasts(hourly, java.time.ZoneId.of("UTC"), now,
+                locale = Locale.UK,
+                clockPreference = com.meteocompare.app.domain.model.ClockFormatPreference.HOUR_24
+            ).map { it.label }
+        )
+    }
+
+    @Test
     fun `daily filtre les jours passes d un cache stale sans decaler les valeurs`() {
         val zone = java.time.ZoneId.of("Europe/Paris")
         val dates = (0L until 5L).map { LocalDate.of(2026, 7, 15).plusDays(it) }

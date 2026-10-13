@@ -1,5 +1,6 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
 import com.meteocompare.app.ui.components.UvIndexGauge
@@ -73,7 +74,7 @@ internal fun DetailSolarCard(
     modifier: Modifier = Modifier
 ) {
     val locale = LocalConfiguration.current.locales[0]
-    val formatter = WeatherTimeFormat.clock(locale)
+    val formatter = WeatherTimeFormat.clock(locale, LocalClockFormatPreference.current)
     val sunriseTime = window.sunrise?.atZone(timezone)?.toLocalTime()
     val sunsetTime = window.sunset?.atZone(timezone)?.toLocalTime()
     val minutesOfDaylight = if (window.sunrise != null && window.sunset != null &&

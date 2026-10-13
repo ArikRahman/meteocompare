@@ -1,5 +1,6 @@
 package com.meteocompare.app.ui.citylist
 
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
 import androidx.compose.foundation.layout.Arrangement
@@ -62,7 +63,7 @@ internal fun SunTimesRow(
     modifier: Modifier = Modifier,
     iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant
 ) {
-    val formatter = WeatherTimeFormat.clock(LocalConfiguration.current.locales[0])
+    val formatter = WeatherTimeFormat.clock(LocalConfiguration.current.locales[0], LocalClockFormatPreference.current)
     // Résolution des textes AVANT la Row — on est encore en scope @Composable
     // ici, donc stringResource(...) est légal. À l'intérieur de .semantics { }
     // le scope est SemanticsPropertyReceiver et les appels @Composable y sont

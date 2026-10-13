@@ -1,5 +1,6 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
 import com.meteocompare.app.core.charts.metricPlotValue
@@ -189,6 +190,7 @@ private fun MarineDashboard(
     units: WeatherUnits = LocalWeatherUnits.current
 ) {
     val locale = LocalLocale.current.platformLocale
+    val clockPreference = LocalClockFormatPreference.current
     val now by produceState(System.currentTimeMillis(), data) {
         while (true) {
             val current = System.currentTimeMillis()
@@ -317,7 +319,7 @@ private fun MarineDashboard(
                 )
             } ?: "—",
             nextExtremumDetail = tideEvents.firstOrNull()?.let {
-                "${eventTime(it, locale)} · ${formatMarine(it.value, WeatherUnit.HEIGHT, 2, locale, units = units)}"
+                "${eventTime(it, locale, clockPreference)} · ${formatMarine(it.value, WeatherUnit.HEIGHT, 2, locale, units = units)}"
             } ?: stringResource(R.string.marine_tide_unavailable),
             tideRange = tideRange?.let { formatMarine(it.range, WeatherUnit.HEIGHT, 2, locale, units = units) } ?: "—",
             accent = tideAccent,
@@ -746,14 +748,15 @@ private fun MarineInlineNotice(primary: String, secondary: String?, accent: Colo
 @Composable
 private fun eventDateTime(event: TideEvent): String {
     val locale = LocalLocale.current.platformLocale
+    val clockPreference = LocalClockFormatPreference.current
     return runCatching {
         LocalDateTime.parse(event.timestamp)
-            .format(WeatherTimeFormat.dateTime(locale))
+            .format(WeatherTimeFormat.dateTime(locale, clockPreference))
     }.getOrDefault(event.timestamp)
 }
 
-private fun eventTime(event: TideEvent, locale: java.util.Locale): String = runCatching {
-    LocalDateTime.parse(event.timestamp).format(WeatherTimeFormat.clock(locale))
+private fun eventTime(event: TideEvent, locale: java.util.Locale, clockPreference: com.meteocompare.app.domain.model.ClockFormatPreference): String = runCatching {
+    LocalDateTime.parse(event.timestamp).format(WeatherTimeFormat.clock(locale, clockPreference))
 }.getOrDefault(event.timestamp)
 
 @Composable
@@ -808,7 +811,8 @@ private fun MarineLineChart(
             (minX + (maxX - minX) * fraction).toLong()
         }
     }
-    val timeFormatter = remember(locale) { WeatherTimeFormat.dayClockLines(locale) }
+    val clockPreference = LocalClockFormatPreference.current
+    val timeFormatter = remember(locale, clockPreference) { WeatherTimeFormat.dayClockLines(locale, clockPreference) }
     val chartZone = remember(timezone) {
         runCatching { ZoneId.of(timezone) }.getOrElse { ZoneId.systemDefault() }
     }

@@ -1,6 +1,7 @@
 package com.meteocompare.app
 
 
+import com.meteocompare.app.domain.model.ClockFormatPreference
 import com.meteocompare.app.domain.model.UnitSystem
 import com.meteocompare.app.domain.model.ThemePreference
 import com.meteocompare.app.domain.repository.UserPreferencesRepository
@@ -22,9 +23,11 @@ import org.junit.Test
 class MainViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val themes = MutableStateFlow(ThemePreference.SYSTEM)
+    private val clockFormats = MutableStateFlow(ClockFormatPreference.AUTO)
     private val preferences: UserPreferencesRepository = mockk(relaxed = true) {
         every { observeUnitSystem() } returns kotlinx.coroutines.flow.flowOf(UnitSystem.METRIC)
         every { observeThemePreference() } returns themes
+        every { observeClockFormatPreference() } returns clockFormats
     }
 
     @Before
@@ -48,6 +51,16 @@ class MainViewModelTest {
         themes.value = ThemePreference.LIGHT
         assertEquals(ThemePreference.LIGHT, viewModel.themePreference.value)
     }
+    @Test
+    fun `clock preference follows repository changes independently from language`() = runTest(dispatcher) {
+        val vm = MainViewModel(preferences)
+        assertEquals(ClockFormatPreference.AUTO, vm.clockFormatPreference.value)
+        clockFormats.value = ClockFormatPreference.HOUR_12
+        assertEquals(ClockFormatPreference.HOUR_12, vm.clockFormatPreference.value)
+        clockFormats.value = ClockFormatPreference.HOUR_24
+        assertEquals(ClockFormatPreference.HOUR_24, vm.clockFormatPreference.value)
+    }
+
     @Test
     fun `unit preference follows persistence eagerly without replacing theme`() = runTest(dispatcher) {
         val units = MutableStateFlow(UnitSystem.IMPERIAL)

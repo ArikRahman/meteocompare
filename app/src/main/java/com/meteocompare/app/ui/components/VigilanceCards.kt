@@ -1,5 +1,6 @@
 package com.meteocompare.app.ui.components
 
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
 import androidx.compose.foundation.background
@@ -307,7 +308,7 @@ private fun phenomenonTimingLabel(alert: VigilancePhenomenonAlert, timezone: Str
     if (windows.isEmpty()) return "—"
 
     val locale = LocalLocale.current.platformLocale
-    return formatVigilanceWindows(windows, timezone, locale)
+    return formatVigilanceWindows(windows, timezone, locale, LocalClockFormatPreference.current)
 }
 
 /**
@@ -323,11 +324,12 @@ private fun phenomenonTimingLabel(alert: VigilancePhenomenonAlert, timezone: Str
 internal fun formatVigilanceWindows(
     windows: List<Pair<Instant, Instant>>,
     timezone: String?,
-    locale: Locale
+    locale: Locale,
+    clockPreference: com.meteocompare.app.domain.model.ClockFormatPreference = com.meteocompare.app.domain.model.ClockFormatPreference.AUTO
 ): String {
     val zone = resolveZone(timezone)
     val dateFormatter = DateTimeFormatter.ofPattern("EEE d MMM", locale)
-    val timeFormatter = WeatherTimeFormat.hourPadded(locale)
+    val timeFormatter = WeatherTimeFormat.hourPadded(locale, clockPreference)
     val validWindows = windows
         .filter { (begin, end) -> end.isAfter(begin) }
         .sortedBy { it.first }
@@ -416,7 +418,7 @@ private fun VigilanceTimeline(
     val totalMs = max(1L, end.toEpochMilli() - start.toEpochMilli())
     val locale = LocalLocale.current.platformLocale
     val zone = resolveZone(timezone)
-    val tickFormatter = WeatherTimeFormat.dayHour(locale).withZone(zone)
+    val tickFormatter = WeatherTimeFormat.dayHour(locale, LocalClockFormatPreference.current).withZone(zone)
 
     Column {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -524,13 +526,13 @@ private fun compactIntervalLabel(interval: VigilanceInterval, timezone: String?)
     val begin = interval.begin ?: return ""
     val end = interval.end ?: return ""
     val locale = LocalLocale.current.platformLocale
-    return formatVigilanceWindows(listOf(begin to end), timezone, locale)
+    return formatVigilanceWindows(listOf(begin to end), timezone, locale, LocalClockFormatPreference.current)
 }
 
 @Composable
 private fun vigilanceUpdateLabel(instant: Instant, timezone: String?): String {
     val locale = LocalLocale.current.platformLocale
-    val formatter = WeatherTimeFormat.shortDateClock(locale).withZone(resolveZone(timezone))
+    val formatter = WeatherTimeFormat.shortDateClock(locale, LocalClockFormatPreference.current).withZone(resolveZone(timezone))
     return formatter.format(instant)
 }
 

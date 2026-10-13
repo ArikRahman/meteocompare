@@ -3,6 +3,7 @@ package com.meteocompare.app.testutil
 import com.meteocompare.app.core.network.ApiResult
 import com.meteocompare.app.domain.model.BiasSample
 import com.meteocompare.app.domain.model.BiasVariable
+import com.meteocompare.app.domain.model.ClockFormatPreference
 import com.meteocompare.app.domain.model.City
 import com.meteocompare.app.domain.model.CityDetailContentTab
 import com.meteocompare.app.domain.model.CityDetailSection
@@ -224,6 +225,7 @@ class FakeForecastEvolutionRepository @Inject constructor() : ForecastEvolutionR
 class FakeUserPreferencesRepository @Inject constructor() : UserPreferencesRepository {
     private val models = MutableStateFlow(WeatherModel.MVP_SELECTION)
     private val theme = MutableStateFlow(ThemePreference.SYSTEM)
+    val clockFormat = MutableStateFlow(ClockFormatPreference.AUTO)
     private val language = MutableStateFlow(LanguagePreference.SYSTEM)
     private val refresh = MutableStateFlow(RefreshInterval.DEFAULT)
     private val forecastEngine = MutableStateFlow(ForecastEngine.DEFAULT)
@@ -240,6 +242,9 @@ class FakeUserPreferencesRepository @Inject constructor() : UserPreferencesRepos
     val unitSystem = MutableStateFlow(UnitSystem.METRIC)
     override fun observeUnitSystem(): Flow<UnitSystem> = unitSystem
     override suspend fun setUnitSystem(system: UnitSystem) { unitSystem.value = system }
+
+    override fun observeClockFormatPreference(): Flow<ClockFormatPreference> = clockFormat
+    override suspend fun setClockFormatPreference(preference: ClockFormatPreference) { clockFormat.value = preference }
 
     override fun observeThemePreference(): Flow<ThemePreference> = theme
     override suspend fun setThemePreference(preference: ThemePreference) { theme.value = preference }
@@ -295,6 +300,7 @@ class FakeUserPreferencesRepository @Inject constructor() : UserPreferencesRepos
         notificationSettings.value = NotificationSettings()
         unitSystem.value = UnitSystem.METRIC
         theme.value = ThemePreference.SYSTEM
+        clockFormat.value = ClockFormatPreference.AUTO
         language.value = LanguagePreference.SYSTEM
         refresh.value = RefreshInterval.DEFAULT
         forecastEngine.value = ForecastEngine.DEFAULT

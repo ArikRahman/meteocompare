@@ -1,5 +1,7 @@
 package com.meteocompare.app.core.locale
 
+import com.meteocompare.app.domain.model.ClockFormatPreference
+
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
@@ -30,6 +32,44 @@ class WeatherTimeFormatTest {
             assertEquals("23:45", LocalTime.of(23, 45).format(WeatherTimeFormat.clock(locale)))
             assertEquals("00h", LocalTime.MIDNIGHT.format(WeatherTimeFormat.hourPadded(locale)))
         }
+    }
+
+    @Test
+    fun `explicit twelve hour preference works in every supported language`() {
+        val locales = listOf(Locale.FRANCE, Locale.US, Locale.GERMANY, Locale.ITALY, Locale.forLanguageTag("es-ES"))
+        for (locale in locales) {
+            assertEquals("12 AM", LocalTime.MIDNIGHT.format(WeatherTimeFormat.hour(locale, ClockFormatPreference.HOUR_12)))
+            assertEquals("12 PM", LocalTime.NOON.format(WeatherTimeFormat.hour(locale, ClockFormatPreference.HOUR_12)))
+            assertEquals("3:07 PM", LocalTime.of(15, 7).format(WeatherTimeFormat.clock(locale, ClockFormatPreference.HOUR_12)))
+            assertEquals("11 PM", LocalTime.of(23, 0).format(WeatherTimeFormat.hourPadded(locale, ClockFormatPreference.HOUR_12)))
+            assertTrue(WeatherTimeFormat.usesTwelveHourClock(locale, ClockFormatPreference.HOUR_12))
+        }
+    }
+
+    @Test
+    fun `explicit twenty four hour preference works in english and other languages`() {
+        val locales = listOf(Locale.FRANCE, Locale.US, Locale.UK, Locale.GERMANY, Locale.ITALY, Locale.forLanguageTag("es-ES"))
+        for (locale in locales) {
+            assertEquals("00h", LocalTime.MIDNIGHT.format(WeatherTimeFormat.hourPadded(locale, ClockFormatPreference.HOUR_24)))
+            assertEquals("15h", LocalTime.of(15, 7).format(WeatherTimeFormat.hour(locale, ClockFormatPreference.HOUR_24)))
+            assertEquals("15:07", LocalTime.of(15, 7).format(WeatherTimeFormat.clock(locale, ClockFormatPreference.HOUR_24)))
+            assertTrue(!WeatherTimeFormat.usesTwelveHourClock(locale, ClockFormatPreference.HOUR_24))
+        }
+    }
+
+    @Test
+    fun `preference parsing is robust to missing or obsolete stored values`() {
+        assertEquals(ClockFormatPreference.AUTO, ClockFormatPreference.fromString(null))
+        assertEquals(ClockFormatPreference.AUTO, ClockFormatPreference.fromString("bad_value"))
+        assertEquals(ClockFormatPreference.HOUR_12, ClockFormatPreference.fromString("HOUR_12"))
+        assertEquals(ClockFormatPreference.HOUR_24, ClockFormatPreference.fromString("HOUR_24"))
+    }
+
+    @Test
+    fun `extended chart labels honor the chosen clock`() {
+        val value = LocalTime.of(21, 42)
+        assertEquals("9:42 PM", value.format(WeatherTimeFormat.clock(Locale.FRANCE, ClockFormatPreference.HOUR_12)))
+        assertEquals("21:42", value.format(WeatherTimeFormat.clock(Locale.US, ClockFormatPreference.HOUR_24)))
     }
 
     @Test

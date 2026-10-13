@@ -27,6 +27,11 @@
     <string name="tablet_detail_placeholder_subtitle">Selecciona una localidad en la columna izquierda.</string>
 
     <string name="settings_appearance">Apariencia</string>
+    <string name="settings_clock_format">Formato de hora</string>
+    <string name="settings_clock_format_desc">Elige el formato para todos los idiomas y widgets.</string>
+    <string name="settings_clock_auto">Automático (según el idioma)</string>
+    <string name="settings_clock_12">12 horas (AM/PM)</string>
+    <string name="settings_clock_24">24 horas</string>
     <string name="settings_language">Idioma</string>
 
     <string name="settings_refresh_interval_title">Intervalo de actualización</string>
