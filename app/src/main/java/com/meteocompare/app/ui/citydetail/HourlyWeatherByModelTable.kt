@@ -50,6 +50,10 @@ fun HourlyWeatherByModelTable(
         forecast.seriesByModel.values.flatMap { it.hourly.timestamps }.distinct().sorted()
             .filter { it >= startHour && it < endExclusive }
     }
+    val nightByTimestamp = remember(forecast, timestamps) {
+        val night = com.meteocompare.app.domain.util.forecastNightFlags(forecast, timestamps)
+        timestamps.zip(night).toMap()
+    }
     val models = remember(forecast) {
         forecast.seriesByModel.keys.sortedByFamily()
     }
@@ -168,6 +172,7 @@ fun HourlyWeatherByModelTable(
                     models.forEachIndexed { modelIndex, model ->
                         HourIconCell(
                             cell = cellsByTimestamp[ts]?.get(model),
+                            isNight = nightByTimestamp[ts] == true,
                             background = palette.dataRowBackground(modelIndex, isCurrent),
                             height = rowHeight,
                             palette = palette
@@ -260,6 +265,7 @@ private data class HourCellData(
 @Composable
 private fun HourIconCell(
     cell: HourCellData?,
+    isNight: Boolean = false,
     background: Color,
     height: Dp,
     palette: DetailTablePalette
@@ -293,7 +299,9 @@ private fun HourIconCell(
                 WeatherIconDecorative(
                     condition = cell.condition,
                     size = 28.dp,
-                    tint = cell.condition.semanticTint()
+                    tint = if (isNight && cell.condition == WeatherCondition.CLEAR) Color.Unspecified
+                        else cell.condition.semanticTint(),
+                    isNight = isNight
                 )
                 val badge = weatherBadgeFor(
                     condition = cell.condition,

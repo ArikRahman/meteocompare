@@ -689,7 +689,9 @@ private fun TimelinePointColumn(
                     WeatherIconDecorative(
                         condition = condition,
                         size = 32.dp,
-                        tint = condition.semanticTint()
+                        tint = if (point.isNight == true && condition == com.meteocompare.app.domain.model.WeatherCondition.CLEAR)
+                            Color.Unspecified else condition.semanticTint(),
+                        isNight = point.isNight == true
                     )
                 } ?: Text(
                     text = "—",

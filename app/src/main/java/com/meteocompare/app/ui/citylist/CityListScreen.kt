@@ -649,6 +649,8 @@ internal fun CityCard(
                                 hourlyStartTime = forecast.hourlyStartTime,
                                 vigilance = state.vigilance,
                                 cityTimezone = state.city.timezone,
+                                latitude = state.city.latitude,
+                                longitude = state.city.longitude,
                                 accentColor = accentColor
                             )
 
@@ -817,8 +819,27 @@ private fun CityCardLoaded(
     hourlyStartTime: LocalDateTime?,
     vigilance: VigilanceForecast?,
     cityTimezone: String?,
+    latitude: Double,
+    longitude: Double,
     accentColor: Color
 ) {
+    val zone = remember(cityTimezone) {
+        try { java.time.ZoneId.of(cityTimezone ?: "UTC") } catch (_: Exception) { java.time.ZoneOffset.UTC }
+    }
+    // Not cached against the download timestamp: sunset can pass without a new forecast.
+    val currentIsNight = com.meteocompare.app.domain.util.isNightAtCoordinates(
+        latitude, longitude, Instant.now(), zone
+    ) == true
+    val miniNightFlags = remember(latitude, longitude, zone, hourlyStartTime) {
+        hourlyStartTime?.let { start ->
+            List(12) { offset ->
+                com.meteocompare.app.domain.util.isNightAtCoordinates(
+                    latitude, longitude,
+                    start.atZone(zone).toInstant().plusSeconds(offset * 3600L), zone
+                )
+            }
+        }.orEmpty()
+    }
     Column {
         CurrentWeatherHero(
             currentTemp = currentTemp,
@@ -826,7 +847,8 @@ private fun CityCardLoaded(
             currentCloudCover = currentCloudCover,
             agreementPercent = today.overallPercent,
             accentColor = accentColor,
-            hourlyTemps = next12hTemps
+            hourlyTemps = next12hTemps,
+            isNight = currentIsNight
         )
 
         if (uvIndex != null) {
@@ -852,7 +874,8 @@ private fun CityCardLoaded(
                 hourlyPrecipProb = next12hPrecipProb,
                 hourlyPrecipMm = next12hPrecipMm,
                 hourlyConditions = next12hConditions,
-                startTime = hourlyStartTime
+                startTime = hourlyStartTime,
+                nightFlags = miniNightFlags
             )
         }
 
@@ -868,7 +891,8 @@ private fun CityCardLoaded(
         if (visibleScenarios.isNotEmpty() || fetchedAt != null) {
             HomeWeatherFooter(
                 scenarios = visibleScenarios,
-                fetchedAt = fetchedAt
+                fetchedAt = fetchedAt,
+                nightFlags = miniNightFlags
             )
         }
     }
@@ -882,6 +906,7 @@ private fun CurrentWeatherHero(
     agreementPercent: Int?,
     accentColor: Color,
     hourlyTemps: List<Double?>,
+    isNight: Boolean = false,
     units: WeatherUnits = LocalWeatherUnits.current
 ) {
     val trend = homeTemperatureTrend(currentTemp, hourlyTemps)
@@ -909,7 +934,8 @@ private fun CurrentWeatherHero(
                         condition = currentCondition,
                         size = 60.dp,
                         animated = true,
-                        tint = Color.Unspecified
+                        tint = Color.Unspecified,
+                        isNight = isNight
                     )
                 } else {
                     Icon(
@@ -1217,7 +1243,8 @@ private fun precipitationMetricPresentation(
 @Composable
 private fun HomeWeatherFooter(
     scenarios: List<WeatherScenario>,
-    fetchedAt: Instant?
+    fetchedAt: Instant?,
+    nightFlags: List<Boolean?> = emptyList()
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     val lastUpdated = if (fetchedAt != null) {
@@ -1324,7 +1351,15 @@ private fun HomeWeatherFooter(
                         }
                         HomeWeatherScenarioRow(
                             scenario = scenario,
-                            rank = index
+                            rank = index,
+                            // Approximate the scenario's representative hour rather than
+                            // using the phone's theme or a fixed 6-18 h window.
+                            isNight = nightFlags.getOrNull(when (scenario.timing) {
+                                com.meteocompare.app.domain.model.WeatherScenarioTiming.EARLY -> 1
+                                com.meteocompare.app.domain.model.WeatherScenarioTiming.MIDDLE -> 5
+                                com.meteocompare.app.domain.model.WeatherScenarioTiming.LATE -> 10
+                                else -> 0
+                            }) == true
                         )
                     }
                     scenarios.firstOrNull()?.takeIf { it.hiddenVariantCount > 0 }?.let { scenario ->
@@ -1354,7 +1389,8 @@ private fun HomeWeatherFooter(
 @Composable
 private fun HomeWeatherScenarioRow(
     scenario: WeatherScenario,
-    rank: Int
+    rank: Int,
+    isNight: Boolean = false
 ) {
     val representativeCondition = scenarioRepresentativeCondition(scenario.kind)
     Row(
@@ -1372,7 +1408,8 @@ private fun HomeWeatherScenarioRow(
                     condition = representativeCondition,
                     size = 30.dp,
                     animated = false,
-                    tint = Color.Unspecified
+                    tint = Color.Unspecified,
+                    isNight = isNight
                 )
             }
         }

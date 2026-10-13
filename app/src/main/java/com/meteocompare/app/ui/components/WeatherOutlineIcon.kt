@@ -9,6 +9,8 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -35,7 +37,8 @@ fun WeatherOutlineIconDecorative(
     modifier: Modifier = Modifier,
     size: Dp = 20.dp,
     tint: Color = Color.Unspecified,
-    backdropColor: Color = Color.Transparent
+    backdropColor: Color = Color.Transparent,
+    isNight: Boolean = false
 ) {
     if (condition == null) return
     val color = if (tint == Color.Unspecified) Color(0xFF64727C) else tint
@@ -58,7 +61,7 @@ fun WeatherOutlineIconDecorative(
         withTransform({
             translate(left = origin.x, top = origin.y)
         }) {
-            drawOutlineCondition(condition, color, backdropColor, unit)
+            drawOutlineCondition(condition, color, backdropColor, unit, isNight)
         }
     }
 }
@@ -67,21 +70,25 @@ private fun DrawScope.drawOutlineCondition(
     condition: WeatherCondition,
     color: Color,
     backdropColor: Color,
-    unit: Float
+    unit: Float,
+    isNight: Boolean
 ) {
     val mainStroke = 5.2f * unit
     val lightStroke = 4.2f * unit
 
     when (condition) {
-        WeatherCondition.CLEAR -> drawOutlineSun(pointO(50f, 50f, unit), 17f * unit, color, unit)
+        WeatherCondition.CLEAR -> if (isNight) drawOutlineMoon(pointO(50f, 50f, unit), 21f * unit, color, unit)
+            else drawOutlineSun(pointO(50f, 50f, unit), 17f * unit, color, unit)
 
         WeatherCondition.MAINLY_CLEAR -> {
-            drawOutlineSun(pointO(36f, 35f, unit), 12f * unit, color, unit)
+            if (isNight) drawOutlineMoon(pointO(36f, 35f, unit), 14f * unit, color, unit)
+            else drawOutlineSun(pointO(36f, 35f, unit), 12f * unit, color, unit)
             drawOutlineCloudMasked(pointO(59f, 61f, unit), 0.82f, color, backdropColor, unit, mainStroke)
         }
 
         WeatherCondition.PARTLY_CLOUDY -> {
-            drawOutlineSun(pointO(33f, 34f, unit), 11f * unit, color, unit)
+            if (isNight) drawOutlineMoon(pointO(33f, 34f, unit), 13f * unit, color, unit)
+            else drawOutlineSun(pointO(33f, 34f, unit), 11f * unit, color, unit)
             drawOutlineCloudMasked(pointO(59f, 59f, unit), 0.98f, color, backdropColor, unit, mainStroke)
         }
 
@@ -109,7 +116,8 @@ private fun DrawScope.drawOutlineCondition(
         }
 
         WeatherCondition.RAIN_SHOWERS -> {
-            drawOutlineSun(pointO(31f, 31f, unit), 8f * unit, color, unit)
+            if (isNight) drawOutlineMoon(pointO(31f, 31f, unit), 9f * unit, color, unit)
+            else drawOutlineSun(pointO(31f, 31f, unit), 8f * unit, color, unit)
             drawOutlineCloudMasked(pointO(55f, 40f, unit), 0.94f, color, backdropColor, unit, mainStroke)
             drawOutlineRain(listOf(38f, 53f, 68f), 59f, 82f, color, 4.2f * unit, unit)
         }
@@ -128,7 +136,8 @@ private fun DrawScope.drawOutlineCondition(
         }
 
         WeatherCondition.SNOW_SHOWERS -> {
-            drawOutlineSun(pointO(31f, 31f, unit), 8f * unit, color, unit)
+            if (isNight) drawOutlineMoon(pointO(31f, 31f, unit), 9f * unit, color, unit)
+            else drawOutlineSun(pointO(31f, 31f, unit), 8f * unit, color, unit)
             drawOutlineCloudMasked(pointO(55f, 39f, unit), 0.94f, color, backdropColor, unit, mainStroke)
             drawOutlineSnowflake(pointO(43f, 70f, unit), 5.5f * unit, color, 2.8f * unit)
             drawOutlineSnowflake(pointO(64f, 78f, unit), 6f * unit, color, 2.8f * unit)
@@ -166,6 +175,22 @@ private fun DrawScope.drawOutlineCondition(
             drawCircle(color = color, radius = 2.8f * unit, center = pointO(50f, 69f, unit))
         }
     }
+}
+
+private fun DrawScope.drawOutlineMoon(center: Offset, radius: Float, color: Color, unit: Float) {
+    val outside = Path().apply {
+        addOval(Rect(center.x - radius, center.y - radius, center.x + radius, center.y + radius))
+    }
+    val inside = Path().apply {
+        addOval(Rect(
+            center.x - radius * 0.18f, center.y - radius * 1.02f,
+            center.x + radius * 1.22f, center.y + radius * 0.98f
+        ))
+    }
+    val crescent = Path.combine(PathOperation.Difference, outside, inside)
+    drawPath(crescent, color = color, style = Stroke(
+        width = 4.4f * unit, cap = StrokeCap.Round, join = StrokeJoin.Round
+    ))
 }
 
 private fun DrawScope.drawOutlineSun(

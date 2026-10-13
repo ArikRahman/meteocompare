@@ -201,7 +201,7 @@ private fun InsightPillSummary(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (!veryNarrow) {
-                ValueWeatherGlyph(data.currentCondition, 25)
+                ValueWeatherGlyph(data.currentCondition, 25, isNight = data.currentIsNight == true)
                 Spacer(GlanceModifier.width(4.dp))
             }
             Text(
@@ -332,7 +332,7 @@ private fun InsightWidgetLayout(
             modifier = GlanceModifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ValueWeatherGlyph(data.currentCondition, if (compact) 36 else 46)
+            ValueWeatherGlyph(data.currentCondition, if (compact) 36 else 46, isNight = data.currentIsNight == true)
             Spacer(GlanceModifier.width(8.dp))
             Text(
                 text = units.temp(data.currentTemp),
@@ -581,12 +581,13 @@ private fun ValueWidgetError(
 }
 
 @Composable
-private fun ValueWeatherGlyph(condition: WeatherCondition?, sizeDp: Int) {
+private fun ValueWeatherGlyph(condition: WeatherCondition?, sizeDp: Int, isNight: Boolean = false) {
     val context = LocalContext.current
     val density = context.resources.displayMetrics.density.coerceAtMost(2f)
-    val bitmap = remember(condition, sizeDp, density) {
+    val bitmap = remember(condition, isNight, sizeDp, density) {
         WidgetWeatherIconRenderer.render(
             condition = condition,
+            isNight = isNight,
             sizePx = (sizeDp * density).toInt().coerceAtLeast(1)
         )
     }

@@ -126,6 +126,10 @@ internal data class WidgetData(
      * MINI_FORECAST_12H ou [ForecastMode.HEATMAP_CHART_12H].
      */
     val hourlyStartTime: java.time.LocalDateTime? = null,
+    /** Nuit astronomique de la ville pour la météo actuelle. */
+    val currentIsNight: Boolean? = null,
+    /** Nuit par créneau des vues bitmap 12 h. */
+    val next12hIsNight: List<Boolean?> = emptyList(),
     /** Synthèse éditoriale la plus utile issue des événements multi-modèles. */
     val keyInsight: WidgetKeyInsight? = null,
     /** Instantané comparatif par variable pour les widgets à valeur ajoutée. */
@@ -202,7 +206,8 @@ internal data class WidgetForecastItem(
      */
     val forecastConfidencePct: Int? = null,
     /** Source des cartes : null signifie consensus multi-modèles (consensus robuste). */
-    val sourceModelName: String? = null
+    val sourceModelName: String? = null,
+    val isNight: Boolean? = null
 )
 
 /**
@@ -491,6 +496,14 @@ private suspend fun loadWidgetDataInternal(
                 null
             }
 
+            val currentIsNight = com.meteocompare.app.domain.util.forecastIsNightAt(forecast, currentInstant)
+            val next12hIsNight = miniForecast?.let { mini ->
+                com.meteocompare.app.domain.util.forecastNightFlags(
+                    forecast, List(mini.conditions.size) { index ->
+                        mini.startInstant.plusSeconds(index * 3600L)
+                    }
+                )
+            }.orEmpty()
             WidgetData(
                 unitSystem = units.system,
                 cityName = city.name,
@@ -511,6 +524,8 @@ private suspend fun loadWidgetDataInternal(
                 next12hPrecipMm = miniForecast?.precipitationAmountsMm.orEmpty(),
                 next12hConditions = miniForecast?.conditions.orEmpty(),
                 hourlyStartTime = hourlyStartTime,
+                currentIsNight = currentIsNight,
+                next12hIsNight = next12hIsNight,
                 keyInsight = valueWidgetData.keyInsight,
                 comparisonSnapshot = valueWidgetData.comparison,
                 modelCount = forecast.seriesByModel.size,
@@ -569,7 +584,8 @@ internal fun buildForecasts(
                         precipProbabilityPct = point.precipitationPercent,
                         forecastConfidencePct = point.consensusPercent
                             ?: forecastConfidence.hourlyByTimestamp[ts],
-                        sourceModelName = null
+                        sourceModelName = null,
+                        isNight = point.isNight
                     )
                 }
         }

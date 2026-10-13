@@ -30,6 +30,7 @@ internal object WidgetHeatmapTrendForecastRenderer {
         precipProbabilities: List<Int?>,
         precipAmountsMm: List<Double?> = emptyList(),
         conditions: List<WeatherCondition?> = emptyList(),
+        nightFlags: List<Boolean?> = emptyList(),
         precipColorArgb: Int,
         textColorArgb: Int,
         timelineLabels: List<String> = emptyList(),
@@ -145,7 +146,8 @@ internal object WidgetHeatmapTrendForecastRenderer {
                     centerX = centerX,
                     top = tempTop + tempBandHeight * 0.05f,
                     bandHeight = tempBandHeight,
-                    profile = profile
+                    profile = profile,
+                    isNight = nightFlags.getOrNull(index) == true
                 )
                 valuePaint.color = withAlpha(textColorArgb, 0xEC)
                 canvas.drawText(
@@ -243,7 +245,8 @@ internal object WidgetHeatmapTrendForecastRenderer {
         centerX: Float,
         top: Float,
         bandHeight: Float,
-        profile: MiniForecastSizeProfile
+        profile: MiniForecastSizeProfile,
+        isNight: Boolean = false
     ) {
         if (condition == null) return
         val iconSize = when (profile) {
@@ -253,7 +256,7 @@ internal object WidgetHeatmapTrendForecastRenderer {
         }.roundToInt().coerceAtLeast(12)
 
         val badgeHeight = (iconSize * 1.30f).coerceAtLeast(iconSize + 7f)
-        val bitmap = WidgetWeatherIconRenderer.render(condition, iconSize)
+        val bitmap = WidgetWeatherIconRenderer.render(condition, iconSize, isNight = isNight)
         val iconLeft = centerX - iconSize / 2f
         val iconTop = top + (badgeHeight - iconSize) / 2f
         canvas.drawBitmap(bitmap, iconLeft, iconTop, null)

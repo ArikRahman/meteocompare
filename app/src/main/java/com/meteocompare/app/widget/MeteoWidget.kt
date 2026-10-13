@@ -478,7 +478,7 @@ private fun TinyLayout(data: WidgetData, onContainer: ColorProvider, units: Weat
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        WeatherGlyph(data.currentCondition, sizeDp = glyphSize)
+        WeatherGlyph(data.currentCondition, isNight = data.currentIsNight == true, sizeDp = glyphSize)
         Text(
             text = formatTemp(data.currentTemp, units = units),
             style = TextStyle(
@@ -552,7 +552,7 @@ private fun SmallLayout(
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        WeatherGlyph(data.currentCondition, sizeDp = glyphSize)
+        WeatherGlyph(data.currentCondition, isNight = data.currentIsNight == true, sizeDp = glyphSize)
         Spacer(GlanceModifier.width(if (profile == SingleRowWidgetHeightProfile.VERY_DENSE) 4.dp else 6.dp))
         Column {
             if (showCity) {
@@ -633,7 +633,7 @@ private fun MediumLayout(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            WeatherGlyph(data.currentCondition, sizeDp = glyphSize)
+            WeatherGlyph(data.currentCondition, isNight = data.currentIsNight == true, sizeDp = glyphSize)
             Spacer(GlanceModifier.width(if (profile == SingleRowWidgetHeightProfile.VERY_DENSE) 4.dp else 6.dp))
             Text(
                 text = formatTemp(data.currentTemp, units = units),
@@ -731,7 +731,7 @@ private fun LargeLayout(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            WeatherGlyph(data.currentCondition, sizeDp = glyphSize)
+            WeatherGlyph(data.currentCondition, isNight = data.currentIsNight == true, sizeDp = glyphSize)
             Spacer(GlanceModifier.width(if (profile == SingleRowWidgetHeightProfile.VERY_DENSE) 4.dp else 6.dp))
             Text(
                 text = formatTemp(data.currentTemp, units = units),
@@ -857,7 +857,7 @@ private fun CompactTallLayout(
             modifier = GlanceModifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            WeatherGlyph(data.currentCondition, sizeDp = if (narrow) 30 else 36)
+            WeatherGlyph(data.currentCondition, isNight = data.currentIsNight == true, sizeDp = if (narrow) 30 else 36)
             Spacer(GlanceModifier.width(if (narrow) 5.dp else 8.dp))
             Column(modifier = GlanceModifier.defaultWeight()) {
                 data.cityName?.let {
@@ -1048,6 +1048,7 @@ private fun ExtraLargeLayout(
         ) {
             WeatherGlyph(
                 data.currentCondition,
+                isNight = data.currentIsNight == true,
                 sizeDp = when {
                     veryCompact -> 32
                     compactHeight -> 38
@@ -1237,6 +1238,7 @@ private fun TwelveHourForecastStrip(
         data.next12hPrecipProb,
         data.next12hPrecipMm,
         data.next12hConditions,
+        data.next12hIsNight,
         timelineLabels,
         widthPx,
         heightPx,
@@ -1251,6 +1253,7 @@ private fun TwelveHourForecastStrip(
                 precipProbabilities = data.next12hPrecipProb,
                 precipAmountsMm = data.next12hPrecipMm,
                 conditions = data.next12hConditions,
+                nightFlags = data.next12hIsNight,
                 precipColorArgb = precipColorArgb,
                 textColorArgb = textColorArgb,
                 timelineLabels = timelineLabels,
@@ -1265,6 +1268,7 @@ private fun TwelveHourForecastStrip(
                 precipProbabilities = data.next12hPrecipProb,
                 precipAmountsMm = data.next12hPrecipMm,
                 conditions = data.next12hConditions,
+                nightFlags = data.next12hIsNight,
                 precipColorArgb = precipColorArgb,
                 textColorArgb = textColorArgb,
                 timelineLabels = timelineLabels,
@@ -1279,6 +1283,7 @@ private fun TwelveHourForecastStrip(
                 precipProbabilities = data.next12hPrecipProb,
                 precipAmountsMm = data.next12hPrecipMm,
                 conditions = data.next12hConditions,
+                nightFlags = data.next12hIsNight,
                 precipColorArgb = precipColorArgb,
                 textColorArgb = textColorArgb,
                 timelineLabels = timelineLabels,
@@ -1716,14 +1721,16 @@ private fun ErrorLayout(
 @Composable
 private fun WeatherGlyph(
     condition: WeatherCondition?,
-    sizeDp: Int
+    sizeDp: Int,
+    isNight: Boolean = false
 ) {
     val context = LocalContext.current
     val density = context.resources.displayMetrics.density
     val renderDensity = density.coerceAtMost(2f)
-    val bitmap = remember(condition, sizeDp, renderDensity) {
+    val bitmap = remember(condition, isNight, sizeDp, renderDensity) {
         WidgetWeatherIconRenderer.render(
             condition = condition,
+            isNight = isNight,
             sizePx = (sizeDp * renderDensity).toInt().coerceAtLeast(1)
         )
     }
@@ -1829,7 +1836,7 @@ private fun ForecastTimelineItem(
                 maxLines = 1
             )
         }
-        WeatherGlyph(condition = item.condition, sizeDp = glyphSize)
+        WeatherGlyph(condition = item.condition, sizeDp = glyphSize, isNight = item.isNight == true)
         Text(
             text = formatTemp(item.temp, units = units),
             style = TextStyle(

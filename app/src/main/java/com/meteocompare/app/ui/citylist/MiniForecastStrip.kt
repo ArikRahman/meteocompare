@@ -70,7 +70,8 @@ internal fun MiniForecastStrip(
     modifier: Modifier = Modifier,
     hourlyPrecipMm: List<Double?> = emptyList(),
     hourlyConditions: List<WeatherCondition?> = emptyList(),
-    startTime: LocalDateTime? = null
+    startTime: LocalDateTime? = null,
+    nightFlags: List<Boolean?> = emptyList()
 ) {
     val containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.52f)
     val themeContentColor = MaterialTheme.colorScheme.onSurface
@@ -134,6 +135,7 @@ internal fun MiniForecastStrip(
                         temperatureBackground = heatBackground,
                         temperatureContentColor = temperatureContent,
                         condition = hourlyConditions.getOrNull(index),
+                        isNight = nightFlags.getOrNull(index) == true,
                         rainStyle = miniTimelineRainDotStyle(
                             probabilityPercent = hourlyPrecipProb.getOrNull(index),
                             amountMm = hourlyPrecipMm.getOrNull(index),
@@ -158,6 +160,7 @@ private fun MiniForecastHour(
     temperatureBackground: Color,
     temperatureContentColor: Color,
     condition: WeatherCondition?,
+    isNight: Boolean = false,
     rainStyle: MiniTimelineRainDotStyle?,
     contentColor: Color,
     containerColor: Color,
@@ -217,6 +220,7 @@ private fun MiniForecastHour(
                     size = MINI_TIMELINE_CONDITION_ICON_DP.dp,
                     tint = contentColor.copy(alpha = 0.92f),
                     backdropColor = containerColor,
+                    isNight = isNight,
                     modifier = Modifier.testTag("$TAG_MINI_FORECAST_CONDITION_PREFIX$index")
                 )
             }

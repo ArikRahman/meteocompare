@@ -17,7 +17,7 @@ import kotlin.math.sin
  */
 internal object WidgetWeatherIconRenderer {
 
-    fun render(condition: WeatherCondition?, sizePx: Int): Bitmap {
+    fun render(condition: WeatherCondition?, sizePx: Int, isNight: Boolean = false): Bitmap {
         require(sizePx > 0) { "sizePx must be > 0" }
 
         val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
@@ -26,13 +26,16 @@ internal object WidgetWeatherIconRenderer {
         val palette = paletteFor(condition)
 
         when (condition) {
-            WeatherCondition.CLEAR -> drawSun(canvas, scale, palette, 24f, 24f, 9f)
+            WeatherCondition.CLEAR -> if (isNight) drawMoon(canvas, scale, palette, 24f, 24f, 10f)
+                else drawSun(canvas, scale, palette, 24f, 24f, 9f)
             WeatherCondition.MAINLY_CLEAR -> {
-                drawSun(canvas, scale, palette, 18f, 18f, 6.9f)
+                if (isNight) drawMoon(canvas, scale, palette, 18f, 18f, 7.6f)
+                else drawSun(canvas, scale, palette, 18f, 18f, 6.9f)
                 drawCloud(canvas, scale, palette, 3f, 4f, 0.90f)
             }
             WeatherCondition.PARTLY_CLOUDY -> {
-                drawSun(canvas, scale, palette, 17f, 17f, 6.6f)
+                if (isNight) drawMoon(canvas, scale, palette, 17f, 17f, 7.2f)
+                else drawSun(canvas, scale, palette, 17f, 17f, 6.6f)
                 drawCloud(canvas, scale, palette, 4f, 5f, 0.98f)
             }
             WeatherCondition.OVERCAST -> {
@@ -56,7 +59,8 @@ internal object WidgetWeatherIconRenderer {
                 drawRain(canvas, scale, palette, light = false, fine = false)
             }
             WeatherCondition.RAIN_SHOWERS -> {
-                drawSun(canvas, scale, palette, 16f, 15f, 5.8f)
+                if (isNight) drawMoon(canvas, scale, palette, 16f, 15f, 6.4f)
+                else drawSun(canvas, scale, palette, 16f, 15f, 5.8f)
                 drawCloud(canvas, scale, palette, 3f, -2f, 0.96f, depth = 0.74f)
                 drawRain(canvas, scale, palette, light = true, xShift = 2f, fine = false)
             }
@@ -70,7 +74,8 @@ internal object WidgetWeatherIconRenderer {
                 drawSnow(canvas, scale, palette, showers = false)
             }
             WeatherCondition.SNOW_SHOWERS -> {
-                drawSun(canvas, scale, palette, 16f, 15f, 5.8f)
+                if (isNight) drawMoon(canvas, scale, palette, 16f, 15f, 6.4f)
+                else drawSun(canvas, scale, palette, 16f, 15f, 5.8f)
                 drawCloud(canvas, scale, palette, 3f, -3f, 0.96f, depth = 0.70f)
                 drawSnow(canvas, scale, palette, showers = true)
             }
@@ -90,6 +95,18 @@ internal object WidgetWeatherIconRenderer {
         }
 
         return bitmap
+    }
+
+    /** Crescent is cut from its actual geometry; it does not use a background-color mask. */
+    private fun drawMoon(canvas: Canvas, scale: Float, palette: Palette, cx: Float, cy: Float, radius: Float) {
+        fun f(v: Float) = v * scale
+        val outer = Path().apply { addCircle(f(cx), f(cy), f(radius), Path.Direction.CW) }
+        val inner = Path().apply {
+            addCircle(f(cx + radius * 0.45f), f(cy - radius * 0.37f), f(radius * 0.88f), Path.Direction.CW)
+        }
+        val crescent = Path().apply { op(outer, inner, Path.Op.DIFFERENCE) }
+        canvas.drawPath(crescent, fill(palette.cloud))
+        canvas.drawPath(crescent, stroke(palette.cloudDark, 1.0f * scale))
     }
 
     private fun drawSun(canvas: Canvas, scale: Float, palette: Palette, cx: Float, cy: Float, radius: Float) {

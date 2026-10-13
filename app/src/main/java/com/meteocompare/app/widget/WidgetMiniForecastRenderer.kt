@@ -100,6 +100,7 @@ internal object WidgetMiniForecastRenderer {
         precipProbabilities: List<Int?>,
         precipAmountsMm: List<Double?> = emptyList(),
         conditions: List<WeatherCondition?> = emptyList(),
+        nightFlags: List<Boolean?> = emptyList(),
         precipColorArgb: Int,
         textColorArgb: Int,
         timelineLabels: List<String> = emptyList(),
@@ -114,7 +115,7 @@ internal object WidgetMiniForecastRenderer {
         val canvas = Canvas(bitmap)
         val shapePaint = Paint(Paint.ANTI_ALIAS_FLAG)
         val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { isFilterBitmap = true }
-        val iconCache = mutableMapOf<Pair<WeatherCondition, Int>, Bitmap>()
+        val iconCache = mutableMapOf<Triple<WeatherCondition, Boolean, Int>, Bitmap>()
 
         val outerPadding = (heightPx * 0.022f).coerceAtLeast(2f)
         val rowGap = (heightPx * 0.042f).coerceAtLeast(3f)
@@ -251,8 +252,8 @@ internal object WidgetMiniForecastRenderer {
 
             if (condition != null && temperatureLine.iconSizePx > 0f) {
                 val iconSizePx = temperatureLine.iconSizePx.roundToInt().coerceAtLeast(1)
-                val iconBitmap = iconCache.getOrPut(condition to iconSizePx) {
-                    WidgetWeatherIconRenderer.render(condition, iconSizePx)
+                val iconBitmap = iconCache.getOrPut(Triple(condition, nightFlags.getOrNull(index) == true, iconSizePx)) {
+                    WidgetWeatherIconRenderer.render(condition, iconSizePx, isNight = nightFlags.getOrNull(index) == true)
                 }
                 canvas.drawBitmap(
                     iconBitmap,
