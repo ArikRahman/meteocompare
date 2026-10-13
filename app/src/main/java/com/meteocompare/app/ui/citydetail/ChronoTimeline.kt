@@ -698,7 +698,8 @@ private fun ChronoConditionsLane(points: List<SimplifiedTimelinePoint>) {
                             WeatherIconDecorative(
                                 condition = condition,
                                 size = 28.dp,
-                                tint = condition.semanticTint()
+                                tint = condition.semanticTint(),
+                                isNight = point.isNight == true
                             )
                         } ?: Text("—", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

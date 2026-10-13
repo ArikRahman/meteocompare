@@ -21,7 +21,8 @@ fun WeatherIconDecorative(
     condition: WeatherCondition?,
     modifier: Modifier = Modifier,
     size: Dp = 24.dp,
-    tint: Color = Color.Unspecified
+    tint: Color = Color.Unspecified,
+    isNight: Boolean = false
 ) {
     if (condition == null) return
 
@@ -31,7 +32,8 @@ fun WeatherIconDecorative(
         size = size,
         animated = false,
         animateConditionChanges = false,
-        tint = tint
+        tint = tint,
+        isNight = isNight
     )
 }
 

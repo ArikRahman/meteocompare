@@ -37,6 +37,14 @@ private val uvColors = listOf(
     Color(0xFFE65257), Color(0xFF8F53BA)
 )
 
+internal fun uvIntensityColor(value: Double): Color = when {
+    value < 3 -> uvColors[0]
+    value < 6 -> uvColors[1]
+    value < 8 -> uvColors[2]
+    value < 11 -> uvColors[3]
+    else -> uvColors[4]
+}
+
 internal fun uvRiskLabelRes(value: Double): Int = when {
     value < 3 -> R.string.uv_risk_low
     value < 6 -> R.string.uv_risk_moderate
@@ -97,10 +105,10 @@ fun UvIndexCompact(value: Double?, modifier: Modifier = Modifier, small: Boolean
         modifier = modifier.testTag("uv_compact").semantics {
             contentDescription = description
         },
-        style = if (small) MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
-            else MaterialTheme.typography.labelSmall,
+        style = if (small) MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+            else MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
         textAlign = TextAlign.Center,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = uvIntensityColor(safeValue),
         maxLines = 1
     )
 }

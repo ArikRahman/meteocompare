@@ -414,7 +414,8 @@ private fun GraphicChartPanel(
                 models = models,
                 zone = zone,
                 locale = locale,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                isNight = renderData.daylight.getOrNull(selectedIndex) == false
             )
 
             Spacer(Modifier.height(1.dp))
@@ -596,7 +597,8 @@ private fun GraphicSelectionHeader(
     zone: ZoneId,
     locale: Locale,
     modifier: Modifier = Modifier,
-    units: WeatherUnits = LocalWeatherUnits.current
+    units: WeatherUnits = LocalWeatherUnits.current,
+    isNight: Boolean = false
 ) {
     val instant = point.instant
     val dateTimeFormatter = remember(locale) { DateTimeFormatter.ofPattern("EEE d MMM · HH:mm", locale) }
@@ -616,7 +618,7 @@ private fun GraphicSelectionHeader(
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
             ) {
                 Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                    WeatherIconDecorative(point.condition, size = 32.dp)
+                    WeatherIconDecorative(point.condition, size = 32.dp, isNight = isNight)
                 }
             }
             Spacer(Modifier.width(8.dp))
@@ -1064,6 +1066,7 @@ private fun GraphicConditionLane(
             slotWidth = GraphicHourWidth,
             iconSize = 25.dp,
             visibleRange = visibleRange,
+            daylight = renderData.daylight,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(30.dp)

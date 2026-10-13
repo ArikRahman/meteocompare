@@ -1587,6 +1587,14 @@ internal fun TodaySummaryCard(
     val solarZone = remember(forecast?.city?.timezone) {
         resolveCityZone(forecast?.city?.timezone)
     }
+    val currentIsNight = remember(solarWindow, now) {
+        solarWindow?.let { window ->
+            val sunrise = window.sunrise
+            val sunset = window.sunset
+            sunrise != null && sunset != null && sunset.isAfter(sunrise) &&
+                (now.isBefore(sunrise) || !now.isBefore(sunset))
+        } == true
+    }
     val resources = LocalResources.current
     val baseDescription = A11yFormatter
         .todaySummaryDescription(resources, today, modelCount, units = units)
@@ -1665,7 +1673,8 @@ internal fun TodaySummaryCard(
                                     size = 56.dp,
                                     animated = true,
                                     motionScale = 2.0f,
-                                    tint = Color.Unspecified
+                                    tint = Color.Unspecified,
+                                    isNight = currentIsNight
                                 )
                             } else {
                                 Icon(

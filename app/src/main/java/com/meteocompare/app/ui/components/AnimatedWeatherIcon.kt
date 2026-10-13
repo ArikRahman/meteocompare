@@ -23,10 +23,12 @@ import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -69,7 +71,8 @@ internal fun AnimatedWeatherIcon(
     animationSeed: Int = 0,
     motionScale: Float = 1f,
     tint: Color = Color.Unspecified,
-    palette: WeatherIconPalette = WeatherIconDefaults.palette
+    palette: WeatherIconPalette = WeatherIconDefaults.palette,
+    isNight: Boolean = false
 ) {
     val displayedCondition = condition ?: WeatherCondition.UNKNOWN
     val effectivePalette = if (tint == Color.Unspecified) {
@@ -109,6 +112,7 @@ internal fun AnimatedWeatherIcon(
                     animated = animated,
                     animationSeed = animationSeed,
                     motionScale = motionScale.coerceIn(0f, 2f),
+                    isNight = isNight,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -119,6 +123,7 @@ internal fun AnimatedWeatherIcon(
                 animated = animated,
                 animationSeed = animationSeed,
                 motionScale = motionScale.coerceIn(0f, 2f),
+                isNight = isNight,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -141,7 +146,8 @@ internal fun StaticWeatherIconStrip(
     iconSize: Dp,
     visibleRange: IntRange = conditions.indices,
     modifier: Modifier = Modifier,
-    palette: WeatherIconPalette = WeatherIconDefaults.palette
+    palette: WeatherIconPalette = WeatherIconDefaults.palette,
+    daylight: List<Boolean>? = null
 ) {
     Canvas(modifier = modifier) {
         if (conditions.isEmpty()) return@Canvas
@@ -159,6 +165,7 @@ internal fun StaticWeatherIconStrip(
                     palette = palette,
                     progress = condition.staticPreviewProgress,
                     motionScale = 0f,
+                    isNight = daylight?.getOrNull(index) == false,
                     unit = unit
                 )
             }
@@ -173,6 +180,7 @@ private fun WeatherIconCanvas(
     animated: Boolean,
     animationSeed: Int,
     motionScale: Float,
+    isNight: Boolean,
     modifier: Modifier
 ) {
     key(condition, animationSeed, animated) {
@@ -217,6 +225,7 @@ private fun WeatherIconCanvas(
                     palette = palette,
                     progress = progress,
                     motionScale = motionScale,
+                    isNight = isNight,
                     unit = unit
                 )
             }
@@ -327,24 +336,40 @@ private fun DrawScope.drawWeatherCondition(
     palette: WeatherIconPalette,
     progress: Float,
     motionScale: Float,
+    isNight: Boolean,
     unit: Float
 ) {
     when (condition) {
-        WeatherCondition.CLEAR -> drawClear(
+        WeatherCondition.CLEAR -> if (isNight) drawClearNight(
+            palette = palette,
+            progress = progress,
+            motionScale = motionScale,
+            unit = unit
+        ) else drawClear(
             palette = palette,
             progress = progress,
             motionScale = motionScale,
             unit = unit
         )
 
-        WeatherCondition.MAINLY_CLEAR -> drawMainlyClear(
+        WeatherCondition.MAINLY_CLEAR -> if (isNight) drawMainlyClearNight(
+            palette = palette,
+            progress = progress,
+            motionScale = motionScale,
+            unit = unit
+        ) else drawMainlyClear(
             palette = palette,
             progress = progress,
             motionScale = motionScale,
             unit = unit
         )
 
-        WeatherCondition.PARTLY_CLOUDY -> drawPartlyCloudy(
+        WeatherCondition.PARTLY_CLOUDY -> if (isNight) drawPartlyCloudyNight(
+            palette = palette,
+            progress = progress,
+            motionScale = motionScale,
+            unit = unit
+        ) else drawPartlyCloudy(
             palette = palette,
             progress = progress,
             motionScale = motionScale,
@@ -379,7 +404,12 @@ private fun DrawScope.drawWeatherCondition(
             unit = unit
         )
 
-        WeatherCondition.RAIN_SHOWERS -> drawRainShowers(
+        WeatherCondition.RAIN_SHOWERS -> if (isNight) drawRainShowersNight(
+            palette = palette,
+            progress = progress,
+            motionScale = motionScale,
+            unit = unit
+        ) else drawRainShowers(
             palette = palette,
             progress = progress,
             motionScale = motionScale,
@@ -400,7 +430,12 @@ private fun DrawScope.drawWeatherCondition(
             unit = unit
         )
 
-        WeatherCondition.SNOW_SHOWERS -> drawSnowShowers(
+        WeatherCondition.SNOW_SHOWERS -> if (isNight) drawSnowShowersNight(
+            palette = palette,
+            progress = progress,
+            motionScale = motionScale,
+            unit = unit
+        ) else drawSnowShowers(
             palette = palette,
             progress = progress,
             motionScale = motionScale,
@@ -498,6 +533,114 @@ private fun DrawScope.drawPartlyCloudy(
         palette = palette,
         unit = unit,
         depth = 0.70f
+    )
+}
+
+private fun DrawScope.drawClearNight(
+    palette: WeatherIconPalette,
+    progress: Float,
+    motionScale: Float,
+    unit: Float
+) {
+    val breathe = 1f + 0.03f * wave(progress, cycles = 2f) * motionScale
+    drawMoon(
+        center = point(50f, 50f, unit),
+        radius = 18f * unit * breathe,
+        rotation = 18f * wave(progress, cycles = 1f),
+        palette = palette,
+        unit = unit
+    )
+}
+
+private fun DrawScope.drawMainlyClearNight(
+    palette: WeatherIconPalette,
+    progress: Float,
+    motionScale: Float,
+    unit: Float
+) {
+    val moonCenter = point(40f, 39f, unit)
+    val cloudDx = wave(progress, cycles = 1f) * 1.8f * unit * motionScale
+    val cloudDy = wave(progress, cycles = 2f, phase = 0.2f) * 0.6f * unit * motionScale
+    drawMoon(center = moonCenter, radius = 14f * unit, rotation = 12f * wave(progress, cycles = 1f), palette = palette, unit = unit)
+    drawCloud(
+        center = point(58f, 61f, unit) + Offset(cloudDx, cloudDy),
+        scale = 0.86f,
+        palette = palette,
+        unit = unit,
+        depth = 0.80f
+    )
+}
+
+private fun DrawScope.drawPartlyCloudyNight(
+    palette: WeatherIconPalette,
+    progress: Float,
+    motionScale: Float,
+    unit: Float
+) {
+    val moonCenter = point(35f, 37f, unit)
+    val foregroundDx = wave(progress, cycles = 1f) * 2.5f * unit * motionScale
+    val foregroundDy = wave(progress, cycles = 2f, phase = 0.15f) * 0.7f * unit * motionScale
+    drawMoon(center = moonCenter, radius = 12f * unit, rotation = 12f * wave(progress, cycles = 1f), palette = palette, unit = unit)
+    drawCloud(
+        center = point(58f, 59f, unit) + Offset(foregroundDx, foregroundDy),
+        scale = 1.02f,
+        palette = palette,
+        unit = unit,
+        depth = 0.70f
+    )
+}
+
+private fun DrawScope.drawRainShowersNight(
+    palette: WeatherIconPalette,
+    progress: Float,
+    motionScale: Float,
+    unit: Float
+) {
+    drawMoon(center = point(31f, 31f, unit), radius = 8f * unit, rotation = 10f * wave(progress, cycles = 1f), palette = palette, unit = unit)
+    drawCloud(
+        center = point(55f, 40f, unit),
+        scale = 0.94f,
+        palette = palette,
+        unit = unit,
+        depth = 0.68f
+    )
+    drawRainStreaks(
+        progress = progress,
+        palette = palette,
+        unit = unit,
+        motionScale = motionScale,
+        intensity = 0.86f,
+        xPositions = listOf(38f, 53f, 68f),
+        speeds = listOf(1.80f, 2.10f, 1.90f),
+        phases = listOf(0.00f, 0.31f, 0.62f),
+        startY = 59f,
+        endY = 82f,
+        lengthRange = 6.0f to 10.5f,
+        strokeRange = 2.0f to 2.4f,
+        slant = 2.1f
+    )
+}
+
+private fun DrawScope.drawSnowShowersNight(
+    palette: WeatherIconPalette,
+    progress: Float,
+    motionScale: Float,
+    unit: Float
+) {
+    drawMoon(center = point(31f, 31f, unit), radius = 8f * unit, rotation = 10f * wave(progress, cycles = 1f), palette = palette, unit = unit)
+    drawCloud(
+        center = point(55f, 39f, unit),
+        scale = 0.94f,
+        palette = palette,
+        unit = unit,
+        depth = 0.68f
+    )
+    drawSnowflakes(
+        progress = progress,
+        palette = palette,
+        unit = unit,
+        motionScale = motionScale,
+        xOffset = 3f
     )
 }
 
@@ -855,6 +998,49 @@ private fun DrawScope.drawUnknown(
         radius = 2.7f * unit,
         center = center + Offset(0f, 17f * unit)
     )
+}
+
+private fun DrawScope.drawMoon(
+    center: Offset,
+    radius: Float,
+    rotation: Float,
+    palette: WeatherIconPalette,
+    unit: Float
+) {
+    rotate(rotation, pivot = center) {
+        val outer = Path().apply {
+            addOval(Rect(center.x - radius, center.y - radius, center.x + radius, center.y + radius))
+        }
+        val inner = Path().apply {
+            addOval(
+                Rect(
+                    center.x - radius * 0.18f,
+                    center.y - radius * 1.02f,
+                    center.x + radius * 1.22f,
+                    center.y + radius * 0.98f
+                )
+            )
+        }
+        val crescent = Path.combine(PathOperation.Difference, outer, inner)
+        drawPath(
+            path = crescent,
+            brush = Brush.radialGradient(
+                colors = listOf(palette.cloudLight, palette.cloudMid),
+                center = center,
+                radius = radius * 1.4f
+            )
+        )
+        drawPath(
+            path = crescent,
+            color = palette.shadow.copy(alpha = 0.18f),
+            style = Stroke(width = 2.2f * unit, join = StrokeJoin.Round, cap = StrokeCap.Round)
+        )
+        drawCircle(
+            color = palette.glow.copy(alpha = 0.42f),
+            radius = radius * 1.08f,
+            center = center
+        )
+    }
 }
 
 private fun DrawScope.drawSun(

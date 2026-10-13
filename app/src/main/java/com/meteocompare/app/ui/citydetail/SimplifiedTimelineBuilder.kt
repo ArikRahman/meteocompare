@@ -120,6 +120,8 @@ internal data class SimplifiedTimelinePoint(
     val condition: WeatherCondition? = null,
     /** UV from one location-based best-match forecast, not a model consensus. */
     val uvIndex: Double? = null,
+    /** Vrai la nuit pour les échéances horaires quand les heures solaires sont connues. */
+    val isNight: Boolean? = null,
     /** Nombre de modèles ayant fourni au moins une valeur exploitable à cette échéance. */
     val modelCount: Int = 0,
     /** Nombre de lignées numériques indépendantes à cette échéance. */
@@ -204,6 +206,7 @@ private fun buildHourlyTimeline(
 
     // L'analyse conserve toutes les échéances de la fenêtre. La timeline
     // visuelle applique ensuite une grille régulière indépendante des événements.
+    val solarWindows = mutableMapOf<LocalDate, DetailSolarWindow>()
     return timestamps.mapNotNull { timestamp ->
         val snapshots = indexed.mapNotNull { it[timestamp] }
         timelinePoint(
@@ -213,7 +216,17 @@ private fun buildHourlyTimeline(
             hourly = true,
             calibrationLeadDay = null,
             engineContext = engineContext
-        )
+        )?.let { point ->
+            val localDate = timestamp.atZone(zone).toLocalDate()
+            val window = solarWindows.getOrPut(localDate) { detailSolarWindow(forecast, localDate) }
+            val isNight = when {
+                window.sunrise == null || window.sunset == null -> null
+                !window.sunset.isAfter(window.sunrise) -> null
+                timestamp.isBefore(window.sunrise) || !timestamp.isBefore(window.sunset) -> true
+                else -> false
+            }
+            point.copy(isNight = isNight)
+        }
     }
 }
 
