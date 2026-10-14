@@ -84,12 +84,13 @@ class MiniForecastStripVisualsTest {
     }
 
     @Test
-    fun `home timeline is a compact neutral card with smaller icons`() {
-        assertEquals(76, MINI_TIMELINE_HEIGHT_DP)
+    fun `home timeline gives colorful weather icons priority over its temperature capsules`() {
+        assertEquals(80, MINI_TIMELINE_HEIGHT_DP)
         assertEquals(10, MINI_TIMELINE_CORNER_RADIUS_DP)
-        assertEquals(16, MINI_TIMELINE_CONDITION_ICON_DP)
-        assertEquals(42, MINI_TIMELINE_TEMPERATURE_CAPSULE_WIDTH_DP)
-        assertEquals(8, MINI_TIMELINE_TEMPERATURE_CAPSULE_RADIUS_DP)
+        assertEquals(23, MINI_TIMELINE_CONDITION_ICON_DP)
+        assertEquals(40, MINI_TIMELINE_TEMPERATURE_CAPSULE_WIDTH_DP)
+        assertEquals(7, MINI_TIMELINE_TEMPERATURE_CAPSULE_RADIUS_DP)
+        assertTrue(MINI_TIMELINE_CONDITION_ICON_DP > MINI_TIMELINE_TEMPERATURE_CAPSULE_RADIUS_DP)
     }
 
     @Test

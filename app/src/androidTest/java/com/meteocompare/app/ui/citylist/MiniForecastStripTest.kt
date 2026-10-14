@@ -1,8 +1,15 @@
 package com.meteocompare.app.ui.citylist
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.assertContentDescriptionContains
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
@@ -11,6 +18,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.meteocompare.app.R
 import com.meteocompare.app.domain.model.WeatherCondition
 import java.time.LocalDateTime
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -74,6 +82,77 @@ class MiniForecastStripTest {
         composeRule.onNodeWithTag("${TAG_MINI_FORECAST_CONDITION_PREFIX}1").assertIsDisplayed()
         composeRule.onNodeWithTag("${TAG_MINI_FORECAST_CONDITION_PREFIX}2").assertDoesNotExist()
         composeRule.onNodeWithTag("${TAG_MINI_FORECAST_TEMPERATURE_PREFIX}0").assertIsDisplayed()
+    }
+
+    @Test
+    fun shared_colorful_icons_are_kept_for_day_and_night_hours() {
+        composeRule.setContent {
+            MiniForecastStrip(
+                hourlyTemps = List(12) { 12.0 },
+                hourlyPrecipProb = List(12) { 0 },
+                hourlyConditions = listOf(
+                    WeatherCondition.MAINLY_CLEAR,
+                    WeatherCondition.PARTLY_CLOUDY,
+                    WeatherCondition.RAIN_SHOWERS
+                ) + List(9) { null },
+                nightFlags = listOf(false, true, true)
+            )
+        }
+
+        (0..2).forEach { index ->
+            composeRule.onNodeWithTag("$TAG_MINI_FORECAST_CONDITION_PREFIX$index")
+                .assertIsDisplayed()
+        }
+        composeRule.onNodeWithTag("${TAG_MINI_FORECAST_CONDITION_PREFIX}3").assertDoesNotExist()
+    }
+
+    @Test
+    fun icon_and_temperature_capsule_keep_their_compact_dimensions() {
+        composeRule.setContent {
+            MiniForecastStrip(
+                hourlyTemps = List(12) { 15.0 },
+                hourlyPrecipProb = List(12) { 0 },
+                hourlyConditions = List(12) { WeatherCondition.CLEAR }
+            )
+        }
+
+        val icon = composeRule.onNodeWithTag("${TAG_MINI_FORECAST_CONDITION_PREFIX}0")
+            .getUnclippedBoundsInRoot()
+        val capsule = composeRule.onNodeWithTag("${TAG_MINI_FORECAST_TEMPERATURE_PREFIX}0")
+            .getUnclippedBoundsInRoot()
+
+        assertEquals(23f, (icon.right - icon.left).value, 0.5f)
+        assertEquals(23f, (icon.bottom - icon.top).value, 0.5f)
+        assertEquals(40f, (capsule.right - capsule.left).value, 0.5f)
+        assertEquals(18f, (capsule.bottom - capsule.top).value, 0.5f)
+    }
+
+    @Test
+    fun current_hour_marker_uses_theme_accent_and_updates_when_accent_changes() {
+        val accent = mutableStateOf(Color(0xFF2456B8))
+        composeRule.setContent {
+            MaterialTheme(colorScheme = lightColorScheme(primary = accent.value)) {
+                MiniForecastStrip(
+                    hourlyTemps = List(12) { 15.0 },
+                    hourlyPrecipProb = List(12) { 0 },
+                    startTime = LocalDateTime.of(2026, 7, 15, 15, 0)
+                )
+            }
+        }
+
+        fun assertMarkerMatches(expected: Color) {
+            val pixels = composeRule.onNodeWithTag(TAG_MINI_FORECAST_CURRENT_MARKER)
+                .captureToImage().toPixelMap()
+            val center = pixels[pixels.width / 2, pixels.height / 2]
+            assertEquals(expected.red, center.red, 0.08f)
+            assertEquals(expected.green, center.green, 0.08f)
+            assertEquals(expected.blue, center.blue, 0.08f)
+        }
+
+        assertMarkerMatches(Color(0xFF2456B8))
+        composeRule.runOnIdle { accent.value = Color(0xFFCA582F) }
+        composeRule.waitForIdle()
+        assertMarkerMatches(Color(0xFFCA582F))
     }
 
     @Test

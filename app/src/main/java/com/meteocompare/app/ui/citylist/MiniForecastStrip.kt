@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meteocompare.app.R
 import com.meteocompare.app.domain.model.WeatherCondition
-import com.meteocompare.app.ui.components.WeatherOutlineIconDecorative
+import com.meteocompare.app.ui.components.WeatherIconDecorative
 import com.meteocompare.app.ui.components.blendedHeatmapColor
 import com.meteocompare.app.ui.components.temperatureHeatmapColor
 import java.time.LocalDateTime
@@ -138,7 +138,6 @@ internal fun MiniForecastStrip(
                             isDarkTheme = isDarkTheme
                         ),
                         contentColor = MaterialTheme.colorScheme.onSurface,
-                        containerColor = containerColor,
                         index = index
                     )
                 }
@@ -159,7 +158,6 @@ private fun MiniForecastHour(
     isNight: Boolean = false,
     rainStyle: MiniTimelineRainDotStyle?,
     contentColor: Color,
-    containerColor: Color,
     index: Int,
     units: WeatherUnits = LocalWeatherUnits.current
 ) {
@@ -179,10 +177,10 @@ private fun MiniForecastHour(
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .width(14.dp)
-                        .height(2.dp)
+                        .width(10.dp)
+                        .height(1.dp)
                         .background(
-                            contentColor.copy(alpha = 0.50f),
+                            MaterialTheme.colorScheme.primary,
                             RoundedCornerShape(1.dp)
                         )
                         .testTag(TAG_MINI_FORECAST_CURRENT_MARKER)
@@ -206,16 +204,16 @@ private fun MiniForecastHour(
 
         Box(
             modifier = Modifier
-                .height(21.dp)
+                .height(27.dp)
                 .fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
             condition?.let {
-                WeatherOutlineIconDecorative(
+                // Même palette multicolore que les autres vues. La variante
+                // nocturne est conservée pour chaque heure de la frise.
+                WeatherIconDecorative(
                     condition = it,
                     size = MINI_TIMELINE_CONDITION_ICON_DP.dp,
-                    tint = contentColor.copy(alpha = 0.92f),
-                    backdropColor = containerColor,
                     isNight = isNight,
                     modifier = Modifier.testTag("$TAG_MINI_FORECAST_CONDITION_PREFIX$index")
                 )
@@ -224,7 +222,7 @@ private fun MiniForecastHour(
 
         Box(
             modifier = Modifier
-                .height(20.dp)
+                .height(18.dp)
                 .width(MINI_TIMELINE_TEMPERATURE_CAPSULE_WIDTH_DP.dp)
                 .background(
                     temperatureBackground,
@@ -237,8 +235,8 @@ private fun MiniForecastHour(
                 text = temperature?.let { units.temp(it) } ?: "—",
                 color = temperatureContentColor,
                 style = MaterialTheme.typography.labelLarge.copy(
-                    fontSize = 11.sp,
-                    lineHeight = 14.sp,
+                    fontSize = 10.sp,
+                    lineHeight = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 ),
                 textAlign = TextAlign.Center,
@@ -375,11 +373,11 @@ private fun buildA11yLabel(
 
 private const val CELL_COUNT = 12
 internal const val MINI_TIMELINE_VISIBLE_HOURS = 6
-internal const val MINI_TIMELINE_HEIGHT_DP = 76
+internal const val MINI_TIMELINE_HEIGHT_DP = 80
 internal const val MINI_TIMELINE_CORNER_RADIUS_DP = 10
-internal const val MINI_TIMELINE_CONDITION_ICON_DP = 16
-internal const val MINI_TIMELINE_TEMPERATURE_CAPSULE_WIDTH_DP = 42
-internal const val MINI_TIMELINE_TEMPERATURE_CAPSULE_RADIUS_DP = 8
+internal const val MINI_TIMELINE_CONDITION_ICON_DP = 23
+internal const val MINI_TIMELINE_TEMPERATURE_CAPSULE_WIDTH_DP = 40
+internal const val MINI_TIMELINE_TEMPERATURE_CAPSULE_RADIUS_DP = 7
 internal const val MINI_TIMELINE_HEAT_STRENGTH_LIGHT = 0.88f
 internal const val MINI_TIMELINE_HEAT_STRENGTH_DARK = 0.90f
 private const val RAIN_DOT_MIN_PROBABILITY = 30
