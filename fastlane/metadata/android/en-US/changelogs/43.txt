@@ -1,0 +1,1 @@
+Choose 12-hour (AM/PM) or 24-hour time independently of the app language, across forecasts, charts and widgets. New night-time weather icons and UV intensity colors. Clearer daily summary with sunrise, sunset and UV. Fixes for hourly display, translations and stability.

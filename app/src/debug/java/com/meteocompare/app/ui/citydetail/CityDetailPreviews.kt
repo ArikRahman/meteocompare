@@ -104,6 +104,23 @@ private fun TodaySummaryCardPreview() {
 
 @MeteoComponentPreview
 @Composable
+private fun DetailSolarCardPreview() {
+    val forecast = PreviewFixtures.forecast()
+    MeteoPreviewSurface {
+        Surface(Modifier.padding(12.dp)) {
+            DetailSolarCard(
+                window = detailSolarWindow(forecast, PreviewFixtures.today),
+                timezone = resolveCityZone(forecast.city.timezone),
+                date = PreviewFixtures.today,
+                now = PreviewFixtures.now,
+                uvIndex = 6.5
+            )
+        }
+    }
+}
+
+@MeteoComponentPreview
+@Composable
 private fun BiasSparklinePreview() {
     val samples = PreviewFixtures.biasSamples(0.4, BiasVariable.TEMPERATURE)
     MeteoPreviewSurface {

@@ -1,0 +1,1 @@
+12-/24-Stundenformat unabhängig von der App-Sprache wählen – für Vorhersagen, Diagramme und Widgets. Neue Wettersymbole für die Nacht und farbcodierte UV-Werte. Tagesübersicht mit Sonnenaufgang, Sonnenuntergang und UV-Index verbessert. Fehlerbehebungen für Uhrzeit, Übersetzungen und Stabilität.

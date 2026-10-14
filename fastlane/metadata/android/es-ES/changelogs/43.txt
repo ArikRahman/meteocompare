@@ -1,0 +1,1 @@
+Elige el formato de 12 h (AM/PM) o 24 h, independientemente del idioma, para previsiones, gráficos y widgets. Nuevos iconos meteorológicos nocturnos e índices UV con colores por intensidad. Resumen diario mejorado con salida/puesta del sol e índice UV. Correcciones de horas, traducciones y estabilidad.

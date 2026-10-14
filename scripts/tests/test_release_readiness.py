@@ -31,17 +31,32 @@ class ReleaseReadinessTests(unittest.TestCase):
         self.assertIn(':app:assembleDebugAndroidTest', workflow)
         self.assertIn(':app:testDebugUnitTest', workflow)
         self.assertIn(':app:testReleaseUnitTest', workflow)
+        self.assertIn('python3 scripts/check_android_strings.py', workflow)
         self.assertIn(':app:lintDebug', workflow)
         self.assertIn(':app:assembleRelease', workflow)
         self.assertIn(':app:bundleRelease', workflow)
 
-    def test_version_1171_has_five_localized_release_notes(self):
+    def test_current_android_version_has_localized_release_notes(self):
+        """Do not pin this guard to an older release number.
+
+        A bump without all localized notes should fail CI. The latest
+        changelog code must also match the Android versionCode.
+        """
         build = (APP / 'build.gradle.kts').read_text(encoding='utf-8')
-        self.assertRegex(build, r'versionCode\s*=\s*42\b')
-        self.assertRegex(build, r'versionName\s*=\s*"1\.17\.1"')
+        code_match = re.search(r'(?m)^\s*versionCode\s*=\s*(\d+)\s*$', build)
+        name_match = re.search(r'(?m)^\s*versionName\s*=\s*"([^"]+)"\s*$', build)
+        self.assertIsNotNone(code_match)
+        self.assertIsNotNone(name_match)
+        version_code = int(code_match.group(1))
+        self.assertRegex(name_match.group(1), r'^\d+\.\d+\.\d+$')
+        self.assertGreater(version_code, 0)
         for locale in LOCALES:
             with self.subTest(locale=locale):
-                note = (ROOT / f'fastlane/metadata/android/{locale}/changelogs/42.txt').read_text(encoding='utf-8').strip()
+                changelogs = ROOT / f'fastlane/metadata/android/{locale}/changelogs'
+                codes = sorted(int(path.stem) for path in changelogs.glob('*.txt') if path.stem.isdigit())
+                self.assertTrue(codes, f'No changelogs found for {locale}')
+                self.assertEqual(version_code, codes[-1], f'Latest changelog in {locale} must match the build')
+                note = (changelogs / f'{version_code}.txt').read_text(encoding='utf-8').strip()
                 self.assertTrue(note)
                 self.assertLessEqual(len(note), 500)
 

@@ -369,6 +369,8 @@ Fait :
 - ✅ v1.16.0 — Ajout d'un système de notifications (résumé journalier, changement de prévisions, évènements à venir), prise en charge des unités impériales (métriques par défaut), corrections de bugs (bias, widget's settings, requests et GC)
 - ✅ v1.16.1 — Correction des refreshs et requêtes inutiles, correction des notifications
 - ✅ v1.17.0 — Radar des pluies (observation et projection jusqu'à 60 minutes), amélioration des performances, correction de bugs 
+- ✅ v1.17.1 — Indices UV, widgets redimensionnables et amélioration des descriptions des moteurs météo
+- ✅ v1.17.2 — Choix 12 h / 24 h indépendant de la langue, icônes météo nocturnes, indices UV colorés, refonte du résumé du jour et correctifs de stabilité (publication après validation CI / appareil)
 
 ## Licence
 
