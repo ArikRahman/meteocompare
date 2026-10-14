@@ -1,6 +1,10 @@
 package com.meteocompare.app.ui.citydetail
 
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
+import com.meteocompare.app.core.locale.WeatherTimeFormat
+import com.meteocompare.app.domain.model.ClockFormatPreference
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
@@ -16,8 +20,6 @@ import com.meteocompare.app.domain.model.ConfidenceScore
 import com.meteocompare.app.domain.model.DayConfidence
 import com.meteocompare.app.domain.model.PrecipitationConfidence
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import com.meteocompare.app.testutil.TestFixtures
 import com.meteocompare.app.ui.theme.MeteoCompareTheme
 import org.junit.Assert.assertEquals
@@ -36,15 +38,17 @@ class TodaySummaryCardTest {
         uvIndex: Double? = null
     ) {
         composeRule.setContent {
-            MeteoCompareTheme {
-                Surface {
-                    TodaySummaryCard(
-                        today = today,
-                        modelCount = modelCount,
-                        currentTemp = null,
-                        forecast = forecast,
-                        uvIndex = uvIndex
-                    )
+            CompositionLocalProvider(LocalClockFormatPreference provides ClockFormatPreference.HOUR_24) {
+                MeteoCompareTheme {
+                    Surface {
+                        TodaySummaryCard(
+                            today = today,
+                            modelCount = modelCount,
+                            currentTemp = null,
+                            forecast = forecast,
+                            uvIndex = uvIndex
+                        )
+                    }
                 }
             }
         }
@@ -74,8 +78,9 @@ class TodaySummaryCardTest {
             ),
             forecast = forecast
         )
-        val format = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-            .withLocale(context.resources.configuration.locales[0])
+        val format = WeatherTimeFormat.clock(
+            context.resources.configuration.locales[0], ClockFormatPreference.HOUR_24
+        )
         composeRule.onNodeWithTag(TAG_DETAIL_SOLAR_CARD, useUnmergedTree = true)
             .assertIsDisplayed()
         composeRule.onNodeWithText(sunriseTime.format(format), useUnmergedTree = true)

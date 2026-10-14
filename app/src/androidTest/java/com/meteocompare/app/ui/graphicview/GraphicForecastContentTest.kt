@@ -1,6 +1,8 @@
 package com.meteocompare.app.ui.graphicview
 
 import androidx.compose.runtime.CompositionLocalProvider
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
+import com.meteocompare.app.domain.model.ClockFormatPreference
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertTextEquals
 import com.meteocompare.app.core.units.LocalWeatherUnits
@@ -87,6 +89,20 @@ class GraphicForecastContentTest {
     }
 
     @Test
+    fun hourly_axis_respects_explicit_clock_preference_independent_of_language() {
+        val points = listOf(0L, 1L, 12L, 16L).map { hour ->
+            SimplifiedTimelinePoint(instant = Instant.parse("2026-08-29T00:00:00Z").plusSeconds(hour * 3600L))
+        }
+        val zone = java.time.ZoneId.of("UTC")
+        val french = Locale.FRANCE
+        val english = Locale.US
+        val twelve = buildGraphicTimeAxisLabels(points, zone, french, ClockFormatPreference.HOUR_12)
+        val twentyFour = buildGraphicTimeAxisLabels(points, zone, english, ClockFormatPreference.HOUR_24)
+        assertEquals(listOf("12 AM", "1 AM", "12 PM", "4 PM"), twelve.hourLabels)
+        assertEquals(listOf("00h", "01h", "12h", "16h"), twentyFour.hourLabels)
+    }
+
+    @Test
     fun ten_day_timeline_virtualizes_hours_and_keeps_weather_layers() {
         val start = Instant.parse("2026-09-16T00:00:00Z")
         val points = List(240) { index ->
@@ -129,8 +145,10 @@ class GraphicForecastContentTest {
         )
 
         composeRule.setContent {
-            MeteoCompareTheme {
-                GraphicForecastContent(state = state)
+            CompositionLocalProvider(LocalClockFormatPreference provides ClockFormatPreference.HOUR_24) {
+                MeteoCompareTheme {
+                    GraphicForecastContent(state = state)
+                }
             }
         }
 

@@ -1,6 +1,10 @@
 package com.meteocompare.app.ui.citydetail
 
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
+import com.meteocompare.app.domain.model.ClockFormatPreference
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -20,6 +24,16 @@ import org.junit.Test
 
 class SimplifiedTimelineCardTest {
     @get:Rule val composeRule = createComposeRule()
+
+    /** Legacy clock-label assertions intentionally exercise the explicit 24 h setting,
+     * independently of the instrumentation device's language and saved preferences. */
+    private fun setContentWith24HourClock(content: @Composable () -> Unit) {
+        composeRule.setContent {
+            CompositionLocalProvider(LocalClockFormatPreference provides ClockFormatPreference.HOUR_24) {
+                content()
+            }
+        }
+    }
 
     @Test
     fun disagreement_badge_keeps_the_affected_metric_visible() {
@@ -41,7 +55,7 @@ class SimplifiedTimelineCardTest {
             )
         )
 
-        composeRule.setContent {
+        setContentWith24HourClock {
             MeteoCompareTheme {
                 Surface {
                     SimplifiedTimelineCard(
@@ -81,7 +95,7 @@ class SimplifiedTimelineCardTest {
             consensusLevel = ModelConsensusLevel.HIGH
         )
 
-        composeRule.setContent {
+        setContentWith24HourClock {
             MeteoCompareTheme {
                 Surface {
                     SimplifiedTimelineCard(
@@ -108,6 +122,32 @@ class SimplifiedTimelineCardTest {
     }
 
     @Test
+    fun explicit_12h_clock_reformats_timeline_when_preference_changes() {
+        val mode = androidx.compose.runtime.mutableStateOf(ClockFormatPreference.HOUR_24)
+        val point = SimplifiedTimelinePoint(
+            instant = Instant.parse("2026-07-26T16:00:00Z"),
+            temperatureC = 22.0,
+            modelCount = 2
+        )
+        composeRule.setContent {
+            CompositionLocalProvider(LocalClockFormatPreference provides mode.value) {
+                MeteoCompareTheme {
+                    SimplifiedTimelineCard(
+                        points = listOf(point),
+                        mode = DisplayMode.HOURLY,
+                        timezone = "UTC",
+                        now = Instant.parse("2026-07-26T12:20:00Z")
+                    )
+                }
+            }
+        }
+        composeRule.onNodeWithText("16h").assertIsDisplayed()
+        composeRule.runOnIdle { mode.value = ClockFormatPreference.HOUR_12 }
+        composeRule.onNodeWithText("4 PM").assertIsDisplayed()
+        composeRule.onNodeWithText("16h").assertDoesNotExist()
+    }
+
+    @Test
     fun first_future_point_keeps_its_real_hour_instead_of_now() {
         val point = SimplifiedTimelinePoint(
             instant = Instant.parse("2026-07-26T16:00:00Z"),
@@ -118,7 +158,7 @@ class SimplifiedTimelineCardTest {
         )
         val now = Instant.parse("2026-07-26T12:20:00Z")
 
-        composeRule.setContent {
+        setContentWith24HourClock {
             MeteoCompareTheme {
                 Surface {
                     SimplifiedTimelineCard(
@@ -155,7 +195,7 @@ class SimplifiedTimelineCardTest {
             )
         )
 
-        composeRule.setContent {
+        setContentWith24HourClock {
             MeteoCompareTheme {
                 Surface {
                     SimplifiedTimelineCard(
@@ -201,7 +241,7 @@ class SimplifiedTimelineCardTest {
             peakPoint = eventPoint
         )
 
-        composeRule.setContent {
+        setContentWith24HourClock {
             MeteoCompareTheme {
                 Surface {
                     SimplifiedTimelineCard(
@@ -240,7 +280,7 @@ class SimplifiedTimelineCardTest {
             consensusLevel = ModelConsensusLevel.MEDIUM
         )
 
-        composeRule.setContent {
+        setContentWith24HourClock {
             MeteoCompareTheme {
                 Surface {
                     SimplifiedTimelineCard(
@@ -269,7 +309,7 @@ class SimplifiedTimelineCardTest {
         )
         var requestedRange: TimelineRange? = null
 
-        composeRule.setContent {
+        setContentWith24HourClock {
             MeteoCompareTheme {
                 Surface {
                     SimplifiedTimelineCard(
@@ -315,7 +355,7 @@ class SimplifiedTimelineCardTest {
             consensusLevel = ModelConsensusLevel.HIGH
         )
 
-        composeRule.setContent {
+        setContentWith24HourClock {
             val layout = androidx.compose.runtime.remember {
                 androidx.compose.runtime.mutableStateOf(TimelineLayout.COLUMNS)
             }
@@ -361,7 +401,7 @@ class SimplifiedTimelineCardTest {
             consensusLevel = ModelConsensusLevel.MEDIUM
         )
 
-        composeRule.setContent {
+        setContentWith24HourClock {
             MeteoCompareTheme {
                 Surface {
                     SimplifiedTimelineCard(
@@ -403,7 +443,7 @@ class SimplifiedTimelineCardTest {
             condition = com.meteocompare.app.domain.model.WeatherCondition.RAIN
         )
 
-        composeRule.setContent {
+        setContentWith24HourClock {
             MeteoCompareTheme {
                 Surface {
                     ChronoTimelineView(
@@ -428,7 +468,7 @@ class SimplifiedTimelineCardTest {
             windGustKmh = 31.0
         )
 
-        composeRule.setContent {
+        setContentWith24HourClock {
             MeteoCompareTheme {
                 Surface {
                     ChronoTimelineView(

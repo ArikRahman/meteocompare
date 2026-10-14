@@ -1,6 +1,9 @@
 package com.meteocompare.app.ui.components
 
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.runtime.CompositionLocalProvider
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
+import com.meteocompare.app.domain.model.ClockFormatPreference
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -27,11 +30,13 @@ class VigilanceCardsRenderTest {
         val coastal = vigilance.coastalFloodingAlert
 
         composeRule.setContent {
-            MeteoCompareTheme(dynamicColor = false) {
-                LazyColumn {
-                    item { VigilanceCompactBanner(vigilance, "Europe/Paris") }
-                    item { VigilanceDetailCard(vigilance, "Europe/Paris") }
-                    item { MarineCoastalVigilanceBanner(coastal, "Europe/Paris") }
+            CompositionLocalProvider(LocalClockFormatPreference provides ClockFormatPreference.HOUR_24) {
+                MeteoCompareTheme(dynamicColor = false) {
+                    LazyColumn {
+                        item { VigilanceCompactBanner(vigilance, "Europe/Paris") }
+                        item { VigilanceDetailCard(vigilance, "Europe/Paris") }
+                        item { MarineCoastalVigilanceBanner(coastal, "Europe/Paris") }
+                    }
                 }
             }
         }
@@ -71,8 +76,10 @@ class VigilanceCardsRenderTest {
         )
 
         composeRule.setContent {
-            MeteoCompareTheme(dynamicColor = false) {
-                VigilanceCompactBanner(vigilance, "Europe/Paris")
+            CompositionLocalProvider(LocalClockFormatPreference provides ClockFormatPreference.HOUR_24) {
+                MeteoCompareTheme(dynamicColor = false) {
+                    VigilanceCompactBanner(vigilance, "Europe/Paris")
+                }
             }
         }
 
@@ -82,6 +89,20 @@ class VigilanceCardsRenderTest {
             .assertTextContains("30", substring = true)
             .assertTextContains("04h", substring = true)
             .assertTextContains("→", substring = true)
+    }
+
+    @Test
+    fun explicit_12h_clock_formats_vigilance_windows_without_changing_dates() {
+        val vigilance = forecast()
+        composeRule.setContent {
+            CompositionLocalProvider(LocalClockFormatPreference provides ClockFormatPreference.HOUR_12) {
+                MeteoCompareTheme(dynamicColor = false) {
+                    VigilanceCompactBanner(vigilance, "Europe/Paris")
+                }
+            }
+        }
+        composeRule.onNodeWithTag(TAG_VIGILANCE_HOME_TEXT)
+            .assertTextContains("10 AM–2 PM, 6 PM–10 PM", substring = true)
     }
 
     private fun forecast(): VigilanceForecast {
