@@ -96,6 +96,19 @@ class WeatherStringsTest {
         }
     }
 
+    @Test fun UK_profile_spoken_wind_is_mph_but_temperature_is_Celsius() {
+        val units = WeatherUnits(UnitSystem.UK_MIXED)
+        val resources = context.createConfigurationContext(Configuration(context.resources.configuration).apply {
+            setLocale(Locale.UK)
+        }).resources
+        assertTrue(weatherString(resources, units, R.string.forecast_insight_metric_wind, 16.09344).contains("10 mph"))
+        val spoken = A11yFormatter.temperatureDescription(resources,
+            ConfidenceScore(85, 0.0, 0.0, 0.0, 0.0, 5), units)
+        assertTrue(spoken.contains("Celsius"))
+        assertFalse(spoken.contains("Fahrenheit"))
+        assertEquals(resources.getString(R.string.unit_miles_per_hour), spokenUnit(resources, units, WeatherUnit.WIND_SPEED))
+    }
+
     @Test fun metric_labels_and_values_still_match_after_an_imperial_render() {
         val resources = context.resources
         weatherString(resources, imperial, R.string.timeline_precip_amount, 25.4)

@@ -17,6 +17,42 @@ class WeatherUnitsTest {
         assertEquals(UnitSystem.METRIC, metric.system)
     }
 
+    @Test fun `UK preset mixes Celsius and millimetres with miles and mph`() {
+        val uk = WeatherUnits(UnitSystem.UK_MIXED)
+        assertEquals("°C", uk.temperatureUnit)
+        assertEquals("°", uk.temperatureSuffix)
+        assertEquals("mph", uk.windUnit)
+        assertEquals("mi", uk.distanceUnit)
+        assertEquals("mm", uk.precipitationUnit)
+        assertEquals("m", uk.heightUnit)
+        assertEquals("hPa", uk.label(WeatherUnit.PRESSURE))
+        assertEquals(0.0, uk.temperature(0.0), 0.0)
+        assertEquals(2.0, uk.temperatureDelta(2.0), 0.0)
+        assertEquals(10.0, uk.wind(16.09344), 1e-10)
+        assertEquals(10.0, uk.distance(16.09344), 1e-10)
+        assertEquals(25.4, uk.precipitation(25.4), 0.0)
+        assertEquals(10.0, uk.height(10.0), 0.0)
+        assertEquals(1013.25, uk.pressure(1013.25), 0.0)
+        assertEquals("20°", uk.temp(20.0, locale = Locale.UK))
+        assertEquals("10 mph", uk.speed(16.09344, Locale.UK))
+        assertEquals("25.4 mm", uk.rain(25.4, Locale.UK))
+        assertEquals("10.0 mi", uk.format(16.09344, WeatherUnit.DISTANCE, 1, Locale.UK))
+        assertEquals("10.0 m", uk.format(10.0, WeatherUnit.HEIGHT, 1, Locale.UK))
+        assertEquals("1013 hPa", uk.format(1013.25, WeatherUnit.PRESSURE, locale = Locale.UK))
+    }
+
+    @Test fun `UK preset persists without depending on app language`() {
+        assertEquals(UnitSystem.UK_MIXED, UnitSystem.fromStorage("uk_mixed"))
+        val uk = WeatherUnits(UnitSystem.fromStorage("uk_mixed"))
+        for (locale in listOf(Locale.UK, Locale.FRANCE, Locale.GERMANY, Locale.ITALY)) {
+            assertEquals("mph", uk.windUnit)
+            assertEquals("°C", uk.temperatureUnit)
+            assertEquals("mm", uk.precipitationUnit)
+            assertEquals("mi", uk.distanceUnit)
+            assertTrue(uk.speed(16.09344, locale).endsWith(" mph"))
+        }
+    }
+
     @Test fun `absolute temperature conversion includes the offset exactly once`() {
         listOf(-40.0 to -40.0, 0.0 to 32.0, 20.0 to 68.0, 100.0 to 212.0).forEach { (c, f) ->
             assertEquals(f, imperial.temperature(c), 1e-10)

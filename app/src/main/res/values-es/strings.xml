@@ -917,6 +917,7 @@ datos</string>
     <string name="settings_units">Unidades</string>
     <string name="settings_units_metric">Métrico (%1$s, %2$s, %3$s)</string>
     <string name="settings_units_imperial">Imperial (%1$s, %2$s, %3$s)</string>
+    <string name="settings_units_uk">Reino Unido (%1$s, %2$s, %4$s, %3$s)</string>
     <string name="toast_units_updated">Unidades actualizadas</string>
     <string name="unit_degrees_celsius">grados Celsius</string>
     <string name="unit_degrees_fahrenheit">grados Fahrenheit</string>

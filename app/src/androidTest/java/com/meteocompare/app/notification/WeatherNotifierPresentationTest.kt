@@ -464,4 +464,19 @@ class WeatherNotifierPresentationTest {
         assertEquals(20.0, summary.tempMax!!, 0.0)
     }
 
+    @Test
+    fun UKDailySummaryKeepsCelsiusMillimetresAndMph() {
+        val summary = WeatherNotification.DailySummary(
+            city = TestFixtures.paris, date = LocalDate.of(2026, 9, 30), isToday = true,
+            condition = WeatherCondition.RAIN, tempMin = 0.0, tempMax = 20.0,
+            precipitationProbabilityPercent = 80, precipitationAmountMm = 25.4,
+            windKmh = 16.09344, convergencePercent = 82
+        )
+        val rendered = WeatherNotifier(context, WeatherUnits(UnitSystem.UK_MIXED)).render(summary)
+        assertTrue(rendered.text.contains("0° / 20°"))
+        assertTrue(rendered.bigText.contains("25,4 mm"))
+        assertTrue(rendered.bigText.contains("10 mph"))
+        assertEquals(20.0, summary.tempMax!!, 0.0)
+    }
+
 }

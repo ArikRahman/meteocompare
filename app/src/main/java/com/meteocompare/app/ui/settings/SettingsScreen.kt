@@ -826,7 +826,7 @@ private fun nativeTimeStepLabel(model: WeatherModel): String = when {
  * (1.5 km, 2.5 km, 5.5 km) mais évite les faux « .0 » (2 km, 7 km, 9 km).
  */
 private fun formatResolution(km: Double, units: WeatherUnits): String =
-    units.format(km, WeatherUnit.DISTANCE, if (km % 1.0 == 0.0 && !units.imperial) 0 else 1)
+    units.format(km, WeatherUnit.DISTANCE, if (km % 1.0 == 0.0 && !units.distanceInMiles) 0 else 1)
 
 /** Horizon natif affiché sans le confondre avec le `forecast_days` entier de l'API. */
 @Composable
@@ -919,9 +919,11 @@ internal fun UnitSystemSelector(selected: UnitSystem, onSelect: (UnitSystem) -> 
                 androidx.compose.material3.RadioButton(selected = system == selected, onClick = null)
                 Spacer(Modifier.width(8.dp))
                 val example = WeatherUnits(system)
-                Text(stringResource(if (system == UnitSystem.METRIC)
-                    R.string.settings_units_metric else R.string.settings_units_imperial,
-                    example.temperatureUnit, example.windUnit, example.precipitationUnit))
+                Text(stringResource(when (system) {
+                    UnitSystem.METRIC -> R.string.settings_units_metric
+                    UnitSystem.IMPERIAL -> R.string.settings_units_imperial
+                    UnitSystem.UK_MIXED -> R.string.settings_units_uk
+                }, example.temperatureUnit, example.windUnit, example.precipitationUnit, example.distanceUnit))
             }
         }
     }

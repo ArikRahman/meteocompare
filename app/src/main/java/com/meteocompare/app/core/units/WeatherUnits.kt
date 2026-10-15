@@ -6,22 +6,25 @@ import kotlin.math.abs
 
 /** Presentation boundary: every input is metric, every output is display-only. */
 data class WeatherUnits(val system: UnitSystem = UnitSystem.METRIC) {
+    /** Full imperial profile only. Do not use for wind or distance in UK_MIXED. */
     val imperial: Boolean get() = system == UnitSystem.IMPERIAL
+    val windInMph: Boolean get() = system != UnitSystem.METRIC
+    val distanceInMiles: Boolean get() = system != UnitSystem.METRIC
     val temperatureUnit: String get() = if (imperial) "°F" else "°C"
     val temperatureSuffix: String get() = if (imperial) "°F" else "°"
-    val windUnit: String get() = if (imperial) "mph" else "km/h"
+    val windUnit: String get() = if (windInMph) "mph" else "km/h"
     val precipitationUnit: String get() = if (imperial) "in" else "mm"
     val heightUnit: String get() = if (imperial) "ft" else "m"
-    val distanceUnit: String get() = if (imperial) "mi" else "km"
+    val distanceUnit: String get() = if (distanceInMiles) "mi" else "km"
     val precipitationDigits: Int get() = if (imperial) 2 else 1
 
     fun temperature(celsius: Double): Double = if (imperial) celsius * 1.8 + 32.0 else celsius
     /** Differences, MAE, spread and standard deviation must never receive the +32 offset. */
     fun temperatureDelta(celsius: Double): Double = if (imperial) celsius * 1.8 else celsius
-    fun wind(kmh: Double): Double = if (imperial) kmh / 1.609344 else kmh
+    fun wind(kmh: Double): Double = if (windInMph) kmh / 1.609344 else kmh
     fun precipitation(mm: Double): Double = if (imperial) mm / 25.4 else mm
     fun height(metres: Double): Double = if (imperial) metres / 0.3048 else metres
-    fun distance(km: Double): Double = if (imperial) km / 1.609344 else km
+    fun distance(km: Double): Double = if (distanceInMiles) km / 1.609344 else km
 
     // NIST SP 811: conventional inch of mercury = 3386.389 Pa.
     fun pressure(hpa: Double): Double = if (imperial) hpa / 33.86389 else hpa

@@ -421,7 +421,7 @@ private fun formatValue(value: Double, kind: VariableKind, units: WeatherUnits):
  * sensorielle pour l'utilisateur).
  */
 private fun formatResolution(km: Double, units: WeatherUnits): String =
-    units.format(km, WeatherUnit.DISTANCE, if (km < 5.0 || units.imperial) 1 else 0)
+    units.format(km, WeatherUnit.DISTANCE, if (km < 5.0 || units.distanceInMiles) 1 else 0)
 
 @Composable
 private fun interpretationFor(

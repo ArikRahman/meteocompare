@@ -184,4 +184,23 @@ class WidgetFormattingTest {
             25.4, java.util.Locale.US, units))
     }
 
+    @Test
+    fun `UK mixed widgets keep Celsius and millimetres with mph`() {
+        val data = WidgetData.empty(cityName = "London", error = WidgetError.Loading).copy(
+            unitSystem = UnitSystem.UK_MIXED,
+            currentCondition = WeatherCondition.RAIN,
+            currentTemp = 20.0, tempMin = 10.0, tempMax = 22.0,
+            currentWindSpeedKmh = 16.09344, precipMm = 2.5,
+            precipConfidencePct = 78
+        )
+        val units = WeatherUnits(data.unitSystem)
+        assertEquals("20°", formatTemp(data.currentTemp, units))
+        assertEquals("10° / 22°", formatMinMax(data.tempMin, data.tempMax, units))
+        val extras = buildExtrasLine(data)
+        org.junit.Assert.assertTrue(extras, extras.contains("10 mph"))
+        org.junit.Assert.assertTrue(extras, extras.contains("mm (78%)"))
+        org.junit.Assert.assertFalse(extras, extras.contains(" in"))
+        assertEquals(16.09344, data.currentWindSpeedKmh!!, 0.0)
+    }
+
 }

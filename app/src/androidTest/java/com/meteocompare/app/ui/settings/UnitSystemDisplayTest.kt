@@ -87,6 +87,8 @@ class UnitSystemDisplayTest {
         assertSummary(metricTemperature, "16 km/h")
         composeRule.onNodeWithTag("settings_units_IMPERIAL").performClick().assertIsSelected()
         assertSummary(String.format(displayLocale, "%.1f°F", 68.0), "10 mph")
+        composeRule.onNodeWithTag("settings_units_UK_MIXED").performClick().assertIsSelected()
+        assertSummary(metricTemperature, "10 mph")
         composeRule.onNodeWithTag("settings_units_METRIC").performClick().assertIsSelected()
         assertSummary(metricTemperature, "16 km/h")
         assertEquals(20.0, today.tempMax!!.centralValue, 0.0)

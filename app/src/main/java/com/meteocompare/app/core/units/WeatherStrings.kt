@@ -38,7 +38,7 @@ fun weatherString(resources: Resources, units: WeatherUnits, @StringRes id: Int,
 internal fun spokenUnit(resources: Resources, units: WeatherUnits, metricUnit: WeatherUnit): String {
     return resources.getString(when (metricUnit) {
         WeatherUnit.TEMPERATURE, WeatherUnit.TEMPERATURE_COMPACT -> if (units.imperial) R.string.unit_degrees_fahrenheit else R.string.unit_degrees_celsius
-        WeatherUnit.WIND_SPEED -> if (units.imperial) R.string.unit_miles_per_hour else R.string.a11y_kmh_unit
+        WeatherUnit.WIND_SPEED -> if (units.windInMph) R.string.unit_miles_per_hour else R.string.a11y_kmh_unit
         WeatherUnit.PRECIPITATION -> if (units.imperial) R.string.unit_inches else R.string.unit_millimetres
         else -> return units.label(metricUnit)
     })

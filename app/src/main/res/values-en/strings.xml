@@ -931,6 +931,7 @@
     <string name="settings_units">Units</string>
     <string name="settings_units_metric">Metric (%1$s, %2$s, %3$s)</string>
     <string name="settings_units_imperial">Imperial (%1$s, %2$s, %3$s)</string>
+    <string name="settings_units_uk">United Kingdom (%1$s, %2$s, %4$s, %3$s)</string>
     <string name="toast_units_updated">Units updated</string>
     <string name="unit_degrees_celsius">degrees Celsius</string>
     <string name="unit_degrees_fahrenheit">degrees Fahrenheit</string>
