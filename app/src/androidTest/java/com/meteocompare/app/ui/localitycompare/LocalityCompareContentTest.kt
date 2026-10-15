@@ -1,8 +1,10 @@
 package com.meteocompare.app.ui.localitycompare
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -13,9 +15,14 @@ import com.meteocompare.app.domain.model.DailyForecast
 import com.meteocompare.app.domain.model.ForecastSeries
 import com.meteocompare.app.domain.model.HourlyForecast
 import com.meteocompare.app.domain.model.WeatherModel
+import com.meteocompare.app.domain.model.UvForecast
+import com.meteocompare.app.domain.model.ClockFormatPreference
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.domain.usecase.ConfidenceCalculator
 import com.meteocompare.app.domain.usecase.EqualWeighting
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -49,6 +56,50 @@ class LocalityCompareContentTest {
         compose.onNodeWithTag("compare_column_paris").assertExists()
         compose.onNodeWithTag("compare_column_lyon").assertExists()
         compose.onNodeWithTag("compare_city_lille").assertExists()
+    }
+
+    @Test fun uvShowsDailyMaximumThenHourlyValueAndKeepsClockPreference() {
+        val date = LocalDate.of(2026, 6, 20)
+        val zone = ZoneId.of("Europe/Paris")
+        val instant = LocalDateTime.of(2026, 6, 20, 14, 0).atZone(zone).toInstant()
+        val city = cities.first()
+        val hourly = HourlyForecast(
+            timestamps = listOf(instant), temperature2m = listOf(21.0),
+            precipitation = listOf(0.0), windSpeed10m = listOf(14.0),
+            cloudCover = listOf(25)
+        )
+        val daily = DailyForecast(
+            dates = listOf(date), tempMax = listOf(23.0), tempMin = listOf(16.0),
+            precipitationSum = listOf(0.0), windSpeedMax = listOf(20.0)
+        )
+        val forecast = CityForecast(city, mapOf(WeatherModel.GFS to
+            ForecastSeries(WeatherModel.GFS, hourly, daily)))
+        compose.setContent {
+            CompositionLocalProvider(LocalClockFormatPreference provides ClockFormatPreference.HOUR_12) {
+                MaterialTheme {
+                    LocalityCompareContent(
+                        state = LocalityCompareState(
+                            favorites = cities, selectedIds = listOf("paris", "lyon"),
+                            forecasts = mapOf("paris" to CompareForecastState.Ready(forecast)),
+                            uvForecasts = mapOf("paris" to UvForecast(
+                                mapOf(instant to 5.6), mapOf(date to 8.3)
+                            ))
+                        ),
+                        calculator = ConfidenceCalculator(EqualWeighting()),
+                        onBack = {}, onToggleCity = {}, onRefresh = {},
+                        currentDate = date, currentHour = 14
+                    )
+                }
+            }
+        }
+        compose.onNodeWithTag("compare_uv_paris").assertTextContains("8")
+        compose.onNodeWithTag("compare_mode_hour").performClick()
+        compose.onNodeWithTag("compare_selected_hour").assertTextEquals("2 PM")
+        compose.onNodeWithTag("compare_uv_paris").assertTextContains("5")
+        compose.onNodeWithTag("compare_cloud_cover_paris").assertTextEquals("25 %")
+        compose.onNodeWithTag("compare_column_lyon").assertExists()
+        compose.onNodeWithTag("compare_mode_day").performClick()
+        compose.onNodeWithTag("compare_uv_paris").assertTextContains("8")
     }
 
     @Test fun thirdFavoriteCanBeSelected() {

@@ -436,6 +436,23 @@ class ConfidenceCalculator @Inject constructor(
         extractor = { series, idx -> series.hourly.temperature2m.getOrNull(idx) }
     )
 
+    /** Temperature agreement at one exact hour, using the same consensus and
+     * family weights as the timeline, without calculating the whole horizon. */
+    fun hourlyTemperatureAgreementAt(forecast: CityForecast, instant: Instant): Int? {
+        val samples = forecast.seriesByModel.mapNotNull { (model, series) ->
+            val index = series.hourly.timestamps.indexOf(instant)
+            if (index < 0) null else series.hourly.temperature2m.getOrNull(index)
+                ?.takeIf(Double::isFinite)?.let { model to it }
+        }
+        if (samples.size < 2) return null
+        return ForecastConsensus.continuous(
+            entries = samples.map { (model, value) -> ForecastConsensus.Entry(model, value) },
+            localWeights = localWeights(samples.map { it.first }),
+            tightStdDev = Thresholds.TEMPERATURE.tightStdDev,
+            wideStdDev = Thresholds.TEMPERATURE.wideStdDev
+        ).convergencePercent
+    }
+
     /**
      * Bandes de convergence horaires sur les précipitations (mm sur l'heure précédente).
      *

@@ -23,6 +23,22 @@
     <string name="compare_rain_cloud_disclaimer">Probabilidad de lluvia estimada mediante consenso de modelos, no calibrada. Nubosidad: mediana de los promedios horarios de cada modelo para el día local; se excluyen los días con datos insuficientes.</string>
     <string name="compare_sunshine_disclaimer">Horas equivalentes de cielo despejado estimadas a partir de la nubosidad y la duración del día. No es insolación medida.</string>
     <string name="compare_agreement_disclaimer">El acuerdo indica la convergencia entre modelos, no la probabilidad de acierto. Cada fecha corresponde al día local de cada ciudad.</string>
+    <string name="compare_mode_day">Por día</string>
+    <string name="compare_mode_hour">Por hora</string>
+    <string name="compare_previous_hour">Hora anterior</string>
+    <string name="compare_next_hour">Hora siguiente</string>
+    <string name="compare_hour_local_disclaimer">Se usa la hora local de cada ciudad. Algunas horas no existen al comenzar el horario de verano.</string>
+    <string name="compare_hour_temperature">Temperatura</string>
+    <string name="compare_hour_rain">Lluvia (hora anterior)</string>
+    <string name="compare_hour_cloud_cover">Nubosidad</string>
+    <string name="compare_hour_wind">Viento medio</string>
+    <string name="compare_hour_agreement">Acuerdo (temperatura)</string>
+    <string name="compare_uv_max">Índice UV máximo</string>
+    <string name="compare_uv_hour">Índice UV</string>
+    <string name="compare_no_data_for_hour">Sin previsión para esta hora</string>
+    <string name="compare_hour_rain_cloud_disclaimer">Lluvia horaria: mediana de los modelos disponibles. Riesgo de lluvia estimado no calibrado; nubosidad de la hora elegida.</string>
+    <string name="compare_hour_agreement_disclaimer">El acuerdo horario refleja la convergencia de temperaturas entre modelos, no la precisión de la previsión. Las horas son locales.</string>
+    <string name="compare_uv_disclaimer">El índice UV procede de una previsión independiente, no del acuerdo entre modelos. Los datos ausentes no se muestran.</string>
 
 
 

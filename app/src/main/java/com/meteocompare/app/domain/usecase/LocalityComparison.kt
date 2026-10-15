@@ -1,11 +1,16 @@
 package com.meteocompare.app.domain.usecase
 
 import com.meteocompare.app.core.util.resolveZoneOrUtc
+import com.meteocompare.app.domain.model.UvForecast
+import com.meteocompare.app.domain.model.validUvIndexOrNull
+import com.meteocompare.app.domain.util.forecastSolarWindow
 import com.meteocompare.app.domain.model.CityForecast
 import com.meteocompare.app.domain.model.PrecipitationConfidence
 import com.meteocompare.app.domain.util.SolarTimes
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -24,7 +29,8 @@ data class LocalityDayMetrics(
     val estimatedSunHours: Double?,
     /** Model convergence (not forecast accuracy or rain probability). */
     val agreementPercent: Int?,
-    val modelCount: Int
+    val modelCount: Int,
+    val uvMax: Double? = null
 )
 
 /**
@@ -34,7 +40,8 @@ data class LocalityDayMetrics(
 fun buildLocalityDayMetrics(
     forecast: CityForecast,
     date: LocalDate,
-    calculator: ConfidenceCalculator
+    calculator: ConfidenceCalculator,
+    uv: UvForecast? = null
 ): LocalityDayMetrics? {
     if (forecast.seriesByModel.values.none { date in it.daily.dates }) return null
     val daily = calculator.dayConfidence(forecast, date)
@@ -63,7 +70,8 @@ fun buildLocalityDayMetrics(
         maxWindKmh = daily.windMax?.centralValue?.takeIf(Double::isFinite),
         estimatedSunHours = estimatedSunshineHours(forecast, date),
         agreementPercent = daily.convergencePercent?.coerceIn(0, 100),
-        modelCount = count
+        modelCount = count,
+        uvMax = uv?.maxOn(date)?.validUvIndexOrNull()
     )
 }
 
@@ -157,4 +165,97 @@ fun estimateCloudAdjustedDaylight(
     }
     if (coveredSeconds < daylightSeconds * 0.5) return null
     return (daylightSeconds / 3600.0 * clearSeconds / coveredSeconds).coerceIn(0.0, 24.0)
+}
+
+
+/** Values for a single **local wall-clock hour**, not an absolute global instant.
+ * All cities show the same clock hour on the selected date. DST gaps have no
+ * value; at an autumn overlap the earlier occurrence is used consistently.
+ */
+data class LocalityHourMetrics(
+    val instant: Instant,
+    val temperatureC: Double?,
+    val precipitationMm: Double?,
+    val rainProbabilityPercent: Int?,
+    val cloudCoverPercent: Int?,
+    val windKmh: Double?,
+    val estimatedSunHours: Double?,
+    /** Temperature-model convergence at the selected exact instant. */
+    val agreementPercent: Int?,
+    val uvIndex: Double?,
+    val modelCount: Int
+)
+
+/** No implicit DST gap-shifting: e.g. 02:00 on a spring-forward day is missing. */
+fun localityHourInstant(date: LocalDate, hour: Int, zone: ZoneId): Instant? {
+    if (hour !in 0..23) return null
+    val time = LocalDateTime.of(date.year, date.monthValue, date.dayOfMonth, hour, 0)
+    val offsets = zone.rules.getValidOffsets(time)
+    return offsets.firstOrNull()?.let(time::toInstant)
+}
+
+private fun medianAvailable(values: List<Double>): Double? {
+    val sorted = values.filter(Double::isFinite).sorted()
+    if (sorted.isEmpty()) return null
+    val i = sorted.size / 2
+    return if (sorted.size % 2 == 0) (sorted[i - 1] + sorted[i]) / 2 else sorted[i]
+}
+
+/**
+ * Model-median values at the *exact* hourly timestamp. Missing fields do not
+ * become zero; UV comes from the same independent Open-Meteo UV product used
+ * by Home/Detail/Chart View, not from a fictitious model consensus.
+ */
+fun buildLocalityHourMetrics(
+    forecast: CityForecast,
+    date: LocalDate,
+    hour: Int,
+    calculator: ConfidenceCalculator,
+    uv: UvForecast? = null
+): LocalityHourMetrics? {
+    val zone = resolveZoneOrUtc(forecast.city.timezone)
+    val instant = localityHourInstant(date, hour, zone) ?: return null
+    val samples = forecast.seriesByModel.values.mapNotNull { series ->
+        val index = series.hourly.timestamps.indexOf(instant)
+        if (index < 0) null else series.hourly to index
+    }
+    if (samples.isEmpty()) return null
+
+    val temperature = medianAvailable(samples.mapNotNull { (data, i) ->
+        data.temperature2m.getOrNull(i)?.takeIf(Double::isFinite)
+    })
+    val rain = medianAvailable(samples.mapNotNull { (data, i) ->
+        data.precipitation.getOrNull(i)?.takeIf { it.isFinite() && it >= 0.0 }
+    })
+    val probability = medianAvailable(samples.mapNotNull { (data, i) ->
+        data.precipitationProbability.getOrNull(i)?.takeIf { it in 0..100 }?.toDouble()
+    })?.roundToInt()
+    val clouds = medianAvailable(samples.mapNotNull { (data, i) ->
+        data.cloudCover.getOrNull(i)?.takeIf { it in 0..100 }?.toDouble()
+    })?.roundToInt()
+    val wind = medianAvailable(samples.mapNotNull { (data, i) ->
+        data.windSpeed10m.getOrNull(i)?.takeIf { it.isFinite() && it >= 0.0 }
+    })
+    val window = forecastSolarWindow(forecast, date)
+    val sunHours = if (clouds != null && window.isValid) {
+        val sunrise = requireNotNull(window.sunrise)
+        val sunset = requireNotNull(window.sunset)
+        val start = maxOf(instant, sunrise)
+        val end = minOf(instant.plusSeconds(3600), sunset)
+        val seconds = maxOf(0L, end.epochSecond - start.epochSecond)
+        (seconds / 3600.0 * (100 - clouds) / 100.0).coerceIn(0.0, 1.0)
+    } else null
+    return LocalityHourMetrics(
+        instant = instant,
+        temperatureC = temperature,
+        precipitationMm = rain,
+        rainProbabilityPercent = probability,
+        cloudCoverPercent = clouds,
+        windKmh = wind,
+        estimatedSunHours = sunHours,
+        agreementPercent = calculator.hourlyTemperatureAgreementAt(forecast, instant),
+        // An IANA local hour can fall at :15/:30/:45 UTC; do not truncate UTC hours.
+        uvIndex = uv?.hourly?.get(instant)?.validUvIndexOrNull(),
+        modelCount = samples.size
+    )
 }

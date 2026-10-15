@@ -6,9 +6,11 @@ import com.meteocompare.app.core.network.ApiResult
 import com.meteocompare.app.domain.model.City
 import com.meteocompare.app.domain.model.CityForecast
 import com.meteocompare.app.domain.model.RefreshInterval
+import com.meteocompare.app.domain.model.UvForecast
 import com.meteocompare.app.domain.model.UnitSystem
 import com.meteocompare.app.domain.model.WeatherModel
 import com.meteocompare.app.domain.repository.CityRepository
+import com.meteocompare.app.domain.repository.UvIndexRepository
 import com.meteocompare.app.domain.repository.ForecastRepository
 import com.meteocompare.app.domain.repository.UserPreferencesRepository
 import com.meteocompare.app.domain.usecase.ConfidenceCalculator
@@ -36,6 +38,7 @@ internal data class LocalityCompareState(
     val favorites: List<City> = emptyList(),
     val selectedIds: List<String> = emptyList(),
     val forecasts: Map<String, CompareForecastState> = emptyMap(),
+    val uvForecasts: Map<String, UvForecast> = emptyMap(),
     val unitSystem: UnitSystem = UnitSystem.METRIC
 ) {
     val selectedCities: List<City> get() = selectedIds.mapNotNull { id -> favorites.firstOrNull { it.id == id } }
@@ -51,6 +54,7 @@ internal data class LocalityCompareState(
 internal class LocalityCompareViewModel @Inject constructor(
     private val cities: CityRepository,
     private val forecasts: ForecastRepository,
+    private val uvRepository: UvIndexRepository,
     private val preferences: UserPreferencesRepository,
     val calculator: ConfidenceCalculator
 ) : ViewModel() {
@@ -59,6 +63,7 @@ internal class LocalityCompareViewModel @Inject constructor(
     )
     private val selectedIds = MutableStateFlow<List<String>>(emptyList())
     private val loaded = MutableStateFlow<Map<String, CompareForecastState>>(emptyMap())
+    private val loadedUv = MutableStateFlow<Map<String, UvForecast>>(emptyMap())
     private val units = preferences.observeUnitSystem().stateIn(
         viewModelScope, SharingStarted.Eagerly, UnitSystem.METRIC
     )
@@ -66,9 +71,9 @@ internal class LocalityCompareViewModel @Inject constructor(
     private var handledRefresh = 0
 
     val uiState: StateFlow<LocalityCompareState> = combine(
-        favorites, selectedIds, loaded, units
-    ) { all, selected, data, unit ->
-        LocalityCompareState(all, selected, data, unit)
+        favorites, selectedIds, loaded, loadedUv, units
+    ) { all, selected, data, uv, unit ->
+        LocalityCompareState(all, selected, data, uv, unit)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LocalityCompareState())
 
     init {
@@ -98,6 +103,7 @@ internal class LocalityCompareViewModel @Inject constructor(
                 val forceNetwork = request.refresh > handledRefresh
                 handledRefresh = request.refresh
                 loaded.value = request.cities.associate { it.id to CompareForecastState.Loading }
+                loadedUv.value = emptyMap()
                 if (request.models.isEmpty()) {
                     loaded.value = request.cities.associate {
                         it.id to CompareForecastState.Failed("No weather models enabled")
@@ -106,6 +112,16 @@ internal class LocalityCompareViewModel @Inject constructor(
                 }
                 coroutineScope {
                     request.cities.forEach { city ->
+                        launch {
+                            try {
+                                val result = uvRepository.get(city)
+                                if (result != null) loadedUv.update { it + (city.id to result) }
+                            } catch (cancel: kotlinx.coroutines.CancellationException) {
+                                throw cancel
+                            } catch (_: Exception) {
+                                // UV is optional: never block the multi-model forecasts.
+                            }
+                        }
                         launch {
                             try {
                                 forecasts.getCityForecastStream(

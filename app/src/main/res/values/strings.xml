@@ -23,6 +23,22 @@
     <string name="compare_rain_cloud_disclaimer">Risque de pluie estimé par le consensus des modèles, non calibré comme probabilité réelle. Couverture nuageuse : médiane des moyennes horaires de chaque modèle sur le jour local ; journées trop incomplètes exclues.</string>
     <string name="compare_sunshine_disclaimer">Ensoleillement estimé en heures de ciel dégagé équivalentes, d’après la couverture nuageuse et la durée du jour. Ce n’est pas une mesure de la durée d’ensoleillement.</string>
     <string name="compare_agreement_disclaimer">L’accord décrit la convergence des modèles, pas la probabilité que la prévision soit juste. Les dates correspondent au jour local de chaque ville.</string>
+    <string name="compare_mode_day">Par jour</string>
+    <string name="compare_mode_hour">Par heure</string>
+    <string name="compare_previous_hour">Heure précédente</string>
+    <string name="compare_next_hour">Heure suivante</string>
+    <string name="compare_hour_local_disclaimer">Les heures indiquées sont locales à chaque ville. Lors du passage à l’heure d’été, certaines heures peuvent être absentes.</string>
+    <string name="compare_hour_temperature">Température</string>
+    <string name="compare_hour_rain">Pluie (heure précédente)</string>
+    <string name="compare_hour_cloud_cover">Couverture nuageuse</string>
+    <string name="compare_hour_wind">Vent moyen</string>
+    <string name="compare_hour_agreement">Accord (température)</string>
+    <string name="compare_uv_max">Indice UV maximal</string>
+    <string name="compare_uv_hour">Indice UV</string>
+    <string name="compare_no_data_for_hour">Pas de prévision pour cette heure</string>
+    <string name="compare_hour_rain_cloud_disclaimer">Pluie horaire : médiane des modèles disponibles. Risque de pluie estimé non calibré ; couverture nuageuse à l’heure sélectionnée.</string>
+    <string name="compare_hour_agreement_disclaimer">Accord horaire : convergence des températures prévues par les modèles, pas probabilité de justesse. Chaque heure est locale à la ville.</string>
+    <string name="compare_uv_disclaimer">Indice UV issu d’une prévision indépendante des modèles comparés, et non de leur convergence. Indisponible si non fourni.</string>
 
 
 

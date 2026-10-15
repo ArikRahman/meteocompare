@@ -23,6 +23,22 @@
     <string name="compare_rain_cloud_disclaimer">Regenwahrscheinlichkeit als Modellkonsens geschätzt, keine kalibrierte Wahrscheinlichkeit. Bewölkung: Median der stündlichen Modellmittelwerte für den lokalen Tag; zu lückenhafte Tage werden ausgeschlossen.</string>
     <string name="compare_sunshine_disclaimer">Geschätzte sonnenäquivalente Stunden auf Basis der Bewölkung und Tageslänge. Keine gemessene Sonnenscheindauer.</string>
     <string name="compare_agreement_disclaimer">Die Übereinstimmung beschreibt die Konvergenz der Modelle, nicht die Wahrscheinlichkeit einer korrekten Vorhersage. Der Tag gilt jeweils am Ort.</string>
+    <string name="compare_mode_day">Pro Tag</string>
+    <string name="compare_mode_hour">Pro Stunde</string>
+    <string name="compare_previous_hour">Vorherige Stunde</string>
+    <string name="compare_next_hour">Nächste Stunde</string>
+    <string name="compare_hour_local_disclaimer">Die Uhrzeit gilt jeweils am Ort. Bei Beginn der Sommerzeit können einzelne Stunden entfallen.</string>
+    <string name="compare_hour_temperature">Temperatur</string>
+    <string name="compare_hour_rain">Regen (vorige Stunde)</string>
+    <string name="compare_hour_cloud_cover">Bewölkung</string>
+    <string name="compare_hour_wind">Mittlerer Wind</string>
+    <string name="compare_hour_agreement">Übereinstimmung (Temperatur)</string>
+    <string name="compare_uv_max">Maximaler UV-Index</string>
+    <string name="compare_uv_hour">UV-Index</string>
+    <string name="compare_no_data_for_hour">Keine Vorhersage für diese Stunde</string>
+    <string name="compare_hour_rain_cloud_disclaimer">Stündlicher Regen: Median der verfügbaren Modelle. Regenrisiko nicht kalibriert; Bewölkung für die gewählte Stunde.</string>
+    <string name="compare_hour_agreement_disclaimer">Stündliche Übereinstimmung der Modelltemperaturen, keine Trefferwahrscheinlichkeit. Zeiten gelten lokal.</string>
+    <string name="compare_uv_disclaimer">Der UV-Index stammt aus einer unabhängigen Vorhersage, nicht aus der Modellübereinstimmung. Fehlende Werte bleiben leer.</string>
 
 
 

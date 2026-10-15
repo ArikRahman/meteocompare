@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -52,10 +53,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.meteocompare.app.R
 import com.meteocompare.app.core.units.WeatherUnits
+import com.meteocompare.app.core.locale.LocalClockFormatPreference
+import com.meteocompare.app.core.locale.WeatherTimeFormat
+import com.meteocompare.app.core.util.resolveZoneOrUtc
 import com.meteocompare.app.domain.usecase.ConfidenceCalculator
 import com.meteocompare.app.domain.usecase.buildLocalityDayMetrics
+import com.meteocompare.app.domain.usecase.buildLocalityHourMetrics
+import com.meteocompare.app.ui.components.uvIntensityColor
 import com.meteocompare.app.ui.theme.confidenceColor
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -63,14 +70,14 @@ internal const val TAG_LOCALITY_COMPARE = "locality_comparison"
 private val METRIC_WIDTH = 112.dp
 private val CITY_WIDTH = 174.dp
 private val CELL_HEIGHT = 64.dp
-private const val COMPARISON_METRIC_COUNT = 7
+private const val COMPARISON_METRIC_COUNT = 8
 
 @Composable
 fun LocalityCompareScreen(onBack: () -> Unit) {
     val viewModel: LocalityCompareViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    // The calculator is part of the presentation here only for the selected date;
-    // weather data stays in the ViewModel and never refetches on date changes.
+    // Only presentation metrics are recomputed for a selected date or hour.
+    // Weather/UV streams stay cached in the ViewModel; toggling modes does not refetch.
     val calculator = viewModel.calculator
     LocalityCompareContent(
         state = state,
@@ -90,15 +97,26 @@ internal fun LocalityCompareContent(
     onToggleCity: (String) -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
-    currentDate: LocalDate = LocalDate.now()
+    currentDate: LocalDate = LocalDate.now(),
+    currentHour: Int = LocalTime.now().hour
 ) {
-    val availableDates = remember(state.selectedIds, state.forecasts, currentDate) {
+    var comparisonMode by rememberSaveable { mutableStateOf("day") }
+    var selectedHour by rememberSaveable { mutableStateOf(currentHour.coerceIn(0, 23)) }
+    val availableDates = remember(state.selectedIds, state.forecasts, currentDate, comparisonMode) {
         state.selectedIds.flatMap { id ->
-            (state.forecasts[id] as? CompareForecastState.Ready)
-                ?.forecast?.seriesByModel?.values.orEmpty()
-                .flatMap { it.daily.dates }
+            val forecast = (state.forecasts[id] as? CompareForecastState.Ready)?.forecast
+                ?: return@flatMap emptyList()
+            if (comparisonMode == "hour") {
+                val zone = resolveZoneOrUtc(forecast.city.timezone)
+                forecast.seriesByModel.values.flatMap { series ->
+                    series.hourly.timestamps.map { it.atZone(zone).toLocalDate() }
+                }
+            } else {
+                forecast.seriesByModel.values.flatMap { it.daily.dates }
+            }
         }.filter { !it.isBefore(currentDate) }.distinct().sorted()
     }
+    val clockPreference = LocalClockFormatPreference.current
     var dateIso by rememberSaveable { mutableStateOf(currentDate.toString()) }
     LaunchedEffect(availableDates) {
         if (availableDates.isNotEmpty() && availableDates.none { it.toString() == dateIso }) {
@@ -109,6 +127,9 @@ internal fun LocalityCompareContent(
     val dateIndex = availableDates.indexOf(selectedDate)
     val locale = LocalLocale.current.platformLocale
     val formatter = remember(locale) { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale) }
+    val hourFormatter = remember(locale, clockPreference) {
+        WeatherTimeFormat.hourPadded(locale, clockPreference)
+    }
 
     Scaffold(
         modifier = modifier.testTag(TAG_LOCALITY_COMPARE),
@@ -163,6 +184,23 @@ internal fun LocalityCompareContent(
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = comparisonMode == "day",
+                            onClick = { comparisonMode = "day" },
+                            label = { Text(stringResource(R.string.compare_mode_day)) },
+                            modifier = Modifier.testTag("compare_mode_day")
+                        )
+                        FilterChip(
+                            selected = comparisonMode == "hour",
+                            onClick = { comparisonMode = "hour" },
+                            label = { Text(stringResource(R.string.compare_mode_hour)) },
+                            modifier = Modifier.testTag("compare_mode_hour")
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -185,6 +223,32 @@ internal fun LocalityCompareContent(
                             Icon(Icons.Default.KeyboardArrowRight, contentDescription = stringResource(R.string.compare_next_day))
                         }
                     }
+                    if (comparisonMode == "hour") {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            IconButton(onClick = { selectedHour = (selectedHour + 23) % 24 }) {
+                                Icon(Icons.Default.KeyboardArrowLeft, contentDescription = stringResource(R.string.compare_previous_hour))
+                            }
+                            Text(
+                                text = LocalTime.of(selectedHour, 0).format(hourFormatter),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.testTag("compare_selected_hour")
+                            )
+                            IconButton(onClick = { selectedHour = (selectedHour + 1) % 24 }) {
+                                Icon(Icons.Default.KeyboardArrowRight, contentDescription = stringResource(R.string.compare_next_hour))
+                            }
+                        }
+                        Text(
+                            text = stringResource(R.string.compare_hour_local_disclaimer),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
                     if (availableDates.isEmpty()) {
                         val waiting = state.selectedIds.any { id ->
                             state.forecasts[id] == null || state.forecasts[id] is CompareForecastState.Loading
@@ -194,10 +258,19 @@ internal fun LocalityCompareContent(
                         ))
                     }
                     val units = WeatherUnits(state.unitSystem)
-                    val summaries = remember(state.selectedIds, state.forecasts, selectedDate, calculator) {
-                        state.selectedIds.associateWith { id ->
+                    val dailySummaries = remember(comparisonMode, state.selectedIds, state.forecasts,
+                        state.uvForecasts, selectedDate, calculator) {
+                        if (comparisonMode != "day") emptyMap() else state.selectedIds.associateWith { id ->
                             (state.forecasts[id] as? CompareForecastState.Ready)?.forecast?.let {
-                                buildLocalityDayMetrics(it, selectedDate, calculator)
+                                buildLocalityDayMetrics(it, selectedDate, calculator, state.uvForecasts[id])
+                            }
+                        }
+                    }
+                    val hourlySummaries = remember(comparisonMode, state.selectedIds, state.forecasts,
+                        state.uvForecasts, selectedDate, selectedHour, calculator) {
+                        if (comparisonMode != "hour") emptyMap() else state.selectedIds.associateWith { id ->
+                            (state.forecasts[id] as? CompareForecastState.Ready)?.forecast?.let {
+                                buildLocalityHourMetrics(it, selectedDate, selectedHour, calculator, state.uvForecasts[id])
                             }
                         }
                     }
@@ -208,50 +281,87 @@ internal fun LocalityCompareContent(
                     ) {
                         Column(Modifier.width(METRIC_WIDTH)) {
                             ComparisonHeading(stringResource(R.string.compare_metric_heading))
-                            ComparisonCell(stringResource(R.string.compare_temperature))
-                            ComparisonCell(stringResource(R.string.compare_rain))
+                            ComparisonCell(stringResource(
+                                if (comparisonMode == "day") R.string.compare_temperature
+                                else R.string.compare_hour_temperature
+                            ))
+                            ComparisonCell(stringResource(
+                                if (comparisonMode == "day") R.string.compare_rain
+                                else R.string.compare_hour_rain
+                            ))
                             ComparisonCell(stringResource(R.string.compare_rain_probability))
-                            ComparisonCell(stringResource(R.string.compare_cloud_cover))
-                            ComparisonCell(stringResource(R.string.compare_wind))
+                            ComparisonCell(stringResource(
+                                if (comparisonMode == "day") R.string.compare_cloud_cover
+                                else R.string.compare_hour_cloud_cover
+                            ))
+                            ComparisonCell(stringResource(
+                                if (comparisonMode == "day") R.string.compare_wind
+                                else R.string.compare_hour_wind
+                            ))
                             ComparisonCell(stringResource(R.string.compare_sunshine))
-                            ComparisonCell(stringResource(R.string.compare_agreement))
+                            ComparisonCell(stringResource(
+                                if (comparisonMode == "day") R.string.compare_agreement
+                                else R.string.compare_hour_agreement
+                            ))
+                            ComparisonCell(stringResource(
+                                if (comparisonMode == "day") R.string.compare_uv_max
+                                else R.string.compare_uv_hour
+                            ))
                         }
                         state.selectedCities.forEach { city ->
                             val result = state.forecasts[city.id]
-                            val values = summaries[city.id]
+                            val day = dailySummaries[city.id]
+                            val hour = hourlySummaries[city.id]
                             Column(Modifier.width(CITY_WIDTH).testTag("compare_column_${city.id}")) {
                                 ComparisonHeading(city.name)
-                                when (result) {
-                                    is CompareForecastState.Loading, null -> CompareInfoCell(stringResource(R.string.compare_loading))
-                                    is CompareForecastState.Failed -> CompareInfoCell(stringResource(R.string.compare_unavailable))
-                                    is CompareForecastState.Ready -> if (values == null) {
+                                when {
+                                    result is CompareForecastState.Loading || result == null ->
+                                        CompareInfoCell(stringResource(R.string.compare_loading))
+                                    result is CompareForecastState.Failed ->
+                                        CompareInfoCell(stringResource(R.string.compare_unavailable))
+                                    comparisonMode == "day" && day == null ->
                                         CompareInfoCell(stringResource(R.string.compare_no_data_for_day))
-                                    } else {
-                                        ComparisonValue(units.temp(values.minC) + " / " + units.temp(values.maxC))
-                                        ComparisonValue(units.rain(values.precipitationMm))
-                                        ComparisonValue(
-                                            values.rainProbabilityPercent?.let { "$it %" } ?: "—",
-                                            modifier = Modifier.testTag("compare_rain_probability_${city.id}")
-                                        )
-                                        ComparisonValue(
-                                            values.cloudCoverPercent?.let { "$it %" } ?: "—",
-                                            modifier = Modifier.testTag("compare_cloud_cover_${city.id}")
-                                        )
-                                        ComparisonValue(units.speed(values.maxWindKmh))
-                                        ComparisonValue(values.estimatedSunHours?.let {
+                                    comparisonMode == "hour" && hour == null ->
+                                        CompareInfoCell(stringResource(R.string.compare_no_data_for_hour))
+                                    comparisonMode == "day" && day != null -> {
+                                        ComparisonValue(units.temp(day.minC, locale = locale) + " / " + units.temp(day.maxC, locale = locale))
+                                        ComparisonValue(units.rain(day.precipitationMm, locale))
+                                        ComparisonValue(day.rainProbabilityPercent?.let { "$it %" } ?: "—",
+                                            modifier = Modifier.testTag("compare_rain_probability_${city.id}"))
+                                        ComparisonValue(day.cloudCoverPercent?.let { "$it %" } ?: "—",
+                                            modifier = Modifier.testTag("compare_cloud_cover_${city.id}"))
+                                        ComparisonValue(units.speed(day.maxWindKmh, locale = locale))
+                                        ComparisonValue(day.estimatedSunHours?.let {
                                             stringResource(R.string.compare_sun_hours_value, units.number(it, 1, locale))
                                         } ?: "—")
-                                        ComparisonValue(
-                                            values.agreementPercent?.let { "$it %" } ?: "—",
-                                            values.agreementPercent?.let { confidenceColor(it) }
-                                        )
+                                        ComparisonValue(day.agreementPercent?.let { "$it %" } ?: "—",
+                                            day.agreementPercent?.let { confidenceColor(it) })
+                                        CompareUvValue(day.uvMax, city.id)
+                                    }
+                                    hour != null -> {
+                                        ComparisonValue(units.temp(hour.temperatureC, locale = locale))
+                                        ComparisonValue(units.rain(hour.precipitationMm, locale))
+                                        ComparisonValue(hour.rainProbabilityPercent?.let { "$it %" } ?: "—",
+                                            modifier = Modifier.testTag("compare_rain_probability_${city.id}"))
+                                        ComparisonValue(hour.cloudCoverPercent?.let { "$it %" } ?: "—",
+                                            modifier = Modifier.testTag("compare_cloud_cover_${city.id}"))
+                                        ComparisonValue(units.speed(hour.windKmh, locale = locale))
+                                        ComparisonValue(hour.estimatedSunHours?.let {
+                                            stringResource(R.string.compare_sun_hours_value, units.number(it, 1, locale))
+                                        } ?: "—")
+                                        ComparisonValue(hour.agreementPercent?.let { "$it %" } ?: "—",
+                                            hour.agreementPercent?.let { confidenceColor(it) })
+                                        CompareUvValue(hour.uvIndex, city.id)
                                     }
                                 }
                             }
                         }
                     }
                     Text(
-                        text = stringResource(R.string.compare_rain_cloud_disclaimer),
+                        text = stringResource(
+                            if (comparisonMode == "day") R.string.compare_rain_cloud_disclaimer
+                            else R.string.compare_hour_rain_cloud_disclaimer
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp)
@@ -263,7 +373,16 @@ internal fun LocalityCompareContent(
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
                     Text(
-                        text = stringResource(R.string.compare_agreement_disclaimer),
+                        text = stringResource(
+                            if (comparisonMode == "day") R.string.compare_agreement_disclaimer
+                            else R.string.compare_hour_agreement_disclaimer
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.compare_uv_disclaimer),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
@@ -318,4 +437,16 @@ private fun CompareInfoCell(text: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 6.dp))
     }
+}
+
+
+@Composable
+private fun CompareUvValue(value: Double?, cityId: String) {
+    val valid = value?.takeIf { it.isFinite() && it >= 0.0 }
+    val darkBackground = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    ComparisonValue(
+        valid?.let { stringResource(R.string.uv_index_value, it) } ?: "—",
+        valid?.let { uvIntensityColor(it, darkBackground) },
+        modifier = Modifier.testTag("compare_uv_${cityId}")
+    )
 }

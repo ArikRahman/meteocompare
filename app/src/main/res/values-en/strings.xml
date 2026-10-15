@@ -23,6 +23,22 @@
     <string name="compare_rain_cloud_disclaimer">Rain chance is a model-consensus estimate, not a calibrated probability. Cloud cover is the median of each model’s hourly average for the local day; days with insufficient data are excluded.</string>
     <string name="compare_sunshine_disclaimer">Estimated clear-sky-equivalent hours, based on cloud cover and daylight duration. This is not measured sunshine duration.</string>
     <string name="compare_agreement_disclaimer">Agreement measures how closely models converge, not the probability that the forecast will be correct. Dates refer to each location’s local day.</string>
+    <string name="compare_mode_day">By day</string>
+    <string name="compare_mode_hour">By hour</string>
+    <string name="compare_previous_hour">Previous hour</string>
+    <string name="compare_next_hour">Next hour</string>
+    <string name="compare_hour_local_disclaimer">Hours use each city’s local time. Some hours may not exist when daylight saving time starts.</string>
+    <string name="compare_hour_temperature">Temperature</string>
+    <string name="compare_hour_rain">Rain (previous hour)</string>
+    <string name="compare_hour_cloud_cover">Cloud cover</string>
+    <string name="compare_hour_wind">Mean wind</string>
+    <string name="compare_hour_agreement">Agreement (temperature)</string>
+    <string name="compare_uv_max">Maximum UV index</string>
+    <string name="compare_uv_hour">UV index</string>
+    <string name="compare_no_data_for_hour">No forecast for this hour</string>
+    <string name="compare_hour_rain_cloud_disclaimer">Hourly rain: median of available models. Rain chance is an uncalibrated estimate; cloud cover is for the selected hour.</string>
+    <string name="compare_hour_agreement_disclaimer">Hourly agreement measures temperature convergence between models, not forecast accuracy. Each hour is local to its city.</string>
+    <string name="compare_uv_disclaimer">UV index comes from an independent forecast, not agreement between the compared models. Unavailable values are omitted.</string>
 
 
 
