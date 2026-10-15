@@ -1,6 +1,28 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">MeteoCompare</string>
+    <!-- Favorite locality comparison -->
+    <string name="compare_localities_title">Compare locations</string>
+    <string name="compare_localities_select">Select 2 or 3 saved locations to compare.</string>
+    <string name="compare_localities_add_cities">Add at least two favorite locations to compare them.</string>
+    <string name="compare_previous_day">Previous day</string>
+    <string name="compare_next_day">Next day</string>
+    <string name="compare_metric_heading">Metrics</string>
+    <string name="compare_temperature">Low / high temperature</string>
+    <string name="compare_rain">Total rainfall</string>
+    <string name="compare_wind">Maximum wind</string>
+    <string name="compare_sunshine">Estimated sunshine</string>
+    <string name="compare_agreement">Model agreement</string>
+    <string name="compare_loading">Loading forecasts…</string>
+    <string name="compare_unavailable">Data unavailable</string>
+    <string name="compare_no_dates">No forecast dates available.</string>
+    <string name="compare_no_data_for_day">No forecast for this day</string>
+    <string name="compare_sun_hours_value">%s h</string>
+    <string name="compare_sunshine_disclaimer">Estimated clear-sky-equivalent hours, based on cloud cover and daylight duration. This is not measured sunshine duration.</string>
+    <string name="compare_agreement_disclaimer">Agreement measures how closely models converge, not the probability that the forecast will be correct. Dates refer to each location’s local day.</string>
+
+
+
 
     <string name="nav_back">Back</string>
     <string name="action_refresh">Refresh</string>

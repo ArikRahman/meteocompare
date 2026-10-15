@@ -1,6 +1,28 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">MeteoCompare</string>
+    <!-- Favorite locality comparison -->
+    <string name="compare_localities_title">Comparer les localités</string>
+    <string name="compare_localities_select">Choisissez 2 ou 3 villes favorites à comparer.</string>
+    <string name="compare_localities_add_cities">Ajoutez au moins deux villes favorites pour accéder à la comparaison.</string>
+    <string name="compare_previous_day">Date précédente</string>
+    <string name="compare_next_day">Date suivante</string>
+    <string name="compare_metric_heading">Mesures</string>
+    <string name="compare_temperature">Température min. / max.</string>
+    <string name="compare_rain">Pluie cumulée</string>
+    <string name="compare_wind">Vent maximal</string>
+    <string name="compare_sunshine">Soleil estimé</string>
+    <string name="compare_agreement">Accord des modèles</string>
+    <string name="compare_loading">Chargement des prévisions…</string>
+    <string name="compare_unavailable">Données indisponibles</string>
+    <string name="compare_no_dates">Aucune date de prévision disponible.</string>
+    <string name="compare_no_data_for_day">Pas de prévision pour ce jour</string>
+    <string name="compare_sun_hours_value">%s h</string>
+    <string name="compare_sunshine_disclaimer">Ensoleillement estimé en heures de ciel dégagé équivalentes, d’après la couverture nuageuse et la durée du jour. Ce n’est pas une mesure de la durée d’ensoleillement.</string>
+    <string name="compare_agreement_disclaimer">L’accord décrit la convergence des modèles, pas la probabilité que la prévision soit juste. Les dates correspondent au jour local de chaque ville.</string>
+
+
+
 
     <string name="nav_back">Retour</string>
     <string name="action_refresh">Actualiser</string>

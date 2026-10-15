@@ -1,6 +1,28 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">MeteoCompare</string>
+    <!-- Favorite locality comparison -->
+    <string name="compare_localities_title">Confronta località</string>
+    <string name="compare_localities_select">Scegli 2 o 3 località preferite da confrontare.</string>
+    <string name="compare_localities_add_cities">Aggiungi almeno due località preferite per confrontarle.</string>
+    <string name="compare_previous_day">Giorno precedente</string>
+    <string name="compare_next_day">Giorno successivo</string>
+    <string name="compare_metric_heading">Indicatori</string>
+    <string name="compare_temperature">Temperatura min. / max.</string>
+    <string name="compare_rain">Pioggia totale</string>
+    <string name="compare_wind">Vento massimo</string>
+    <string name="compare_sunshine">Sole stimato</string>
+    <string name="compare_agreement">Accordo tra modelli</string>
+    <string name="compare_loading">Caricamento previsioni…</string>
+    <string name="compare_unavailable">Dati non disponibili</string>
+    <string name="compare_no_dates">Nessuna data di previsione disponibile.</string>
+    <string name="compare_no_data_for_day">Nessuna previsione per questo giorno</string>
+    <string name="compare_sun_hours_value">%s h</string>
+    <string name="compare_sunshine_disclaimer">Ore equivalenti di cielo sereno stimate da nuvolosità e durata del giorno. Non è una misura delle ore di sole.</string>
+    <string name="compare_agreement_disclaimer">L’accordo rappresenta la convergenza tra modelli, non la probabilità di correttezza della previsione. Ogni data è riferita al giorno locale della città.</string>
+
+
+
 
     <string name="nav_back">Indietro</string>
     <string name="action_refresh">Aggiorna</string>

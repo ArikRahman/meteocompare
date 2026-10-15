@@ -10,6 +10,7 @@ object Destinations {
     const val CITY_LIST = "cities"
     const val SETTINGS = "settings"
     const val HELP = "help"
+    const val LOCALITY_COMPARE = "locality-compare"
 
     private const val CITY_DETAIL_BASE = "city"
     const val CITY_DETAIL_ARG = "cityId"

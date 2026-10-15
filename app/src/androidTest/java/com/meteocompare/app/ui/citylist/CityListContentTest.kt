@@ -58,6 +58,26 @@ class CityListContentTest {
     }
 
     @Test
+    fun compare_action_appears_for_two_favorites_and_opens_comparison() {
+        var opened = false
+        composeRule.setContent {
+            MeteoCompareTheme {
+                CityListContent(
+                    uiState = CityListUiState(items = listOf(
+                        CityCardState(TestFixtures.paris, ForecastState.Loading),
+                        CityCardState(TestFixtures.lyon, ForecastState.Loading)
+                    )),
+                    onCityClick = {}, onAddClick = {}, onDonateClick = {},
+                    onSettingsClick = {}, onRemoveCity = {}, onRetry = {}, onRefresh = {},
+                    onCompareClick = { opened = true }
+                )
+            }
+        }
+        composeRule.onNodeWithTag("home_compare_localities").assertIsDisplayed().performClick()
+        composeRule.runOnIdle { assertTrue(opened) }
+    }
+
+    @Test
     fun smartphone_cards_keep_standard_style_and_forward_selected_id() {
         var selectedId: String? = null
         val confidence = DayConfidence(

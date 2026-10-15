@@ -53,6 +53,7 @@ import com.meteocompare.app.ui.components.AppToastLayer
 import com.meteocompare.app.ui.enginecomparison.EngineComparisonScreen
 import com.meteocompare.app.ui.graphicview.GraphicForecastScreen
 import com.meteocompare.app.ui.help.HowItWorksScreen
+import com.meteocompare.app.ui.localitycompare.LocalityCompareScreen
 import com.meteocompare.app.ui.radar.RadarScreen
 import com.meteocompare.app.ui.settings.SettingsScreen
 
@@ -139,7 +140,8 @@ private fun PhoneAppNavHost() {
                 },
                 onHelpClick = {
                     navController.navigate(Destinations.HELP)
-                }
+                },
+                onCompareClick = { navController.navigate(Destinations.LOCALITY_COMPARE) }
             )
         }
 
@@ -161,6 +163,7 @@ private fun TabletAppNavHost() {
     ) {
         composable(Destinations.CITY_LIST) {
             TabletHomeScreen(
+                onCompareClick = { navController.navigate(Destinations.LOCALITY_COMPARE) },
                 onSettingsClick = {
                     navController.navigate(Destinations.SETTINGS)
                 },
@@ -181,6 +184,7 @@ private fun TabletAppNavHost() {
  */
 @Composable
 private fun TabletHomeScreen(
+    onCompareClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onHelpClick: () -> Unit,
     cityListViewModel: CityListViewModel = hiltViewModel()
@@ -211,6 +215,7 @@ private fun TabletHomeScreen(
                 },
                 onSettingsClick = onSettingsClick,
                 onHelpClick = onHelpClick,
+                onCompareClick = onCompareClick,
                 selectedCityId = activeCityId,
                 selectionEnabled = true,
                 viewModel = cityListViewModel
@@ -398,6 +403,10 @@ private fun TabletDetailPlaceholder() {
 }
 
 private fun NavGraphBuilder.commonFullScreenDestinations(navController: NavHostController) {
+    composable(Destinations.LOCALITY_COMPARE) {
+        LocalityCompareScreen(onBack = { navController.popBackStack() })
+    }
+
     composable(Destinations.HELP) {
         HowItWorksScreen(onBack = { navController.popBackStack() })
     }

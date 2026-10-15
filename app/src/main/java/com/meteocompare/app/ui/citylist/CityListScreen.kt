@@ -40,6 +40,7 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.CompareArrows
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -159,6 +160,7 @@ fun CityListScreen(
     onGraphicViewClick: (cityId: String) -> Unit = {},
     onRadarClick: (cityId: String) -> Unit = {},
     onHelpClick: () -> Unit,
+    onCompareClick: () -> Unit = {},
     selectedCityId: String? = null,
     selectionEnabled: Boolean = false,
     viewModel: CityListViewModel = hiltViewModel()
@@ -199,6 +201,7 @@ fun CityListScreen(
             onAddClick = { showAddSheet = true },
             onDonateClick = { showDonationDialog = true },
             onHelpClick = onHelpClick,
+            onCompareClick = onCompareClick,
             onSettingsClick = onSettingsClick,
             onRemoveCity = viewModel::onRemoveCity,
             onRetry = viewModel::onRetry,
@@ -278,6 +281,7 @@ internal fun CityListContent(
     onAddClick: () -> Unit,
     onDonateClick: () -> Unit,
     onHelpClick: () -> Unit = {},
+    onCompareClick: () -> Unit = {},
     onSettingsClick: () -> Unit,
     onRemoveCity: (cityId: String) -> Unit,
     onRetry: (City) -> Unit,
@@ -317,6 +321,17 @@ internal fun CityListContent(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
                 ),
                 actions = {
+                    if (uiState.items.size >= 2) {
+                        IconButton(
+                            onClick = onCompareClick,
+                            modifier = Modifier.testTag("home_compare_localities")
+                        ) {
+                            Icon(
+                                Icons.Outlined.CompareArrows,
+                                contentDescription = stringResource(R.string.compare_localities_title)
+                            )
+                        }
+                    }
                     DonationHeartButton(onClick = onDonateClick)
                     IconButton(
                         onClick = onHelpClick,

@@ -1,6 +1,28 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">MeteoCompare</string>
+    <!-- Favorite locality comparison -->
+    <string name="compare_localities_title">Orte vergleichen</string>
+    <string name="compare_localities_select">Wählen Sie 2 oder 3 gespeicherte Orte zum Vergleichen.</string>
+    <string name="compare_localities_add_cities">Fügen Sie mindestens zwei Favoriten hinzu, um sie zu vergleichen.</string>
+    <string name="compare_previous_day">Vorheriger Tag</string>
+    <string name="compare_next_day">Nächster Tag</string>
+    <string name="compare_metric_heading">Werte</string>
+    <string name="compare_temperature">Tiefst- / Höchsttemperatur</string>
+    <string name="compare_rain">Niederschlag gesamt</string>
+    <string name="compare_wind">Maximaler Wind</string>
+    <string name="compare_sunshine">Geschätzte Sonne</string>
+    <string name="compare_agreement">Modellübereinstimmung</string>
+    <string name="compare_loading">Vorhersagen werden geladen…</string>
+    <string name="compare_unavailable">Daten nicht verfügbar</string>
+    <string name="compare_no_dates">Keine Vorhersagedaten verfügbar.</string>
+    <string name="compare_no_data_for_day">Keine Vorhersage für diesen Tag</string>
+    <string name="compare_sun_hours_value">%s Std.</string>
+    <string name="compare_sunshine_disclaimer">Geschätzte sonnenäquivalente Stunden auf Basis der Bewölkung und Tageslänge. Keine gemessene Sonnenscheindauer.</string>
+    <string name="compare_agreement_disclaimer">Die Übereinstimmung beschreibt die Konvergenz der Modelle, nicht die Wahrscheinlichkeit einer korrekten Vorhersage. Der Tag gilt jeweils am Ort.</string>
+
+
+
 
     <string name="nav_back">Zurück</string>
     <string name="action_refresh">Aktualisieren</string>
