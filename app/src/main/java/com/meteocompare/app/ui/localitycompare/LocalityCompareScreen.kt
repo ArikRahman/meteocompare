@@ -22,8 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.WaterDrop
@@ -223,7 +223,7 @@ internal fun LocalityCompareContent(
                             onClick = { if (dateIndex > 0) dateIso = availableDates[dateIndex - 1].toString() },
                             enabled = dateIndex > 0
                         ) {
-                            Icon(Icons.Default.KeyboardArrowLeft, contentDescription = stringResource(R.string.compare_previous_day))
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.compare_previous_day))
                         }
                         Text(
                             text = selectedDate.format(formatter),
@@ -235,7 +235,7 @@ internal fun LocalityCompareContent(
                             onClick = { if (dateIndex in 0 until availableDates.lastIndex) dateIso = availableDates[dateIndex + 1].toString() },
                             enabled = dateIndex in 0 until availableDates.lastIndex
                         ) {
-                            Icon(Icons.Default.KeyboardArrowRight, contentDescription = stringResource(R.string.compare_next_day))
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.compare_next_day))
                         }
                     }
                     if (comparisonMode == "hour") {
@@ -245,7 +245,7 @@ internal fun LocalityCompareContent(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             IconButton(onClick = { selectedHour = (selectedHour + 23) % 24 }) {
-                                Icon(Icons.Default.KeyboardArrowLeft, contentDescription = stringResource(R.string.compare_previous_hour))
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.compare_previous_hour))
                             }
                             Text(
                                 text = LocalTime.of(selectedHour, 0).format(hourFormatter),
@@ -254,7 +254,7 @@ internal fun LocalityCompareContent(
                                 modifier = Modifier.testTag("compare_selected_hour")
                             )
                             IconButton(onClick = { selectedHour = (selectedHour + 1) % 24 }) {
-                                Icon(Icons.Default.KeyboardArrowRight, contentDescription = stringResource(R.string.compare_next_hour))
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.compare_next_hour))
                             }
                         }
                         Text(

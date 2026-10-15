@@ -24,7 +24,7 @@ class LocalityComparisonTest {
     @Test fun cloudAdjustedSunshine_usesOnlyOverlappingDaylight() {
         val hours = (0L until 24).map { Instant.parse("2026-06-20T00:00:00Z").plusSeconds(it * 3600) }
         val clouds = hours.mapIndexed { i, _ -> if (i in 6..17) 25 else 100 }
-        assertEquals(9.0, estimateCloudAdjustedDaylight(rise, set, hours, clouds), 0.001)
+        assertEquals(9.0, requireNotNull(estimateCloudAdjustedDaylight(rise, set, hours, clouds)), 0.001)
     }
 
     @Test fun cloudAdjustedSunshine_rejectsIncompleteCloudData() {
@@ -34,7 +34,7 @@ class LocalityComparisonTest {
 
     @Test fun cloudAdjustedSunshine_doesNotCountRepeatedTimestamps() {
         val hours = (0L until 12).map { rise.plusSeconds(it * 3600) }
-        assertEquals(6.0, estimateCloudAdjustedDaylight(rise, set, hours + hours, List(24) { 50 }), 0.001)
+        assertEquals(6.0, requireNotNull(estimateCloudAdjustedDaylight(rise, set, hours + hours, List(24) { 50 })), 0.001)
     }
 
     @Test fun cloudAdjustedSunshine_invalidSolarWindowReturnsNull() {

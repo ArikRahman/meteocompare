@@ -40,7 +40,7 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.CompareArrows
+import androidx.compose.material.icons.automirrored.outlined.CompareArrows
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -327,7 +327,7 @@ internal fun CityListContent(
                             modifier = Modifier.testTag("home_compare_localities")
                         ) {
                             Icon(
-                                Icons.Outlined.CompareArrows,
+                                Icons.AutoMirrored.Outlined.CompareArrows,
                                 contentDescription = stringResource(R.string.compare_localities_title)
                             )
                         }

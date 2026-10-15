@@ -51,9 +51,7 @@ class LocalityCompareViewModelReuseTest {
             flowOf(ApiResult.Success(CityForecast(city, emptyMap())))
         }
     }
-    private val uvRepository = mockk<UvIndexRepository> {
-        coEvery { get(any()) } returns null
-    }
+    private val uvRepository = mockk<UvIndexRepository>()
     private val preferences = mockk<UserPreferencesRepository> {
         every { observeEnabledModels() } returns models
         every { observeRefreshInterval() } returns interval
@@ -62,6 +60,7 @@ class LocalityCompareViewModelReuseTest {
     private lateinit var viewModel: LocalityCompareViewModel
 
     @Before fun setup() {
+        coEvery { uvRepository.get(any<City>()) } returns null
         Dispatchers.setMain(dispatcher)
         viewModel = LocalityCompareViewModel(
             cityRepository, forecastRepository, uvRepository, preferences,
