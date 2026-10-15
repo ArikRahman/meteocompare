@@ -7,6 +7,7 @@ import com.meteocompare.app.domain.util.SolarTimes
 import java.time.Instant
 import java.time.LocalDate
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 /** A common *calendar date* is evaluated in each locality’s own timezone. */
 data class LocalityDayMetrics(
@@ -14,6 +15,10 @@ data class LocalityDayMetrics(
     val minC: Double?,
     val maxC: Double?,
     val precipitationMm: Double?,
+    /** Consensus-estimated daily chance of rain, not a calibrated observed frequency. */
+    val rainProbabilityPercent: Int?,
+    /** Median of model daily cloud-cover means, evaluated in the locality timezone. */
+    val cloudCoverPercent: Int?,
     val maxWindKmh: Double?,
     /** Cloud-adjusted *estimate* of clear-sky-equivalent hours, NOT measured sunshine. */
     val estimatedSunHours: Double?,
@@ -53,11 +58,44 @@ fun buildLocalityDayMetrics(
         minC = daily.tempMin?.centralValue?.takeIf(Double::isFinite),
         maxC = daily.tempMax?.centralValue?.takeIf(Double::isFinite),
         precipitationMm = centralRain,
+        rainProbabilityPercent = precipitation?.meta?.probabilityPercent?.takeIf { it in 0..100 },
+        cloudCoverPercent = localityDailyCloudCoverPercent(forecast, date),
         maxWindKmh = daily.windMax?.centralValue?.takeIf(Double::isFinite),
         estimatedSunHours = estimatedSunshineHours(forecast, date),
         agreementPercent = daily.convergencePercent?.coerceIn(0, 100),
         modelCount = count
     )
+}
+
+/**
+ * Median of the available per-model daily cloud-cover averages. Require at
+ * least half of each locality's calendar day (23/24/25 hours around DST) so
+ * a single hourly observation never stands in for a daily percentage.
+ * Duplicate/invalid samples and models without this day are ignored.
+ */
+internal fun localityDailyCloudCoverPercent(forecast: CityForecast, date: LocalDate): Int? {
+    val zone = resolveZoneOrUtc(forecast.city.timezone)
+    val start = date.atStartOfDay(zone).toInstant()
+    val end = date.plusDays(1).atStartOfDay(zone).toInstant()
+    val dayHours = (end.epochSecond - start.epochSecond) / 3600.0
+    if (dayHours <= 0.0) return null
+
+    val means = forecast.seriesByModel.values.mapNotNull { series ->
+        if (date !in series.daily.dates) return@mapNotNull null
+        val seen = hashSetOf<Instant>()
+        val valid = series.hourly.timestamps.mapIndexedNotNull { index, timestamp ->
+            if (timestamp < start || timestamp >= end) return@mapIndexedNotNull null
+            val clouds = series.hourly.cloudCover.getOrNull(index)?.takeIf { it in 0..100 }
+                ?: return@mapIndexedNotNull null
+            clouds.takeIf { seen.add(timestamp) }
+        }
+        if (valid.size < dayHours / 2.0) null else valid.average()
+    }.sorted()
+    if (means.isEmpty()) return null
+    val middle = means.size / 2
+    val median = if (means.size % 2 == 1) means[middle]
+    else (means[middle - 1] + means[middle]) / 2.0
+    return median.roundToInt().coerceIn(0, 100)
 }
 
 /** Median of independent model estimates avoids over-weighting a dense hourly grid. */

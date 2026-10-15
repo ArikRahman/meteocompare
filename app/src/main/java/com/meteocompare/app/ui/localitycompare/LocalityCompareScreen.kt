@@ -63,6 +63,7 @@ internal const val TAG_LOCALITY_COMPARE = "locality_comparison"
 private val METRIC_WIDTH = 112.dp
 private val CITY_WIDTH = 174.dp
 private val CELL_HEIGHT = 64.dp
+private const val COMPARISON_METRIC_COUNT = 7
 
 @Composable
 fun LocalityCompareScreen(onBack: () -> Unit) {
@@ -209,6 +210,8 @@ internal fun LocalityCompareContent(
                             ComparisonHeading(stringResource(R.string.compare_metric_heading))
                             ComparisonCell(stringResource(R.string.compare_temperature))
                             ComparisonCell(stringResource(R.string.compare_rain))
+                            ComparisonCell(stringResource(R.string.compare_rain_probability))
+                            ComparisonCell(stringResource(R.string.compare_cloud_cover))
                             ComparisonCell(stringResource(R.string.compare_wind))
                             ComparisonCell(stringResource(R.string.compare_sunshine))
                             ComparisonCell(stringResource(R.string.compare_agreement))
@@ -226,6 +229,14 @@ internal fun LocalityCompareContent(
                                     } else {
                                         ComparisonValue(units.temp(values.minC) + " / " + units.temp(values.maxC))
                                         ComparisonValue(units.rain(values.precipitationMm))
+                                        ComparisonValue(
+                                            values.rainProbabilityPercent?.let { "$it %" } ?: "—",
+                                            modifier = Modifier.testTag("compare_rain_probability_${city.id}")
+                                        )
+                                        ComparisonValue(
+                                            values.cloudCoverPercent?.let { "$it %" } ?: "—",
+                                            modifier = Modifier.testTag("compare_cloud_cover_${city.id}")
+                                        )
                                         ComparisonValue(units.speed(values.maxWindKmh))
                                         ComparisonValue(values.estimatedSunHours?.let {
                                             stringResource(R.string.compare_sun_hours_value, units.number(it, 1, locale))
@@ -239,6 +250,12 @@ internal fun LocalityCompareContent(
                             }
                         }
                     }
+                    Text(
+                        text = stringResource(R.string.compare_rain_cloud_disclaimer),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
                     Text(
                         text = stringResource(R.string.compare_sunshine_disclaimer),
                         style = MaterialTheme.typography.bodySmall,
@@ -279,7 +296,7 @@ private fun ComparisonCell(label: String) {
 }
 
 @Composable
-private fun ComparisonValue(value: String, tone: Color? = null) {
+private fun ComparisonValue(value: String, tone: Color? = null, modifier: Modifier = Modifier) {
     Surface(
         modifier = Modifier.fillMaxWidth().height(CELL_HEIGHT).padding(bottom = 5.dp),
         shape = RoundedCornerShape(12.dp),
@@ -289,14 +306,14 @@ private fun ComparisonValue(value: String, tone: Color? = null) {
             Text(value, style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
                 color = tone ?: MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = 6.dp))
+                modifier = modifier.padding(horizontal = 6.dp))
         }
     }
 }
 
 @Composable
 private fun CompareInfoCell(text: String) {
-    Box(Modifier.height(CELL_HEIGHT * 5).fillMaxWidth(), contentAlignment = Alignment.Center) {
+    Box(Modifier.height(CELL_HEIGHT * COMPARISON_METRIC_COUNT).fillMaxWidth(), contentAlignment = Alignment.Center) {
         Text(text, style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 6.dp))

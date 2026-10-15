@@ -10,6 +10,8 @@
     <string name="compare_metric_heading">Mesures</string>
     <string name="compare_temperature">Température min. / max.</string>
     <string name="compare_rain">Pluie cumulée</string>
+    <string name="compare_rain_probability">Risque de pluie</string>
+    <string name="compare_cloud_cover">Couverture nuageuse moyenne</string>
     <string name="compare_wind">Vent maximal</string>
     <string name="compare_sunshine">Soleil estimé</string>
     <string name="compare_agreement">Accord des modèles</string>
@@ -18,6 +20,7 @@
     <string name="compare_no_dates">Aucune date de prévision disponible.</string>
     <string name="compare_no_data_for_day">Pas de prévision pour ce jour</string>
     <string name="compare_sun_hours_value">%s h</string>
+    <string name="compare_rain_cloud_disclaimer">Risque de pluie estimé par le consensus des modèles, non calibré comme probabilité réelle. Couverture nuageuse : médiane des moyennes horaires de chaque modèle sur le jour local ; journées trop incomplètes exclues.</string>
     <string name="compare_sunshine_disclaimer">Ensoleillement estimé en heures de ciel dégagé équivalentes, d’après la couverture nuageuse et la durée du jour. Ce n’est pas une mesure de la durée d’ensoleillement.</string>
     <string name="compare_agreement_disclaimer">L’accord décrit la convergence des modèles, pas la probabilité que la prévision soit juste. Les dates correspondent au jour local de chaque ville.</string>
 

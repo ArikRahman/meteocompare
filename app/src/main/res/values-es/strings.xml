@@ -10,6 +10,8 @@
     <string name="compare_metric_heading">Indicadores</string>
     <string name="compare_temperature">Temperatura mín. / máx.</string>
     <string name="compare_rain">Lluvia acumulada</string>
+    <string name="compare_rain_probability">Probabilidad de lluvia</string>
+    <string name="compare_cloud_cover">Nubosidad media</string>
     <string name="compare_wind">Viento máximo</string>
     <string name="compare_sunshine">Sol estimado</string>
     <string name="compare_agreement">Acuerdo entre modelos</string>
@@ -18,6 +20,7 @@
     <string name="compare_no_dates">No hay fechas de previsión disponibles.</string>
     <string name="compare_no_data_for_day">Sin previsión para este día</string>
     <string name="compare_sun_hours_value">%s h</string>
+    <string name="compare_rain_cloud_disclaimer">Probabilidad de lluvia estimada mediante consenso de modelos, no calibrada. Nubosidad: mediana de los promedios horarios de cada modelo para el día local; se excluyen los días con datos insuficientes.</string>
     <string name="compare_sunshine_disclaimer">Horas equivalentes de cielo despejado estimadas a partir de la nubosidad y la duración del día. No es insolación medida.</string>
     <string name="compare_agreement_disclaimer">El acuerdo indica la convergencia entre modelos, no la probabilidad de acierto. Cada fecha corresponde al día local de cada ciudad.</string>
 

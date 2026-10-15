@@ -10,6 +10,8 @@
     <string name="compare_metric_heading">Werte</string>
     <string name="compare_temperature">Tiefst- / Höchsttemperatur</string>
     <string name="compare_rain">Niederschlag gesamt</string>
+    <string name="compare_rain_probability">Regenwahrscheinlichkeit</string>
+    <string name="compare_cloud_cover">Mittlere Bewölkung</string>
     <string name="compare_wind">Maximaler Wind</string>
     <string name="compare_sunshine">Geschätzte Sonne</string>
     <string name="compare_agreement">Modellübereinstimmung</string>
@@ -18,6 +20,7 @@
     <string name="compare_no_dates">Keine Vorhersagedaten verfügbar.</string>
     <string name="compare_no_data_for_day">Keine Vorhersage für diesen Tag</string>
     <string name="compare_sun_hours_value">%s Std.</string>
+    <string name="compare_rain_cloud_disclaimer">Regenwahrscheinlichkeit als Modellkonsens geschätzt, keine kalibrierte Wahrscheinlichkeit. Bewölkung: Median der stündlichen Modellmittelwerte für den lokalen Tag; zu lückenhafte Tage werden ausgeschlossen.</string>
     <string name="compare_sunshine_disclaimer">Geschätzte sonnenäquivalente Stunden auf Basis der Bewölkung und Tageslänge. Keine gemessene Sonnenscheindauer.</string>
     <string name="compare_agreement_disclaimer">Die Übereinstimmung beschreibt die Konvergenz der Modelle, nicht die Wahrscheinlichkeit einer korrekten Vorhersage. Der Tag gilt jeweils am Ort.</string>
 
