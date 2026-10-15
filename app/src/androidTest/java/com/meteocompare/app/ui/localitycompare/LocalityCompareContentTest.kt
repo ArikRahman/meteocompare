@@ -3,6 +3,7 @@ package com.meteocompare.app.ui.localitycompare
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertExists
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -152,8 +153,13 @@ class LocalityCompareContentTest {
             }
         }
         compose.onNodeWithTag("compare_cloud_cover_paris").assertTextEquals("60 %")
+        compose.onNodeWithTag("compare_cloud_bar_paris").assertExists()
+        compose.onNodeWithTag("compare_rain_bar_paris").assertExists()
         compose.onNodeWithTag("compare_cloud_cover_lyon").assertTextEquals("—")
         compose.onNodeWithTag("compare_rain_probability_paris").assertExists()
         compose.onNodeWithTag("compare_rain_probability_lyon").assertTextEquals("—")
+        // Absent data must never masquerade as a zero-percent indicator.
+        compose.onNodeWithTag("compare_cloud_bar_lyon").assertDoesNotExist()
+        compose.onNodeWithTag("compare_rain_bar_lyon").assertDoesNotExist()
     }
 }

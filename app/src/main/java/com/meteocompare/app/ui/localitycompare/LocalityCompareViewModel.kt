@@ -16,17 +16,16 @@ import com.meteocompare.app.domain.repository.UserPreferencesRepository
 import com.meteocompare.app.domain.usecase.ConfidenceCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 
 internal sealed interface CompareForecastState {
     data object Loading : CompareForecastState
@@ -50,7 +49,6 @@ internal data class LocalityCompareState(
  * the others. Removing a favorite cancels its flow before another can display it.
  */
 @HiltViewModel
-@OptIn(ExperimentalCoroutinesApi::class)
 internal class LocalityCompareViewModel @Inject constructor(
     private val cities: CityRepository,
     private val forecasts: ForecastRepository,
@@ -68,6 +66,8 @@ internal class LocalityCompareViewModel @Inject constructor(
         viewModelScope, SharingStarted.Eagerly, UnitSystem.METRIC
     )
     private val manualRefresh = MutableStateFlow(0)
+    private val activeCityJobs = mutableMapOf<String, Job>()
+    private val activeRequestKeys = mutableMapOf<String, CityRequestKey>()
     private var handledRefresh = 0
 
     val uiState: StateFlow<LocalityCompareState> = combine(
@@ -99,27 +99,49 @@ internal class LocalityCompareViewModel @Inject constructor(
                     interval = interval,
                     refresh = refresh
                 )
-            }.collectLatest { request ->
-                val forceNetwork = request.refresh > handledRefresh
-                handledRefresh = request.refresh
-                loaded.value = request.cities.associate { it.id to CompareForecastState.Loading }
-                loadedUv.value = emptyMap()
-                if (request.models.isEmpty()) {
-                    loaded.value = request.cities.associate {
-                        it.id to CompareForecastState.Failed("No weather models enabled")
+            }.collect { request ->
+                // Diff the selected city requests instead of cancelling and reloading
+                // every city when a chip is toggled or the favorites list reorders.
+                val currentIds = request.cities.mapTo(hashSetOf()) { it.id }
+                for (id in activeRequestKeys.keys.toList()) {
+                    if (id !in currentIds) {
+                        activeCityJobs.remove(id)?.cancel()
+                        activeRequestKeys.remove(id)
                     }
-                    return@collectLatest
                 }
-                coroutineScope {
-                    request.cities.forEach { city ->
+                loaded.update { current -> current.filterKeys { it in currentIds } }
+                loadedUv.update { current -> current.filterKeys { it in currentIds } }
+                val forceNetwork = request.refresh > handledRefresh
+                handledRefresh = maxOf(handledRefresh, request.refresh)
+
+                request.cities.forEach { city ->
+                    val key = CityRequestKey(city, request.models, request.interval, request.refresh)
+                    if (activeRequestKeys[city.id] == key) return@forEach
+                    activeCityJobs.remove(city.id)?.cancel()
+                    activeRequestKeys[city.id] = key
+                    loaded.update { current -> current + (city.id to CompareForecastState.Loading) }
+                    if (request.models.isEmpty()) {
+                        loaded.update { current -> current +
+                            (city.id to CompareForecastState.Failed("No weather models enabled")) }
+                        return@forEach
+                    }
+                    // Job stays active until its cache/network stream completes.
+                    // Completed keys are kept so unrelated emissions cannot reload it.
+                    activeCityJobs[city.id] = viewModelScope.launch {
                         launch {
-                            try {
-                                val result = uvRepository.get(city)
-                                if (result != null) loadedUv.update { it + (city.id to result) }
-                            } catch (cancel: kotlinx.coroutines.CancellationException) {
-                                throw cancel
-                            } catch (_: Exception) {
-                                // UV is optional: never block the multi-model forecasts.
+                            // UV is shared across Home/Detail/Chart View; do not request
+                            // it again when the manual weather-model refresh is pressed.
+                            if (city.id !in loadedUv.value) {
+                                try {
+                                    val uv = uvRepository.get(city)
+                                    if (uv != null && activeRequestKeys[city.id] == key) {
+                                        loadedUv.update { it + (city.id to uv) }
+                                    }
+                                } catch (cancel: CancellationException) {
+                                    throw cancel
+                                } catch (_: Exception) {
+                                    // UV is optional and must not fail model forecasts.
+                                }
                             }
                         }
                         launch {
@@ -134,17 +156,16 @@ internal class LocalityCompareViewModel @Inject constructor(
                                         is ApiResult.Success -> CompareForecastState.Ready(result.data)
                                         is ApiResult.Error -> CompareForecastState.Failed(result.message)
                                     }
-                                    loaded.update { current ->
-                                        if (city.id in current) current + (city.id to state) else current
+                                    if (activeRequestKeys[city.id] == key) {
+                                        loaded.update { it + (city.id to state) }
                                     }
                                 }
-                            } catch (cancel: kotlinx.coroutines.CancellationException) {
+                            } catch (cancel: CancellationException) {
                                 throw cancel
                             } catch (error: Exception) {
-                                loaded.update { current ->
-                                    if (city.id in current) current + (
-                                        city.id to CompareForecastState.Failed(error.message.orEmpty())
-                                    ) else current
+                                if (activeRequestKeys[city.id] == key) {
+                                    loaded.update { it + (city.id to
+                                        CompareForecastState.Failed(error.message.orEmpty())) }
                                 }
                             }
                         }
@@ -160,6 +181,13 @@ internal class LocalityCompareViewModel @Inject constructor(
     }
 
     fun refresh() { manualRefresh.update { it + 1 } }
+
+    private data class CityRequestKey(
+        val city: City,
+        val models: List<WeatherModel>,
+        val interval: RefreshInterval,
+        val refresh: Int
+    )
 
     private data class Request(
         val cities: List<City>,
