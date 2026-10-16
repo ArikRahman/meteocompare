@@ -3,10 +3,9 @@
     <string name="app_name">MeteoCompare</string>
     <!-- Favorite locality comparison -->
     <string name="compare_localities_title">Comparer les localités</string>
-    <string name="compare_localities_select">Choisissez 2 ou 3 villes favorites à comparer.</string>
+
     <string name="compare_localities_add_cities">Ajoutez au moins deux villes favorites pour accéder à la comparaison.</string>
-    <string name="compare_previous_day">Date précédente</string>
-    <string name="compare_next_day">Date suivante</string>
+
     <string name="compare_metric_heading">Mesures</string>
     <string name="compare_temperature">Température min. / max.</string>
     <string name="compare_rain">Pluie cumulée</string>
@@ -18,15 +17,13 @@
     <string name="compare_loading">Chargement des prévisions…</string>
     <string name="compare_unavailable">Données indisponibles</string>
     <string name="compare_no_dates">Aucune date de prévision disponible.</string>
-    <string name="compare_no_data_for_day">Pas de prévision pour ce jour</string>
-    <string name="compare_sun_hours_value">%s h</string>
+
     <string name="compare_rain_cloud_disclaimer">Risque de pluie estimé par le consensus des modèles, non calibré comme probabilité réelle. Couverture nuageuse : médiane des moyennes horaires de chaque modèle sur le jour local ; journées trop incomplètes exclues.</string>
     <string name="compare_sunshine_disclaimer">Ensoleillement estimé en heures de ciel dégagé équivalentes, d’après la couverture nuageuse et la durée du jour. Ce n’est pas une mesure de la durée d’ensoleillement.</string>
     <string name="compare_agreement_disclaimer">L’accord décrit la convergence des modèles, pas la probabilité que la prévision soit juste. Les dates correspondent au jour local de chaque ville.</string>
-    <string name="compare_mode_day">Par jour</string>
-    <string name="compare_mode_hour">Par heure</string>
-    <string name="compare_previous_hour">Heure précédente</string>
-    <string name="compare_next_hour">Heure suivante</string>
+
+    <string name="compare_chart_touch_hint">Touchez ou glissez sur le graphique</string>
+
     <string name="compare_hour_local_disclaimer">Les heures indiquées sont locales à chaque ville. Lors du passage à l’heure d’été, certaines heures peuvent être absentes.</string>
     <string name="compare_hour_temperature">Température</string>
     <string name="compare_hour_rain">Pluie (heure précédente)</string>
@@ -1003,4 +1000,13 @@
     <string name="detail_solar_sunrise">Lever</string>
     <string name="detail_solar_sunset">Coucher</string>
     <string name="detail_solar_daylight">%1$d h %2$02d de jour</string>
+
+    <string name="compare_overview_title">En un coup d’œil · par jour</string>
+    <string name="compare_overview_tap_hint">Touchez une mesure</string>
+    <string name="compare_timeline_title">Évolution au fil des heures</string>
+    <string name="compare_temperature_difference">Temp. max. : %1$s, %2$s de plus que %3$s</string>
+    <string name="compare_show_details">Voir toutes les valeurs à %1$s</string>
+    <string name="compare_hide_details">Masquer les détails de %1$s</string>
+    <string name="compare_methodology">Comprendre les mesures</string>
+    <string name="compare_rain_difference">%1$s : %2$s de pluie en moins que %3$s</string>
 </resources>

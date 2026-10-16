@@ -3,10 +3,9 @@
     <string name="app_name">MeteoCompare</string>
     <!-- Favorite locality comparison -->
     <string name="compare_localities_title">Compare locations</string>
-    <string name="compare_localities_select">Select 2 or 3 saved locations to compare.</string>
+
     <string name="compare_localities_add_cities">Add at least two favorite locations to compare them.</string>
-    <string name="compare_previous_day">Previous day</string>
-    <string name="compare_next_day">Next day</string>
+
     <string name="compare_metric_heading">Metrics</string>
     <string name="compare_temperature">Low / high temperature</string>
     <string name="compare_rain">Total rainfall</string>
@@ -18,15 +17,13 @@
     <string name="compare_loading">Loading forecasts…</string>
     <string name="compare_unavailable">Data unavailable</string>
     <string name="compare_no_dates">No forecast dates available.</string>
-    <string name="compare_no_data_for_day">No forecast for this day</string>
-    <string name="compare_sun_hours_value">%s h</string>
+
     <string name="compare_rain_cloud_disclaimer">Rain chance is a model-consensus estimate, not a calibrated probability. Cloud cover is the median of each model’s hourly average for the local day; days with insufficient data are excluded.</string>
     <string name="compare_sunshine_disclaimer">Estimated clear-sky-equivalent hours, based on cloud cover and daylight duration. This is not measured sunshine duration.</string>
     <string name="compare_agreement_disclaimer">Agreement measures how closely models converge, not the probability that the forecast will be correct. Dates refer to each location’s local day.</string>
-    <string name="compare_mode_day">By day</string>
-    <string name="compare_mode_hour">By hour</string>
-    <string name="compare_previous_hour">Previous hour</string>
-    <string name="compare_next_hour">Next hour</string>
+
+    <string name="compare_chart_touch_hint">Touch or drag the chart</string>
+
     <string name="compare_hour_local_disclaimer">Hours use each city’s local time. Some hours may not exist when daylight saving time starts.</string>
     <string name="compare_hour_temperature">Temperature</string>
     <string name="compare_hour_rain">Rain (previous hour)</string>
@@ -1003,4 +1000,13 @@
     <string name="detail_solar_sunrise">Sunrise</string>
     <string name="detail_solar_sunset">Sunset</string>
     <string name="detail_solar_daylight">%1$dh %2$02dm daylight</string>
+
+    <string name="compare_overview_title">At a glance · daily</string>
+    <string name="compare_overview_tap_hint">Tap a metric</string>
+    <string name="compare_timeline_title">Hourly evolution</string>
+    <string name="compare_temperature_difference">High temperature: %1$s is %2$s warmer than %3$s</string>
+    <string name="compare_show_details">All values at %1$s</string>
+    <string name="compare_hide_details">Hide details for %1$s</string>
+    <string name="compare_methodology">How metrics are calculated</string>
+    <string name="compare_rain_difference">%1$s: %2$s less rain than %3$s</string>
 </resources>

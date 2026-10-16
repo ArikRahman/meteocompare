@@ -4,6 +4,7 @@ import com.meteocompare.app.core.util.resolveZoneOrUtc
 import com.meteocompare.app.domain.model.UvForecast
 import com.meteocompare.app.domain.model.validUvIndexOrNull
 import com.meteocompare.app.domain.util.forecastSolarWindow
+import com.meteocompare.app.domain.util.ForecastSolarWindow
 import com.meteocompare.app.domain.model.CityForecast
 import com.meteocompare.app.domain.model.PrecipitationConfidence
 import com.meteocompare.app.domain.util.SolarTimes
@@ -109,6 +110,17 @@ internal fun localityDailyCloudCoverPercent(forecast: CityForecast, date: LocalD
 /** Median of independent model estimates avoids over-weighting a dense hourly grid. */
 private fun estimatedSunshineHours(forecast: CityForecast, date: LocalDate): Double? {
     val zone = resolveZoneOrUtc(forecast.city.timezone)
+    // One NOAA fallback per city/date, not one expensive astronomical calculation
+    // per model lacking API sunrise/sunset. Individual API windows retain priority.
+    val fallbackWindow: Pair<Instant, Instant>? by lazy(LazyThreadSafetyMode.NONE) {
+        runCatching {
+            SolarTimes.compute(forecast.city.latitude, forecast.city.longitude, date, zone)
+        }.getOrNull()?.let { solar ->
+            val rise = solar.sunrise?.let { date.atTime(it).atZone(zone).toInstant() }
+            val set = solar.sunset?.let { date.atTime(it).atZone(zone).toInstant() }
+            if (rise != null && set != null && set > rise) rise to set else null
+        }
+    }
     val hours = forecast.seriesByModel.values.mapNotNull { series ->
         val day = series.daily.dates.indexOf(date)
         if (day < 0) return@mapNotNull null
@@ -116,15 +128,7 @@ private fun estimatedSunshineHours(forecast: CityForecast, date: LocalDate): Dou
         val apiSet = series.daily.sunset.getOrNull(day)
         val (rise, set) = if (apiRise != null && apiSet != null && apiSet > apiRise) {
             apiRise to apiSet
-        } else {
-            val fallback = runCatching {
-                SolarTimes.compute(forecast.city.latitude, forecast.city.longitude, date, zone)
-            }.getOrNull() ?: return@mapNotNull null
-            val start = fallback.sunrise?.let { date.atTime(it).atZone(zone).toInstant() }
-            val end = fallback.sunset?.let { date.atTime(it).atZone(zone).toInstant() }
-            if (start == null || end == null || end <= start) return@mapNotNull null
-            start to end
-        }
+        } else fallbackWindow ?: return@mapNotNull null
         estimateCloudAdjustedDaylight(
             rise, set, series.hourly.timestamps, series.hourly.cloudCover
         )
@@ -211,7 +215,8 @@ fun buildLocalityHourMetrics(
     date: LocalDate,
     hour: Int,
     calculator: ConfidenceCalculator,
-    uv: UvForecast? = null
+    uv: UvForecast? = null,
+    solarWindow: ForecastSolarWindow? = null
 ): LocalityHourMetrics? {
     val zone = resolveZoneOrUtc(forecast.city.timezone)
     val instant = localityHourInstant(date, hour, zone) ?: return null
@@ -236,7 +241,7 @@ fun buildLocalityHourMetrics(
     val wind = medianAvailable(samples.mapNotNull { (data, i) ->
         data.windSpeed10m.getOrNull(i)?.takeIf { it.isFinite() && it >= 0.0 }
     })
-    val window = forecastSolarWindow(forecast, date)
+    val window = solarWindow ?: forecastSolarWindow(forecast, date)
     val sunHours = if (clouds != null && window.isValid) {
         val sunrise = requireNotNull(window.sunrise)
         val sunset = requireNotNull(window.sunset)

@@ -13,6 +13,7 @@ import java.time.Instant
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -59,6 +60,42 @@ class LocalityMetricsMemoTest {
         val third = requireNotNull(cached.day(nextForecast, date, nextUv))
         assertEquals(9.0, third.uvMax!!, 0.001)
         assertNotSame(second, third)
+    }
+
+    @Test fun aNewForecastRevisionReleasesOldCityEntriesInsteadOfRetainingLargeGraphs() {
+        val cached = memo(capacity = 100)
+        val previous = forecast()
+        cached.day(previous, date, null)
+        cached.hour(previous, date, 13, null)
+        cached.hour(previous, date, 14, null)
+        assertEquals(3, cached.size())
+        cached.day(forecast(), date, null)
+        assertEquals(1, cached.size())
+    }
+
+    @Test fun aUvOnlyChangeInvalidatesMetricsButKeepsTheForecastResultsCorrect() {
+        val cached = memo()
+        val source = forecast()
+        val before = UvForecast(mapOf(instant to 6.0), mapOf(date to 7.0))
+        val after = UvForecast(mapOf(instant to 8.0), mapOf(date to 9.0))
+        cached.day(source, date, before)
+        cached.hour(source, date, 14, before)
+        val updated = cached.day(source, date, after)
+        assertEquals(1, cached.size())
+        assertNotNull(updated)
+        assertEquals(9.0, updated!!.uvMax!!, 0.001)
+    }
+
+    @Test fun removingCitiesReleasesTheirMetricsAndSolarWindows() {
+        val cached = memo()
+        val old = forecast()
+        cached.day(old, date, null)
+        cached.hour(old, date, 14, null)
+        cached.retainCities(emptySet())
+        assertEquals(0, cached.size())
+        val next = cached.day(old, date, null)
+        assertNotNull(next)
+        assertEquals(1, cached.size())
     }
 
     @Test fun changingOnlyTheSelectedDateOrHourUsesABoundedLru() {

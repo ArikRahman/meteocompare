@@ -3,10 +3,9 @@
     <string name="app_name">MeteoCompare</string>
     <!-- Favorite locality comparison -->
     <string name="compare_localities_title">Orte vergleichen</string>
-    <string name="compare_localities_select">Wählen Sie 2 oder 3 gespeicherte Orte zum Vergleichen.</string>
+
     <string name="compare_localities_add_cities">Fügen Sie mindestens zwei Favoriten hinzu, um sie zu vergleichen.</string>
-    <string name="compare_previous_day">Vorheriger Tag</string>
-    <string name="compare_next_day">Nächster Tag</string>
+
     <string name="compare_metric_heading">Werte</string>
     <string name="compare_temperature">Tiefst- / Höchsttemperatur</string>
     <string name="compare_rain">Niederschlag gesamt</string>
@@ -18,15 +17,13 @@
     <string name="compare_loading">Vorhersagen werden geladen…</string>
     <string name="compare_unavailable">Daten nicht verfügbar</string>
     <string name="compare_no_dates">Keine Vorhersagedaten verfügbar.</string>
-    <string name="compare_no_data_for_day">Keine Vorhersage für diesen Tag</string>
-    <string name="compare_sun_hours_value">%s Std.</string>
+
     <string name="compare_rain_cloud_disclaimer">Regenwahrscheinlichkeit als Modellkonsens geschätzt, keine kalibrierte Wahrscheinlichkeit. Bewölkung: Median der stündlichen Modellmittelwerte für den lokalen Tag; zu lückenhafte Tage werden ausgeschlossen.</string>
     <string name="compare_sunshine_disclaimer">Geschätzte sonnenäquivalente Stunden auf Basis der Bewölkung und Tageslänge. Keine gemessene Sonnenscheindauer.</string>
     <string name="compare_agreement_disclaimer">Die Übereinstimmung beschreibt die Konvergenz der Modelle, nicht die Wahrscheinlichkeit einer korrekten Vorhersage. Der Tag gilt jeweils am Ort.</string>
-    <string name="compare_mode_day">Pro Tag</string>
-    <string name="compare_mode_hour">Pro Stunde</string>
-    <string name="compare_previous_hour">Vorherige Stunde</string>
-    <string name="compare_next_hour">Nächste Stunde</string>
+
+    <string name="compare_chart_touch_hint">Diagramm berühren oder ziehen</string>
+
     <string name="compare_hour_local_disclaimer">Die Uhrzeit gilt jeweils am Ort. Bei Beginn der Sommerzeit können einzelne Stunden entfallen.</string>
     <string name="compare_hour_temperature">Temperatur</string>
     <string name="compare_hour_rain">Regen (vorige Stunde)</string>
@@ -986,4 +983,13 @@ Daten</string>
     <string name="detail_solar_sunrise">Aufgang</string>
     <string name="detail_solar_sunset">Untergang</string>
     <string name="detail_solar_daylight">%1$d Std. %2$02d Min. Tageslicht</string>
+
+    <string name="compare_overview_title">Auf einen Blick · täglich</string>
+    <string name="compare_overview_tap_hint">Wert antippen</string>
+    <string name="compare_timeline_title">Stündlicher Verlauf</string>
+    <string name="compare_temperature_difference">Höchsttemperatur: %1$s ist %2$s wärmer als %3$s</string>
+    <string name="compare_show_details">Alle Werte um %1$s</string>
+    <string name="compare_hide_details">Details für %1$s ausblenden</string>
+    <string name="compare_methodology">Wie die Werte berechnet werden</string>
+    <string name="compare_rain_difference">%1$s: %2$s weniger Regen als %3$s</string>
 </resources>

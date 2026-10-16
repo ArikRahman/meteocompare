@@ -2,14 +2,14 @@ package com.meteocompare.app.ui.localitycompare
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.test.assertExists
-import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import com.meteocompare.app.domain.model.City
 import com.meteocompare.app.domain.model.CityForecast
 import com.meteocompare.app.domain.model.DailyForecast
@@ -36,6 +36,12 @@ class LocalityCompareContentTest {
         City("lille", "Lille", null, "France", 50.63, 3.05, "Europe/Paris")
     )
 
+    private fun waitForComparison() {
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithTag("compare_overview").fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
     @Test fun selectedCities_renderInParallelEvenWhenAForecastIsUnavailable() {
         compose.setContent {
             MaterialTheme {
@@ -54,6 +60,7 @@ class LocalityCompareContentTest {
                 )
             }
         }
+        waitForComparison()
         compose.onNodeWithTag("compare_column_paris").assertExists()
         compose.onNodeWithTag("compare_column_lyon").assertExists()
         compose.onNodeWithTag("compare_city_lille").assertExists()
@@ -93,14 +100,92 @@ class LocalityCompareContentTest {
                 }
             }
         }
+        waitForComparison()
         compose.onNodeWithTag("compare_uv_paris").assertTextContains("8")
-        compose.onNodeWithTag("compare_mode_hour").performClick()
+        // The daily overview and hourly chart share one selected date; no mode switch.
+        compose.onNodeWithTag("compare_hour_chart").assertExists()
+        compose.onNodeWithTag("compare_hour_chart")
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(10f) }
+        compose.onNodeWithTag("compare_selected_hour").assertTextEquals("10 AM")
+        compose.onNodeWithTag("compare_hour_chart")
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(14f) }
         compose.onNodeWithTag("compare_selected_hour").assertTextEquals("2 PM")
-        compose.onNodeWithTag("compare_uv_paris").assertTextContains("5")
-        compose.onNodeWithTag("compare_cloud_cover_paris").assertTextEquals("25 %")
+        compose.onNodeWithTag("compare_chart_metric_rain").performClick()
+        compose.onNodeWithTag("compare_chart_value_paris").assertTextContains("mm")
+        compose.onNodeWithTag("compare_toggle_details").performClick()
+        compose.onNodeWithTag("compare_detail_uv_paris").assertTextContains("5")
+        compose.onNodeWithTag("compare_detail_clouds_paris").assertTextEquals("25 %")
         compose.onNodeWithTag("compare_column_lyon").assertExists()
-        compose.onNodeWithTag("compare_mode_day").performClick()
+        // Touching an hourly value never changes the daily summary.
         compose.onNodeWithTag("compare_uv_paris").assertTextContains("8")
+    }
+
+    @Test fun chartSelectionSnapsToValidHoursAndStaysWithinTheLocalDay() {
+        assertEquals(0, chartHourFromX(-50f, 10f, 240f))
+        assertEquals(0, chartHourFromX(10f, 10f, 240f))
+        assertEquals(12, chartHourFromX(130f, 10f, 240f))
+        assertEquals(23, chartHourFromX(500f, 10f, 240f))
+        assertEquals(0, chartHourFromX(10f, 10f, 10f))
+    }
+
+    @Test fun overviewMetricSelectsTimelineWithoutSwitchingModes() {
+        compose.setContent {
+            MaterialTheme {
+                LocalityCompareContent(
+                    state = LocalityCompareState(favorites = cities, selectedIds = listOf("paris", "lyon")),
+                    calculator = ConfidenceCalculator(EqualWeighting()),
+                    onBack = {}, onToggleCity = {}, onRefresh = {},
+                    currentDate = LocalDate.of(2026, 10, 14)
+                )
+            }
+        }
+        waitForComparison()
+        compose.onNodeWithTag("compare_overview").assertExists()
+        compose.onNodeWithTag("compare_overview_metric_rain").performClick()
+        compose.onNodeWithTag("compare_hour_chart").assertExists()
+        compose.onNodeWithTag("compare_toggle_details").performClick()
+        compose.onNodeWithTag("compare_detail_rain_paris").assertExists()
+    }
+
+    @Test fun dateMetricAndHourChangesNeverRequestANetworkRefresh() {
+        val today = LocalDate.of(2026, 10, 14)
+        val tomorrow = today.plusDays(1)
+        val zone = ZoneId.of("Europe/Paris")
+        val hourly = HourlyForecast(
+            timestamps = (0L until 48).map { today.atStartOfDay(zone).toInstant().plusSeconds(it * 3600) },
+            temperature2m = List(48) { 17.0 }, precipitation = List(48) { 0.0 },
+            windSpeed10m = List(48) { 10.0 }, cloudCover = List(48) { 25 }
+        )
+        val daily = DailyForecast(
+            dates = listOf(today, tomorrow), tempMax = listOf(20.0, 22.0),
+            tempMin = listOf(12.0, 13.0), precipitationSum = listOf(0.0, 1.0),
+            windSpeedMax = listOf(14.0, 12.0)
+        )
+        val forecast = CityForecast(cities[0], mapOf(WeatherModel.GFS to
+            ForecastSeries(WeatherModel.GFS, hourly, daily)))
+        var refreshCount = 0
+        compose.setContent {
+            MaterialTheme {
+                LocalityCompareContent(
+                    state = LocalityCompareState(
+                        favorites = cities, selectedIds = listOf("paris", "lyon"),
+                        forecasts = mapOf("paris" to CompareForecastState.Ready(forecast))
+                    ),
+                    calculator = ConfidenceCalculator(EqualWeighting()),
+                    onBack = {}, onToggleCity = {}, onRefresh = { refreshCount++ },
+                    currentDate = today, currentHour = 12
+                )
+            }
+        }
+        waitForComparison()
+        compose.onNodeWithTag("compare_day_$tomorrow").performClick()
+        waitForComparison()
+        compose.onNodeWithTag("compare_overview_metric_uv").performClick()
+        compose.onNodeWithTag("compare_hour_chart")
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(16f) }
+        compose.runOnIdle { assertEquals(0, refreshCount) }
+        compose.onNodeWithTag("locality_compare_refresh").performClick()
+        compose.runOnIdle { assertEquals(1, refreshCount) }
     }
 
     @Test fun thirdFavoriteCanBeSelected() {
@@ -152,6 +237,7 @@ class LocalityCompareContentTest {
                 )
             }
         }
+        waitForComparison()
         compose.onNodeWithTag("compare_cloud_cover_paris").assertTextEquals("60 %")
         compose.onNodeWithTag("compare_cloud_bar_paris").assertExists()
         compose.onNodeWithTag("compare_rain_bar_paris").assertExists()
@@ -163,3 +249,4 @@ class LocalityCompareContentTest {
         compose.onNodeWithTag("compare_rain_bar_lyon").assertDoesNotExist()
     }
 }
+
