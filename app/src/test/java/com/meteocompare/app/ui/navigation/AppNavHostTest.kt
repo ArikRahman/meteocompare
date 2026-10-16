@@ -45,11 +45,11 @@ class AppNavHostTest {
     }
 
     @Test
-    fun tablet_selects_the_first_city_initially_or_after_removal() {
+    fun tablet_selects_the_last_city_initially_or_after_removal() {
         val cityIds = listOf("paris", "lyon")
 
-        assertEquals("paris", resolveSelectedCityId("removed", cityIds))
-        assertEquals("paris", resolveSelectedCityId(null, cityIds))
+        assertEquals("lyon", resolveSelectedCityId("removed", cityIds))
+        assertEquals("lyon", resolveSelectedCityId(null, cityIds))
     }
 
     @Test

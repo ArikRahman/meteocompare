@@ -996,4 +996,6 @@ datos</string>
     <string name="compare_hide_details">Ocultar detalles de las %1$s</string>
     <string name="compare_methodology">Cómo se calculan los datos</string>
     <string name="compare_rain_difference">%1$s: %2$s menos lluvia que %3$s</string>
+    <string name="home_city_card_expand">Toca para desplegar la tarjeta</string>
+    <string name="home_city_card_open_details">Toca para abrir los detalles de la ciudad</string>
 </resources>

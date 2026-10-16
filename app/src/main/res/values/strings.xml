@@ -1010,4 +1010,6 @@
     <string name="compare_hide_details">Masquer les détails de %1$s</string>
     <string name="compare_methodology">Comprendre les mesures</string>
     <string name="compare_rain_difference">%1$s : %2$s de pluie en moins que %3$s</string>
+    <string name="home_city_card_expand">Touchez pour déplier la carte</string>
+    <string name="home_city_card_open_details">Touchez pour ouvrir les détails de la ville</string>
 </resources>

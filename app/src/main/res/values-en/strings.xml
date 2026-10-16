@@ -1010,4 +1010,6 @@
     <string name="compare_hide_details">Hide details for %1$s</string>
     <string name="compare_methodology">How metrics are calculated</string>
     <string name="compare_rain_difference">%1$s: %2$s less rain than %3$s</string>
+    <string name="home_city_card_expand">Tap to expand this card</string>
+    <string name="home_city_card_open_details">Tap to open city details</string>
 </resources>

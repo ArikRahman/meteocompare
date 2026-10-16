@@ -993,4 +993,6 @@ Daten</string>
     <string name="compare_hide_details">Details für %1$s ausblenden</string>
     <string name="compare_methodology">Wie die Werte berechnet werden</string>
     <string name="compare_rain_difference">%1$s: %2$s weniger Regen als %3$s</string>
+    <string name="home_city_card_expand">Tippen, um die Karte aufzuklappen</string>
+    <string name="home_city_card_open_details">Tippen, um die Stadtdetails zu öffnen</string>
 </resources>

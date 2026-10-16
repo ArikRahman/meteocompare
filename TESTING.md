@@ -236,3 +236,21 @@ Tests ciblés dans `WeatherConditionConsensusTest` :
 - la convergence retournée reste le vote brut exact des modèles.
 
 Recette manuelle : vérifier sur Home, Détails, widgets et Engine Comparison qu'une majorité sémantique ne se fragmente plus entre sous-types voisins, tout en contrôlant que le pourcentage de convergence reste inchangé par rapport aux codes WMO bruts.
+
+## Cartes compactes / dépliées sur l'accueil
+
+- **JUnit (sans émulateur)** : `./gradlew :app:testDebugUnitTest --tests 'com.meteocompare.app.ui.citylist.CityCardExpansionTest'`
+  - zéro/une/deux localités, dernière favorite, nouvel ajout, rafraîchissement,
+    ordre inchangé ou modifié, suppression, premier/deuxième appui.
+- **Android Compose (émulateur/appareil)** :
+  `./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.meteocompare.app.ui.citylist.CityCardExpansionUiTest`
+  - résumé météo avec température, pluie, vent et convergence ; carte complète
+    préservée ; bascule exclusive ; navigation en deux temps ; ajout/suppression ;
+    chargement et erreur.
+- **Régression tablette** : `AdaptiveNavigationContentTest` et
+  `CityListContentTest` vérifient le focus de la ville récemment ajoutée,
+  l'état sélectionné et le volet détails.
+
+À vérifier également manuellement sur un petit écran et en mode sombre :
+largeurs très étroites, longues dénominations de villes, lecteur d'écran,
+unités impériales et actions contextuelles après dépliage.

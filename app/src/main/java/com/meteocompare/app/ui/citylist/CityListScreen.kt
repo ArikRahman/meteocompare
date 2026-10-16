@@ -9,10 +9,12 @@ import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.core.units.LocalWeatherUnits
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -51,6 +53,7 @@ import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Air
+import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.LocationCity
@@ -409,6 +412,26 @@ internal fun CityList(
     selectedCityId: String? = null,
     selectionEnabled: Boolean = false
 ) {
+    val cityIds = items.map { it.city.id }
+    var knownCityIds by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
+    var requestedExpandedCityId by rememberSaveable { mutableStateOf<String?>(null) }
+    val localExpandedId = resolveExpandedCityId(
+        expandedCityId = requestedExpandedCityId,
+        previousCityIds = knownCityIds,
+        cityIds = cityIds
+    )
+    // The tablet already owns the active city in its master/detail navigation.
+    // On the phone, expansion is local to Home and survives configuration changes.
+    val expandedCityId = if (selectionEnabled) {
+        selectedCityId?.takeIf { it in cityIds } ?: localExpandedId
+    } else {
+        localExpandedId
+    }
+    LaunchedEffect(cityIds) {
+        requestedExpandedCityId = localExpandedId
+        knownCityIds = ArrayList(cityIds)
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -430,7 +453,17 @@ internal fun CityList(
         items(items, key = { it.city.id }) { state ->
             CityCard(
                 state = state,
-                onClick = { onCityClick(state.city.id) },
+                onClick = {
+                    when (cityCardTapAction(state.city.id, expandedCityId)) {
+                        CityCardTapAction.EXPAND -> {
+                            requestedExpandedCityId = state.city.id
+                            // On a tablet the detail pane follows the expanded city.
+                            if (selectionEnabled) onCityClick(state.city.id)
+                        }
+                        CityCardTapAction.OPEN_DETAILS -> onCityClick(state.city.id)
+                    }
+                },
+                expanded = state.city.id == expandedCityId,
                 onGraphicViewClick = { onGraphicViewClick(state.city.id) },
                 onRadarClick = { onRadarClick(state.city.id) },
                 onRemove = { onRemove(state.city.id) },
@@ -510,6 +543,7 @@ internal fun CityCard(
     onMarineAction: () -> Unit = {},
     isSelected: Boolean = false,
     selectionEnabled: Boolean = false,
+    expanded: Boolean = true,
     units: WeatherUnits = LocalWeatherUnits.current
 ) {
     val resources = LocalResources.current
@@ -523,6 +557,9 @@ internal fun CityCard(
     val a11yDescription = A11yFormatter
         .cityCardDescription(resources, state, units = units) +
         (uvDescription?.let { ". $it" } ?: "")
+    val a11yTapHint = stringResource(
+        if (expanded) R.string.home_city_card_open_details else R.string.home_city_card_expand
+    )
     WeatherAccentTheme(condition = loaded?.currentCondition) {
         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
         val accentColor = WeatherAccent.of(condition = loaded?.currentCondition, isDark = isDark)
@@ -572,17 +609,27 @@ internal fun CityCard(
             animationSpec = tween(durationMillis = 180),
             label = "city-card-gradient-accent"
         )
+        // Keep the right edge aligned with full cards. The animated start
+        // inset narrows compact cards from the left without moving their right
+        // edge or recomputing weather data on each animation frame.
+        val compactStartInset by animateDpAsState(
+            targetValue = if (expanded) 0.dp else 32.dp,
+            animationSpec = tween(durationMillis = 260),
+            label = "city-card-compact-width"
+        )
 
         Card(
             onClick = onClick,
             modifier = modifier
+                .padding(start = compactStartInset)
                 .fillMaxWidth()
                 .alpha(emphasisAlpha)
                 .testTag("$TAG_CITY_CARD${state.city.id}")
                 .semantics(mergeDescendants = true) {
-                    contentDescription = a11yDescription
+                    contentDescription = "$a11yDescription. $a11yTapHint"
                     role = Role.Button
                     if (selectionEnabled) this.selected = isSelected
+                    this[CityCardExpandedKey] = expanded
                     this[CityCardVisualEmphasisKey] = selectionVisuals.emphasis
                     this[CityCardTargetAlphaKey] =
                         (selectionVisuals.targetAlpha * 100).roundToInt()
@@ -623,65 +670,310 @@ internal fun CityCard(
                     }
             ) {
 
-                Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp)) {
-                    CityCardHeader(
-                        city = state.city,
-                        sunrise = loaded?.sunrise,
-                        sunset = loaded?.sunset,
-                        marineEnabled = state.city.marineEnabled,
-                        marineLoading = state.isMarineLoading,
-                        onMarineAction = onMarineAction,
-                        onGraphicViewClick = onGraphicViewClick,
-                        onRadarClick = onRadarClick,
-                        onRemove = onRemove
-                    )
+                // AnimatedContent only transitions when the card is toggled.
+                // Fade + clipped size change avoids scaling the complex forecast
+                // tree; LazyColumn only composes cards currently in view.
+                AnimatedContent(
+                    targetState = expanded,
+                    transitionSpec = {
+                        (fadeIn(tween(180, delayMillis = 60)) togetherWith
+                            fadeOut(tween(120))).using(
+                            SizeTransform(clip = true, sizeAnimationSpec = { _, _ ->
+                                tween(durationMillis = 260)
+                            })
+                        )
+                    },
+                    contentAlignment = Alignment.TopStart,
+                    label = "city-card-expanded"
+                ) { isExpanded ->
+                    if (isExpanded) {
+                        Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp)) {
+                            CityCardHeader(
+                                city = state.city,
+                                sunrise = loaded?.sunrise,
+                                sunset = loaded?.sunset,
+                                marineEnabled = state.city.marineEnabled,
+                                marineLoading = state.isMarineLoading,
+                                onMarineAction = onMarineAction,
+                                onGraphicViewClick = onGraphicViewClick,
+                                onRadarClick = onRadarClick,
+                                onRemove = onRemove
+                            )
 
-                    AnimatedContent(
-                        targetState = state.forecast,
-                        transitionSpec = { fadeIn(tween(260)) togetherWith fadeOut(tween(220)) },
-                        label = "forecast-state",
-                        contentKey = {
-                            when (it) {
-                                ForecastState.Loading -> "loading"
-                                is ForecastState.Loaded -> "loaded"
-                                is ForecastState.Error -> "error"
+                            AnimatedContent(
+                                targetState = state.forecast,
+                                transitionSpec = { fadeIn(tween(260)) togetherWith fadeOut(tween(220)) },
+                                label = "forecast-state",
+                                contentKey = {
+                                    when (it) {
+                                        ForecastState.Loading -> "loading"
+                                        is ForecastState.Loaded -> "loaded"
+                                        is ForecastState.Error -> "error"
+                                    }
+                                }
+                            ) { forecast ->
+                                when (forecast) {
+                                    ForecastState.Loading -> CityCardLoading()
+                                    is ForecastState.Loaded -> CityCardLoaded(
+                                        today = forecast.today,
+                                        currentTemp = forecast.currentTemp,
+                                        currentCondition = forecast.currentCondition,
+                                        currentCloudCover = forecast.currentCloudCover,
+                                        uvIndex = uv,
+                                        fetchedAt = forecast.fetchedAt,
+                                        next12hTemps = forecast.next12hTemps,
+                                        next12hPrecipProb = forecast.next12hPrecipProb,
+                                        next12hPrecipMm = forecast.next12hPrecipMm,
+                                        next12hConditions = forecast.next12hConditions,
+                                        next12hScenarios = forecast.next12hScenarios,
+                                        hourlyStartTime = forecast.hourlyStartTime,
+                                        vigilance = state.vigilance,
+                                        cityTimezone = state.city.timezone,
+                                        latitude = state.city.latitude,
+                                        longitude = state.city.longitude,
+                                        accentColor = accentColor,
+                                        windDirectionDeg = forecast.windDirectionDeg
+                                    )
+
+                                    is ForecastState.Error -> CityCardError(
+                                        message = forecast.message
+                                            ?: forecast.messageRes?.let { stringResource(it) }
+                                            ?: stringResource(R.string.error_unknown),
+                                        onRetry = onRetry
+                                    )
+                                }
                             }
                         }
-                    ) { forecast ->
-                        when (forecast) {
-                            ForecastState.Loading -> CityCardLoading()
-                            is ForecastState.Loaded -> CityCardLoaded(
-                                today = forecast.today,
-                                currentTemp = forecast.currentTemp,
-                                currentCondition = forecast.currentCondition,
-                                currentCloudCover = forecast.currentCloudCover,
-                                uvIndex = uv,
-                                fetchedAt = forecast.fetchedAt,
-                                next12hTemps = forecast.next12hTemps,
-                                next12hPrecipProb = forecast.next12hPrecipProb,
-                                next12hPrecipMm = forecast.next12hPrecipMm,
-                                next12hConditions = forecast.next12hConditions,
-                                next12hScenarios = forecast.next12hScenarios,
-                                hourlyStartTime = forecast.hourlyStartTime,
-                                vigilance = state.vigilance,
-                                cityTimezone = state.city.timezone,
-                                latitude = state.city.latitude,
-                                longitude = state.city.longitude,
-                                accentColor = accentColor,
-                                windDirectionDeg = forecast.windDirectionDeg
-                            )
-
-                            is ForecastState.Error -> CityCardError(
-                                message = forecast.message
-                                    ?: forecast.messageRes?.let { stringResource(it) }
-                                    ?: stringResource(R.string.error_unknown),
-                                onRetry = onRetry
-                            )
-                        }
+                    } else {
+                        CompactCityCardContent(
+                            state = state,
+                            units = units,
+                            accentColor = accentColor
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+/** Short Home summary: the same consensus values as the full card, without the
+ * timeline, scenarios, UV, sun times or contextual actions. Tapping expands it. */
+@Composable
+private fun CompactCityCardContent(
+    state: CityCardState,
+    units: WeatherUnits,
+    accentColor: Color
+) {
+    val loaded = state.forecast as? ForecastState.Loaded
+    val precipitation = precipitationMetricPresentation(loaded?.today?.precipitation, units)
+    val wind = windMetricPresentation(
+        score = loaded?.today?.windMax ?: loaded?.today?.windGustMax,
+        gust = null,
+        units = units
+    )
+    val conditionLabel = when (val forecast = state.forecast) {
+        ForecastState.Loading -> stringResource(R.string.widget_error_loading)
+        is ForecastState.Error -> forecast.message
+            ?: forecast.messageRes?.let { stringResource(it) }
+            ?: stringResource(R.string.error_unknown)
+        is ForecastState.Loaded -> forecast.currentCondition?.let {
+            stringResource(weatherConditionLabelRes(it))
+        } ?: stringResource(R.string.weather_unknown)
+    }
+    val agreement = loaded?.today?.overallPercent
+    val upcomingTemperature = homeTemperatureTrend(
+        currentTemp = loaded?.currentTemp,
+        hourlyTemps = loaded?.next12hTemps.orEmpty()
+    )
+    val cloudCover = MetricPresentation(
+        value = loaded?.currentCloudCover?.let { "$it%" } ?: "—"
+    )
+    val isNight = remember(
+        state.city.latitude, state.city.longitude, state.city.timezone, loaded?.calculatedAt
+    ) {
+        val zone = runCatching {
+            java.time.ZoneId.of(state.city.timezone ?: "UTC")
+        }.getOrDefault(java.time.ZoneOffset.UTC)
+        com.meteocompare.app.domain.util.isNightAtCoordinates(
+            state.city.latitude, state.city.longitude, Instant.now(), zone
+        ) == true
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 22.dp, end = 14.dp, top = 10.dp, bottom = 11.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        // Title and convergence share the first line; the temperatures follow
+        // the condition label without being pushed to the right edge.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = state.city.name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(8.dp))
+            Surface(
+                modifier = Modifier.testTag("$TAG_CITY_CARD_COMPACT_AGREEMENT${state.city.id}"),
+                color = accentColor.copy(alpha = 0.10f),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.home_agreement_label),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = agreement?.let { "$it%" } ?: "—",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (agreement != null) confidenceColor(agreement)
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp).size(20.dp)
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Match the squared weather pictogram of the expanded card.
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(accentColor.copy(alpha = 0.10f), RoundedCornerShape(10.dp))
+                    .testTag("$TAG_CITY_CARD_COMPACT_CONDITION${state.city.id}"),
+                contentAlignment = Alignment.Center
+            ) {
+                if (loaded?.currentCondition != null) {
+                    AnimatedWeatherIcon(
+                        condition = loaded.currentCondition,
+                        size = 40.dp,
+                        animated = false,
+                        tint = Color.Unspecified,
+                        isNight = isNight
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Outlined.Thermostat,
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = conditionLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                // fill=false: a short label does not stretch to occupy the
+                // row, so the two temperatures follow it immediately.
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .testTag("$TAG_CITY_CARD_COMPACT_CONDITION_LABEL${state.city.id}")
+            )
+            Spacer(Modifier.width(6.dp))
+            Row(
+                modifier = Modifier.testTag("$TAG_CITY_CARD_COMPACT_TEMPERATURES${state.city.id}"),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Text(
+                    text = loaded?.currentTemp?.let { units.temp(it) } ?: "—",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                // Same H+3 forecast and trend chip as on the expanded card.
+                upcomingTemperature?.let { HomeTemperatureTrendChip(it, units) }
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("$TAG_CITY_CARD_COMPACT_METRICS${state.city.id}"),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Equal-width cells keep the three measures visually centered and
+            // predictable, including when one value is temporarily missing.
+            CompactCityMetric(
+                label = stringResource(R.string.metric_home_precipitation),
+                icon = Icons.Outlined.WaterDrop,
+                value = precipitation,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("$TAG_CITY_CARD_COMPACT_RAIN${state.city.id}")
+            )
+            CompactCityMetric(
+                label = stringResource(
+                    if (loaded?.today?.windMax == null && loaded?.today?.windGustMax != null)
+                        R.string.metric_home_gusts else R.string.metric_home_wind
+                ),
+                icon = Icons.Outlined.Air,
+                value = wind,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("$TAG_CITY_CARD_COMPACT_WIND${state.city.id}")
+            )
+            CompactCityMetric(
+                label = stringResource(R.string.compare_hour_cloud_cover),
+                icon = Icons.Outlined.Cloud,
+                value = cloudCover,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("$TAG_CITY_CARD_COMPACT_CLOUD${state.city.id}")
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompactCityMetric(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    value: MetricPresentation,
+    modifier: Modifier = Modifier
+) {
+    val displayedValue = listOfNotNull(value.value, value.unit).joinToString(" ")
+    Row(
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = "$label : $displayedValue"
+        },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.width(3.dp))
+        Text(
+            text = displayedValue,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

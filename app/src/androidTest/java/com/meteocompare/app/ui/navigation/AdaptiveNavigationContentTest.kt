@@ -67,7 +67,7 @@ class AdaptiveNavigationContentTest {
     }
 
     @Test
-    fun tablet_shows_both_panes_and_selects_the_first_city() {
+    fun tablet_shows_both_panes_and_selects_the_last_city() {
         composeRule.setContent {
             MeteoCompareTheme {
                 TestMasterDetail(cityIds = listOf("paris", "lyon"))
@@ -77,8 +77,8 @@ class AdaptiveNavigationContentTest {
         composeRule.onNodeWithTag(TAG_TABLET_LAYOUT).assertExists()
         composeRule.onNodeWithTag(TAG_TABLET_LIST_PANE).assertExists()
         composeRule.onNodeWithTag(TAG_TABLET_DETAIL_PANE).assertExists()
-        composeRule.onNodeWithTag(TAG_TEST_LIST_SELECTION).assertTextEquals("paris")
-        composeRule.onNodeWithTag(TAG_TEST_ACTIVE_CITY).assertTextEquals("paris")
+        composeRule.onNodeWithTag(TAG_TEST_LIST_SELECTION).assertTextEquals("lyon")
+        composeRule.onNodeWithTag(TAG_TEST_ACTIVE_CITY).assertTextEquals("lyon")
     }
 
     @Test
@@ -89,9 +89,23 @@ class AdaptiveNavigationContentTest {
             }
         }
 
-        composeRule.onNodeWithTag("$TAG_TEST_SELECT_CITY-lyon").performClick()
-        composeRule.onNodeWithTag(TAG_TEST_LIST_SELECTION).assertTextEquals("lyon")
-        composeRule.onNodeWithTag(TAG_TEST_ACTIVE_CITY).assertTextEquals("lyon")
+        composeRule.onNodeWithTag("$TAG_TEST_SELECT_CITY-paris").performClick()
+        composeRule.onNodeWithTag(TAG_TEST_LIST_SELECTION).assertTextEquals("paris")
+        composeRule.onNodeWithTag(TAG_TEST_ACTIVE_CITY).assertTextEquals("paris")
+    }
+
+    @Test
+    fun tablet_new_favorite_takes_focus_even_after_manual_selection() {
+        val cityIds = mutableStateOf(listOf("paris", "lyon"))
+        composeRule.setContent {
+            MeteoCompareTheme { TestMasterDetail(cityIds = cityIds.value) }
+        }
+        composeRule.onNodeWithTag("$TAG_TEST_SELECT_CITY-paris").performClick()
+        composeRule.onNodeWithTag(TAG_TEST_ACTIVE_CITY).assertTextEquals("paris")
+
+        composeRule.runOnIdle { cityIds.value = listOf("paris", "lyon", "brest") }
+        composeRule.onNodeWithTag(TAG_TEST_LIST_SELECTION).assertTextEquals("brest")
+        composeRule.onNodeWithTag(TAG_TEST_ACTIVE_CITY).assertTextEquals("brest")
     }
 
     @Test

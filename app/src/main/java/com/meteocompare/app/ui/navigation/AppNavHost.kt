@@ -49,6 +49,7 @@ import com.meteocompare.app.ui.citydetail.CityDetailScreen
 import com.meteocompare.app.ui.citydetail.confidence.ConfidenceExplanationScreen
 import com.meteocompare.app.ui.citylist.CityListScreen
 import com.meteocompare.app.ui.citylist.CityListViewModel
+import com.meteocompare.app.ui.citylist.resolveExpandedCityId
 import com.meteocompare.app.ui.components.AppToastLayer
 import com.meteocompare.app.ui.enginecomparison.EngineComparisonScreen
 import com.meteocompare.app.ui.graphicview.GraphicForecastScreen
@@ -82,7 +83,7 @@ internal fun resolveSelectedCityId(
     availableCityIds: List<String>
 ): String? = currentCityId
     ?.takeIf { it in availableCityIds }
-    ?: availableCityIds.firstOrNull()
+    ?: availableCityIds.lastOrNull()
 
 /**
  * Navigation adaptative : parcours plein écran sur téléphone, maître-détail sur
@@ -259,12 +260,16 @@ internal fun TabletMasterDetailContent(
     modifier: Modifier = Modifier
 ) {
     var selectedCityId by rememberSaveable { mutableStateOf<String?>(null) }
-    val activeCityId = resolveSelectedCityId(selectedCityId, availableCityIds)
+    var knownCityIds by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
+    val activeCityId = resolveExpandedCityId(
+        selectedCityId, knownCityIds, availableCityIds
+    )
 
-    // Sélectionne la première ville au démarrage et bascule proprement sur la
-    // suivante si la ville active est supprimée depuis son menu contextuel.
-    LaunchedEffect(availableCityIds, activeCityId) {
+    // La dernière localité ajoutée prend le focus, comme sur téléphone.
+    // La sélection manuelle reste stable pendant les rafraîchissements météo.
+    LaunchedEffect(availableCityIds) {
         selectedCityId = activeCityId
+        knownCityIds = ArrayList(availableCityIds)
     }
 
     BoxWithConstraints(modifier = modifier) {
