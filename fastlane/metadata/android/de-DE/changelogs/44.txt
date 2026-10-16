@@ -1,0 +1,1 @@
+Ortsvergleich: modernisierte Stundendiagramme mit beschrifteten Achsen, Skalen, metrikspezifischen Farben und Touch-Markierung. Übersicht für mehrere Orte, UV- und Bewölkungsvergleich, UK-Einheiten sowie Stabilitätsverbesserungen. Windrichtung jetzt als Himmelsrichtung in Vorhersagen, Ortsvergleich und Widgets.

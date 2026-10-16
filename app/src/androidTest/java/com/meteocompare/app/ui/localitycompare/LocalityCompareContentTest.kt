@@ -1,6 +1,12 @@
 package com.meteocompare.app.ui.localitycompare
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +32,8 @@ import com.meteocompare.app.domain.model.HourlyForecast
 import com.meteocompare.app.domain.model.WeatherModel
 import com.meteocompare.app.domain.model.UvForecast
 import com.meteocompare.app.domain.model.ClockFormatPreference
+import com.meteocompare.app.domain.model.UnitSystem
+import java.time.format.DateTimeFormatter
 import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.domain.usecase.ConfidenceCalculator
@@ -78,6 +86,46 @@ class LocalityCompareContentTest {
             compose.onAllNodesWithTag(tag, useUnmergedTree = true)
                 .fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    @Test fun chartAxesShowUnitsAndUpdateWithTheMetricAndUkProfile() {
+        compose.setContent {
+            var metric by remember { mutableStateOf(CompareChartMetric.TEMPERATURE) }
+            var unitSystem by remember { mutableStateOf(UnitSystem.UK_MIXED) }
+            MaterialTheme {
+                Column {
+                    Row {
+                        Button(onClick = { metric = CompareChartMetric.WIND },
+                            modifier = Modifier.testTag("chart_test_wind")) { Text("Wind") }
+                        Button(onClick = { metric = CompareChartMetric.RAIN },
+                            modifier = Modifier.testTag("chart_test_rain")) { Text("Rain") }
+                    }
+                    Row {
+                        Button(onClick = { metric = CompareChartMetric.UV },
+                            modifier = Modifier.testTag("chart_test_uv")) { Text("UV") }
+                        Button(onClick = { unitSystem = UnitSystem.IMPERIAL },
+                            modifier = Modifier.testTag("chart_test_imperial")) { Text("Imperial") }
+                    }
+                    LocalityHourlyChart(
+                        cities = listOf(HourChartCity("paris", "Paris", List(24) { null })),
+                        units = WeatherUnits(unitSystem), locale = Locale.UK,
+                        hourFormatter = DateTimeFormatter.ofPattern("h a", Locale.UK),
+                        selectedHour = 14, onHourSelected = {},
+                        metric = metric, onMetricSelected = { metric = it }
+                    )
+                }
+            }
+        }
+        compose.onNodeWithTag("compare_chart_axis_unit").assertTextContains("°C", substring = true)
+        compose.onNodeWithTag("chart_test_wind").performClick()
+        compose.onNodeWithTag("compare_chart_axis_unit").assertTextContains("mph", substring = true)
+        compose.onNodeWithTag("chart_test_rain").performClick()
+        compose.onNodeWithTag("compare_chart_axis_unit").assertTextContains("mm", substring = true)
+        compose.onNodeWithTag("chart_test_imperial").performClick()
+        compose.onNodeWithTag("compare_chart_axis_unit").assertTextContains("in", substring = true)
+        compose.onNodeWithTag("chart_test_uv").performClick()
+        compose.onNodeWithTag("compare_chart_axis_unit").assertTextContains("UV", substring = true)
+        compose.onNodeWithTag("compare_selected_hour").assertTextEquals("2 PM")
     }
 
     @Test fun hourDetailsDisclosureHasStableSemanticsAndActuallyToggles() {

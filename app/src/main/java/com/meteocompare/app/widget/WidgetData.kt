@@ -13,6 +13,8 @@ import com.meteocompare.app.R
 import com.meteocompare.app.core.locale.applyPersistedLocale
 import com.meteocompare.app.core.network.ApiResult
 import com.meteocompare.app.core.util.localDateIn
+import com.meteocompare.app.domain.util.forecastHourlyWindDirection
+import com.meteocompare.app.core.util.windCardinal
 import com.meteocompare.app.core.util.resolveZoneOrUtc
 import com.meteocompare.app.core.util.runSuspendCatching
 import com.meteocompare.app.domain.model.CityForecast
@@ -81,6 +83,8 @@ internal data class WidgetData(
      * l'exposent, mais robuste au cas d'un cache pré-feature).
      */
     val currentWindSpeedKmh: Double?,
+    /** Short localized meteorological compass point, null if direction unavailable. */
+    val currentWindCardinal: String? = null,
     /** Mode ayant produit la vue étendue. Conservé dans le snapshot pour que
      * le rendu puisse distinguer visuellement les 5 heures des 5 jours sans
      * essayer de déduire le mode depuis les libellés localisés. */
@@ -511,6 +515,7 @@ private suspend fun loadWidgetDataInternal(
                     }
                 )
             }.orEmpty()
+            val windAnchor = com.meteocompare.app.domain.util.HourlySampling.anchor(forecast, currentInstant)
             WidgetData(
                 unitSystem = units.system,
                 clockFormatPreference = clockPreference,
@@ -524,6 +529,10 @@ private suspend fun loadWidgetDataInternal(
                 precipConfidencePct = rainConfidence?.convergencePercent,
                 currentCloudCover = calc.currentCloudCover(forecast, currentInstant, engineContext),
                 currentWindSpeedKmh = calc.currentWindSpeed(forecast, currentInstant, engineContext),
+                currentWindCardinal = windCardinal(
+                    forecastHourlyWindDirection(forecast, windAnchor),
+                    localizedContext.resources.configuration.locales[0]
+                ),
                 forecastMode = forecastMode.normalized(),
                 forecasts = forecasts,
                 confidenceStrips = confidenceStrips,

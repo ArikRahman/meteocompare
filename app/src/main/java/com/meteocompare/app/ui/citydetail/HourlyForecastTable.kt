@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.core.util.windCardinal
+
 import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
@@ -290,6 +292,10 @@ private fun HourValueCell(
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (directionDegrees != null) {
                 WindArrow(directionDegrees = directionDegrees, size = 10.dp)
+                windCardinal(directionDegrees, LocalConfiguration.current.locales[0])?.let { cardinal ->
+                    Text(cardinal, style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(

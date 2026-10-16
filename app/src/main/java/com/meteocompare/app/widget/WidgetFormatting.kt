@@ -50,7 +50,7 @@ internal fun buildExtrasLine(data: WidgetData, units: WeatherUnits = WeatherUnit
     }
 
     data.currentWindSpeedKmh?.let { wind ->
-        parts += "↝ ${units.speed(wind)}"
+        parts += "↝ ${units.speed(wind)}" + (data.currentWindCardinal?.let { " · $it" } ?: "")
     }
 
     data.precipMm?.let { mm ->

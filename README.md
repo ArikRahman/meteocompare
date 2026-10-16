@@ -371,6 +371,7 @@ Fait :
 - ✅ v1.17.0 — Radar des pluies (observation et projection jusqu'à 60 minutes), amélioration des performances, correction de bugs 
 - ✅ v1.17.1 — Indices UV, widgets redimensionnables et amélioration des descriptions des moteurs météo
 - ✅ v1.17.2 — Choix 12 h / 24 h indépendant de la langue, icônes météo nocturnes, indices UV colorés, refonte du résumé du jour et correctifs de stabilité (publication après validation CI / appareil)
+- ✅ v1.18.0 — Comparateur de localités avec graphiques horaires (axes gradués, palette par métrique, sélection tactile), unités UK et optimisations de calculs.
 
 ## Licence
 

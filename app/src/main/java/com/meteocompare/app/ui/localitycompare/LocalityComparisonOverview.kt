@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.meteocompare.app.R
 import com.meteocompare.app.core.units.WeatherUnits
+import com.meteocompare.app.core.util.windCardinal
 import com.meteocompare.app.domain.model.City
 import com.meteocompare.app.domain.usecase.LocalityDayMetrics
 import com.meteocompare.app.ui.components.uvIntensityColor
@@ -249,7 +250,10 @@ internal fun displayDayMetric(
     CompareChartMetric.RAIN -> units.rain(day.precipitationMm, locale)
     CompareChartMetric.RAIN_RISK -> day.rainProbabilityPercent?.let { "$it %" } ?: "—"
     CompareChartMetric.CLOUDS -> day.cloudCoverPercent?.let { "$it %" } ?: "—"
-    CompareChartMetric.WIND -> units.speed(day.maxWindKmh, locale = locale)
+    CompareChartMetric.WIND -> units.speed(day.maxWindKmh, locale = locale).let { speed ->
+        if (day.maxWindKmh == null) speed else
+            windCardinal(day.windDirectionDeg, locale)?.let { "$speed · $it" } ?: speed
+    }
     CompareChartMetric.SUNSHINE -> day.estimatedSunHours?.let { "${units.number(it, 1, locale)} h" } ?: "—"
     CompareChartMetric.AGREEMENT -> day.agreementPercent?.let { "$it %" } ?: "—"
     CompareChartMetric.UV -> day.uvMax?.takeIf { it.isFinite() && it >= 0.0 }?.let { units.number(it, 1, locale) } ?: "—"

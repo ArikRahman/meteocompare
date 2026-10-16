@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.core.util.windCardinal
+
 import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
@@ -734,7 +736,10 @@ private fun TimelinePointColumn(
 
         TimelineMetric(
             icon = Icons.Outlined.Air,
-            value = point.windKmh?.let { units.speed(it) } ?: "—",
+            value = point.windKmh?.let { speed ->
+                val formatted = units.speed(speed)
+                windCardinal(point.windDirectionDeg, LocalConfiguration.current.locales[0])?.let { "$formatted · $it" } ?: formatted
+            } ?: "—",
             tint = windAccent
         )
         TimelineSupportingText(

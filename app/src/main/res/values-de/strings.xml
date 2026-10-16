@@ -22,6 +22,7 @@
     <string name="compare_sunshine_disclaimer">Geschätzte sonnenäquivalente Stunden auf Basis der Bewölkung und Tageslänge. Keine gemessene Sonnenscheindauer.</string>
     <string name="compare_agreement_disclaimer">Die Übereinstimmung beschreibt die Konvergenz der Modelle, nicht die Wahrscheinlichkeit einer korrekten Vorhersage. Der Tag gilt jeweils am Ort.</string>
 
+    <string name="compare_chart_x_axis">Ortszeit</string>
     <string name="compare_chart_touch_hint">Diagramm berühren oder ziehen</string>
 
     <string name="compare_hour_local_disclaimer">Die Uhrzeit gilt jeweils am Ort. Bei Beginn der Sommerzeit können einzelne Stunden entfallen.</string>

@@ -8,6 +8,7 @@ import com.meteocompare.app.R
 import com.meteocompare.app.core.network.ApiResult
 import com.meteocompare.app.core.network.NetworkMonitor
 import com.meteocompare.app.core.util.resolveZoneOrUtc
+import com.meteocompare.app.domain.util.forecastDailyWindDirection
 import com.meteocompare.app.core.util.runSuspendCatching
 import com.meteocompare.app.di.DefaultDispatcher
 import com.meteocompare.app.domain.model.City
@@ -1195,7 +1196,8 @@ class CityListViewModel @Inject constructor(
                         .atZone(zone)
                         .toLocalDateTime(),
                     sunrise = sunrise,
-                    sunset = sunset
+                    sunset = sunset,
+                    windDirectionDeg = forecastDailyWindDirection(result.data, today)
                 )
             } else {
                 if (BuildConfig.DEBUG) {

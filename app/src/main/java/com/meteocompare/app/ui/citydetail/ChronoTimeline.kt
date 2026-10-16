@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.core.util.windCardinal
+
 import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
@@ -812,6 +814,7 @@ private fun ChronoCloudLane(points: List<SimplifiedTimelinePoint>) {
 @Composable
 private fun ChronoWindLane(points: List<SimplifiedTimelinePoint>) {
     val accent = windMetricAccent()
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -842,7 +845,8 @@ private fun ChronoWindLane(points: List<SimplifiedTimelinePoint>) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = point.windKmh?.let {
-                                    stringResource(R.string.forecast_insight_metric_wind, it)
+                                    val speed = stringResource(R.string.forecast_insight_metric_wind, it)
+                                    windCardinal(point.windDirectionDeg, locale)?.let { direction -> "$speed · $direction" } ?: speed
                                 } ?: "—",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,

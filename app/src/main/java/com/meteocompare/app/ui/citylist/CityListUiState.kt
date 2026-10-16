@@ -119,7 +119,8 @@ sealed interface ForecastState {
         val next12hScenarios: List<WeatherScenario> = emptyList(),
         val hourlyStartTime: LocalDateTime? = null,
         val sunrise: LocalTime? = null,
-        val sunset: LocalTime? = null
+        val sunset: LocalTime? = null,
+        val windDirectionDeg: Int? = null
     ) : ForecastState
     data class Error(
         val message: String? = null,

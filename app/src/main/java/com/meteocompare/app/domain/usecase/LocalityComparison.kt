@@ -1,6 +1,8 @@
 package com.meteocompare.app.domain.usecase
 
 import com.meteocompare.app.core.util.resolveZoneOrUtc
+import com.meteocompare.app.core.util.meanWindDirection
+import com.meteocompare.app.domain.util.forecastDailyWindDirection
 import com.meteocompare.app.domain.model.UvForecast
 import com.meteocompare.app.domain.model.validUvIndexOrNull
 import com.meteocompare.app.domain.util.forecastSolarWindow
@@ -31,7 +33,8 @@ data class LocalityDayMetrics(
     /** Model convergence (not forecast accuracy or rain probability). */
     val agreementPercent: Int?,
     val modelCount: Int,
-    val uvMax: Double? = null
+    val uvMax: Double? = null,
+    val windDirectionDeg: Int? = null
 )
 
 /**
@@ -72,7 +75,8 @@ fun buildLocalityDayMetrics(
         estimatedSunHours = estimatedSunshineHours(forecast, date),
         agreementPercent = daily.convergencePercent?.coerceIn(0, 100),
         modelCount = count,
-        uvMax = uv?.maxOn(date)?.validUvIndexOrNull()
+        uvMax = uv?.maxOn(date)?.validUvIndexOrNull(),
+        windDirectionDeg = forecastDailyWindDirection(forecast, date)
     )
 }
 
@@ -187,7 +191,8 @@ data class LocalityHourMetrics(
     /** Temperature-model convergence at the selected exact instant. */
     val agreementPercent: Int?,
     val uvIndex: Double?,
-    val modelCount: Int
+    val modelCount: Int,
+    val windDirectionDeg: Int? = null
 )
 
 /** No implicit DST gap-shifting: e.g. 02:00 on a spring-forward day is missing. */
@@ -241,6 +246,10 @@ fun buildLocalityHourMetrics(
     val wind = medianAvailable(samples.mapNotNull { (data, i) ->
         data.windSpeed10m.getOrNull(i)?.takeIf { it.isFinite() && it >= 0.0 }
     })
+    val windDirection = meanWindDirection(samples.mapNotNull { (data, i) ->
+        if (data.windSpeed10m.getOrNull(i)?.takeIf { it.isFinite() && it > 0.0 } == null) null
+        else data.windDirection10m.getOrNull(i)
+    })
     val window = solarWindow ?: forecastSolarWindow(forecast, date)
     val sunHours = if (clouds != null && window.isValid) {
         val sunrise = requireNotNull(window.sunrise)
@@ -261,6 +270,7 @@ fun buildLocalityHourMetrics(
         agreementPercent = calculator.hourlyTemperatureAgreementAt(forecast, instant),
         // An IANA local hour can fall at :15/:30/:45 UTC; do not truncate UTC hours.
         uvIndex = uv?.hourly?.get(instant)?.validUvIndexOrNull(),
-        modelCount = samples.size
+        modelCount = samples.size,
+        windDirectionDeg = windDirection
     )
 }

@@ -22,6 +22,7 @@
     <string name="compare_sunshine_disclaimer">Horas equivalentes de cielo despejado estimadas a partir de la nubosidad y la duración del día. No es insolación medida.</string>
     <string name="compare_agreement_disclaimer">El acuerdo indica la convergencia entre modelos, no la probabilidad de acierto. Cada fecha corresponde al día local de cada ciudad.</string>
 
+    <string name="compare_chart_x_axis">Hora local</string>
     <string name="compare_chart_touch_hint">Toca o desliza en el gráfico</string>
 
     <string name="compare_hour_local_disclaimer">Se usa la hora local de cada ciudad. Algunas horas no existen al comenzar el horario de verano.</string>

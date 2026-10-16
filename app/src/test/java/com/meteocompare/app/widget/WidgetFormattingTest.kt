@@ -47,6 +47,14 @@ class WidgetFormattingTest {
     }
 
     @Test
+    fun `buildExtrasLine - direction cardinale quand disponible`() {
+        val data = WidgetData.empty(cityName = "London", error = WidgetError.Loading)
+            .copy(currentCondition = WeatherCondition.CLEAR, currentWindSpeedKmh = 12.4,
+                currentWindCardinal = "NW")
+        assertEquals("↝ 12 km/h · NW", buildExtrasLine(data))
+    }
+
+    @Test
     fun `buildExtrasLine - vent arrondi à l'entier`() {
         // 14.7 → 15 (arrondi standard), 14.3 → 14
         val data17 = WidgetData.empty(cityName = "P", error = WidgetError.Loading)

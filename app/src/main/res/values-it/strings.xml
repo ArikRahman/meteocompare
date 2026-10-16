@@ -22,6 +22,7 @@
     <string name="compare_sunshine_disclaimer">Ore equivalenti di cielo sereno stimate da nuvolosità e durata del giorno. Non è una misura delle ore di sole.</string>
     <string name="compare_agreement_disclaimer">L’accordo rappresenta la convergenza tra modelli, non la probabilità di correttezza della previsione. Ogni data è riferita al giorno locale della città.</string>
 
+    <string name="compare_chart_x_axis">Ora locale</string>
     <string name="compare_chart_touch_hint">Tocca o trascina sul grafico</string>
 
     <string name="compare_hour_local_disclaimer">Gli orari sono locali a ciascuna città. Alcune ore possono mancare con il passaggio all’ora legale.</string>

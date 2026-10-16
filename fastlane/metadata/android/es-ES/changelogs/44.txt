@@ -1,0 +1,1 @@
+Comparación de ciudades: gráficos horarios renovados, ejes y escalas legibles, colores por métrica y cursor táctil. Vista conjunta, comparación UV y nubosidad, unidades UK y mejoras de estabilidad y rendimiento. Dirección del viento con puntos cardinales en previsiones, comparaciones y widgets.

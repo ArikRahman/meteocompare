@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.core.util.windCardinal
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -270,6 +272,10 @@ private fun ValueCell(
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (directionDegrees != null) {
                 WindArrow(directionDegrees = directionDegrees, size = 10.dp)
+                windCardinal(directionDegrees, LocalConfiguration.current.locales[0])?.let { cardinal ->
+                    Text(cardinal, style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(

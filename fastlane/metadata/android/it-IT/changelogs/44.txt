@@ -1,0 +1,1 @@
+Confronto città: nuovi grafici orari con assi e scale leggibili, colori per metrica e cursore touch. Vista unificata, confronto UV e nuvolosità, unità UK e miglioramenti di stabilità e prestazioni. Direzione del vento con punti cardinali nelle previsioni, nei confronti e nei widget.

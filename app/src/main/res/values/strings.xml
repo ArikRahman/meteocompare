@@ -22,6 +22,7 @@
     <string name="compare_sunshine_disclaimer">Ensoleillement estimé en heures de ciel dégagé équivalentes, d’après la couverture nuageuse et la durée du jour. Ce n’est pas une mesure de la durée d’ensoleillement.</string>
     <string name="compare_agreement_disclaimer">L’accord décrit la convergence des modèles, pas la probabilité que la prévision soit juste. Les dates correspondent au jour local de chaque ville.</string>
 
+    <string name="compare_chart_x_axis">Heure locale</string>
     <string name="compare_chart_touch_hint">Touchez ou glissez sur le graphique</string>
 
     <string name="compare_hour_local_disclaimer">Les heures indiquées sont locales à chaque ville. Lors du passage à l’heure d’été, certaines heures peuvent être absentes.</string>

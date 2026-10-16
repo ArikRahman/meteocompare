@@ -46,6 +46,7 @@ class LocalityComparisonTest {
             dates = listOf(day),
             tempMax = listOf(25.0), tempMin = listOf(15.0),
             precipitationSum = listOf(2.0), windSpeedMax = listOf(15.0),
+            windDirection10mDominant = listOf(270),
             sunrise = listOf(rise), sunset = listOf(set),
             precipitationProbabilityMax = listOf(80)
         )
@@ -67,6 +68,7 @@ class LocalityComparisonTest {
         assertEquals(25.0, result.maxC!!, 0.001)
         assertEquals(15.0, result.minC!!, 0.001)
         assertEquals(15.0, result.maxWindKmh!!, 0.001)
+        assertEquals(270, result.windDirectionDeg)
         assertEquals(12.0, result.estimatedSunHours!!, 0.001)
         assertEquals(2, result.modelCount)
         assertEquals(80, result.rainProbabilityPercent)
@@ -92,12 +94,14 @@ class LocalityComparisonTest {
         val daily = DailyForecast(
             dates = listOf(date), tempMax = listOf(28.0), tempMin = listOf(15.0),
             precipitationSum = listOf(12.0), windSpeedMax = listOf(48.0),
+            windDirection10mDominant = listOf(350),
             sunrise = listOf(rise), sunset = listOf(set)
         )
         fun series(model: WeatherModel, temp: Double, rain: Double, clouds: Int, probability: Int) =
             ForecastSeries(model, HourlyForecast(
                 timestamps = listOf(target), temperature2m = listOf(temp),
                 precipitation = listOf(rain), windSpeed10m = listOf(18.0),
+                windDirection10m = listOf(if (model == WeatherModel.GFS) 350 else 10),
                 precipitationProbability = listOf(probability), cloudCover = listOf(clouds)
             ), daily)
         val forecast = CityForecast(
@@ -116,12 +120,14 @@ class LocalityComparisonTest {
         assertEquals(50, hourly.rainProbabilityPercent)
         assertEquals(50, hourly.cloudCoverPercent)
         assertEquals(18.0, hourly.windKmh!!, 0.001)
+        assertEquals(0, hourly.windDirectionDeg)
         assertEquals(0.5, hourly.estimatedSunHours!!, 0.001)
         assertEquals(6.2, hourly.uvIndex!!, 0.001)
         assertEquals(2, hourly.modelCount)
         assertNotNull(hourly.agreementPercent)
         val dayMetrics = requireNotNull(buildLocalityDayMetrics(forecast, date, calculator, uv))
         assertEquals(7.8, dayMetrics.uvMax!!, 0.001)
+        assertEquals(350, dayMetrics.windDirectionDeg)
         assertNull(buildLocalityHourMetrics(forecast, date, 13, calculator, uv))
     }
 

@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.graphicview
 
+import com.meteocompare.app.core.util.windCardinal
+
 import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
@@ -696,7 +698,9 @@ private fun GraphicSelectionHeader(
                 detail = buildString {
                     append(formatRange(point.windMinAcrossModels, point.windMaxAcrossModels, WeatherUnit.WIND_SPEED, 0, units = units))
                     point.windGustKmh?.let { append(" · $gustShort ${units.speed(it)}") }
-                    point.windDirectionDeg?.let { append(" · ${it}°") }
+                    point.windDirectionDeg?.let { deg ->
+                        windCardinal(deg, locale)?.let { append(" · $it") }
+                    }
                 },
                 agreement = point.consensusFor(ForecastMetric.WIND)?.percent
             )
@@ -1420,7 +1424,7 @@ private fun WindPlot(
             WindSelectionBadge(
                 mean = selected.windKmh?.let { units.speed(it) } ?: "—",
                 gust = selected.windGustKmh?.let { "$gustShort ${units.speed(it)}" },
-                direction = selected.windDirectionDeg?.let { "${it}°" },
+                direction = windCardinal(selected.windDirectionDeg, androidx.compose.ui.platform.LocalConfiguration.current.locales[0]),
                 selectedIndex = selectedIndex,
                 pointCount = points.size
             )

@@ -1,5 +1,7 @@
 package com.meteocompare.app.ui.citylist
 
+import com.meteocompare.app.core.util.windCardinal
+
 import com.meteocompare.app.ui.components.UvIndexGauge
 
 import com.meteocompare.app.core.units.WeatherUnit
@@ -665,7 +667,8 @@ internal fun CityCard(
                                 cityTimezone = state.city.timezone,
                                 latitude = state.city.latitude,
                                 longitude = state.city.longitude,
-                                accentColor = accentColor
+                                accentColor = accentColor,
+                                windDirectionDeg = forecast.windDirectionDeg
                             )
 
                             is ForecastState.Error -> CityCardError(
@@ -835,7 +838,8 @@ private fun CityCardLoaded(
     cityTimezone: String?,
     latitude: Double,
     longitude: Double,
-    accentColor: Color
+    accentColor: Color,
+    windDirectionDeg: Int? = null
 ) {
     val zone = remember(cityTimezone) {
         try { java.time.ZoneId.of(cityTimezone ?: "UTC") } catch (_: Exception) { java.time.ZoneOffset.UTC }
@@ -870,7 +874,7 @@ private fun CityCardLoaded(
             UvIndexGauge(uvIndex, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(7.dp))
         }
-        TodayMetricGrid(today = today)
+        TodayMetricGrid(today = today, windDirectionDeg = windDirectionDeg)
 
         vigilance?.takeIf { it.activeAlerts.isNotEmpty() }?.let { alertForecast ->
             Spacer(Modifier.height(4.dp))
@@ -1096,7 +1100,11 @@ private fun HomeAgreementBadge(percent: Int) {
 }
 
 @Composable
-private fun TodayMetricGrid(today: DayConfidence, units: WeatherUnits = LocalWeatherUnits.current) {
+private fun TodayMetricGrid(
+    today: DayConfidence,
+    units: WeatherUnits = LocalWeatherUnits.current,
+    windDirectionDeg: Int? = null
+) {
     val temperature = temperatureMetricPresentation(today.tempMax, units = units)
     val precipitation = precipitationMetricPresentation(today.precipitation)
     val primaryWind = today.windMax ?: today.windGustMax
@@ -1105,6 +1113,7 @@ private fun TodayMetricGrid(today: DayConfidence, units: WeatherUnits = LocalWea
         score = primaryWind,
         gust = if (gustOnly) null else today.windGustMax
     )
+    val windCardinalLabel = windCardinal(windDirectionDeg, androidx.compose.ui.platform.LocalConfiguration.current.locales[0])
 
     Surface(
         modifier = Modifier
@@ -1165,7 +1174,7 @@ private fun TodayMetricGrid(today: DayConfidence, units: WeatherUnits = LocalWea
                 icon = Icons.Outlined.Air,
                 value = wind.value,
                 unit = wind.unit,
-                supporting = wind.supporting,
+                supporting = listOfNotNull(windCardinalLabel, wind.supporting).joinToString(" · ").ifEmpty { null },
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 5.dp),

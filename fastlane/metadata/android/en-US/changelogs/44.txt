@@ -1,0 +1,1 @@
+City comparison: refreshed hourly charts with readable axes, labeled ticks, metric-specific colors and touch cursor. Unified side-by-side overview, UV and cloud comparison, UK units option, plus stability and performance improvements. Wind direction now shown as compass points throughout forecasts, comparisons and widgets.

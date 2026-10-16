@@ -61,4 +61,36 @@ class LocalityHourlyChartTest {
         assertEquals(10.0, windMixed!!, 0.00001)
         assertEquals(35.0, chartPoints(cities, CompareChartMetric.RAIN_RISK, mixed).single()[0]!!, 0.00001)
     }
+
+    @Test fun axisRangesRespectPhysicalBoundsAndDontInventValues() {
+        val data = listOf(listOf(8.0, 10.0, null))
+        assertEquals(ChartRange(0.0, 100.0, true), metricChartRange(data, CompareChartMetric.CLOUDS))
+        assertEquals(ChartRange(0.0, 100.0, true), metricChartRange(data, CompareChartMetric.RAIN_RISK))
+        assertEquals(ChartRange(0.0, 100.0, true), metricChartRange(data, CompareChartMetric.AGREEMENT))
+        assertEquals(ChartRange(0.0, 1.0, true), metricChartRange(data, CompareChartMetric.SUNSHINE))
+        val rain = metricChartRange(data, CompareChartMetric.RAIN)
+        assertEquals(0.0, rain.lower, 0.0)
+        assertEquals(11.2, rain.upper, 0.00001)
+        val uv = metricChartRange(data, CompareChartMetric.UV)
+        assertEquals(0.0, uv.lower, 0.0)
+        assertEquals(true, uv.upper >= 10.0)
+        assertEquals(false, metricChartRange(listOf(listOf(null, Double.NaN)), CompareChartMetric.UV).hasData)
+    }
+
+    @Test fun axisUnitsFollowMetricImperialAndUkChoice() {
+        val metric = WeatherUnits()
+        val imperial = WeatherUnits(UnitSystem.IMPERIAL)
+        val uk = WeatherUnits(UnitSystem.UK_MIXED)
+        assertEquals("°C", chartAxisUnit(CompareChartMetric.TEMPERATURE, metric))
+        assertEquals("°F", chartAxisUnit(CompareChartMetric.TEMPERATURE, imperial))
+        assertEquals("°C", chartAxisUnit(CompareChartMetric.TEMPERATURE, uk))
+        assertEquals("km/h", chartAxisUnit(CompareChartMetric.WIND, metric))
+        assertEquals("mph", chartAxisUnit(CompareChartMetric.WIND, uk))
+        assertEquals("in", chartAxisUnit(CompareChartMetric.RAIN, imperial))
+        assertEquals("mm", chartAxisUnit(CompareChartMetric.RAIN, uk))
+        assertEquals("%", chartAxisUnit(CompareChartMetric.CLOUDS, metric))
+        assertEquals("UV", chartAxisUnit(CompareChartMetric.UV, metric))
+        assertEquals("0,5", chartAxisLabel(0.5, 0.25, CompareChartMetric.SUNSHINE, metric, java.util.Locale.FRANCE))
+        assertEquals("0.02", chartAxisLabel(0.02, 0.01, CompareChartMetric.RAIN, imperial, java.util.Locale.US))
+    }
 }

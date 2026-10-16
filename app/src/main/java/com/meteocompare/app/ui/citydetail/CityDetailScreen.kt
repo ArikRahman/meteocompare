@@ -1,5 +1,8 @@
 package com.meteocompare.app.ui.citydetail
 
+import com.meteocompare.app.core.util.windCardinal
+import com.meteocompare.app.domain.util.forecastDailyWindDirection
+
 import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
@@ -1619,6 +1622,11 @@ internal fun TodaySummaryCard(
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val weatherAccent = WeatherAccent.of(currentCondition, isDark)
     val dateLocale = LocalConfiguration.current.locales[0]
+    // Préparer la direction ici, où la prévision et la locale sont disponibles.
+    // La grille reçoit un libellé prêt à afficher et ne recalcule rien.
+    val windDirectionLabel = remember(forecast, today.date, dateLocale) {
+        windCardinal(forecast?.let { forecastDailyWindDirection(it, today.date) }, dateLocale)
+    }
     val longDateFmt = remember(dateLocale) {
         DateTimeFormatter.ofPattern("EEEE d MMMM", dateLocale)
     }
@@ -1739,7 +1747,8 @@ internal fun TodaySummaryCard(
                         today = today,
                         samples = remember(forecast, today.date) {
                             buildTodaySummaryDispersionSamples(forecast, today.date)
-                        }
+                        },
+                        windDirectionLabel = windDirectionLabel
                     )
                 }
             }
@@ -1855,7 +1864,8 @@ private fun buildTodaySummaryDispersionSamples(
 @Composable
 private fun DetailMetricGrid(
     today: DayConfidence,
-    samples: TodaySummaryDispersionSamples
+    samples: TodaySummaryDispersionSamples,
+    windDirectionLabel: String?
 ) {
     val hasAnyMetric = today.tempMin != null || today.tempMax != null ||
             today.precipitation != null || today.windMax != null || today.windGustMax != null
@@ -1969,7 +1979,8 @@ private fun DetailMetricGrid(
                         if (isGustOnly) R.string.var_wind_gust_max else R.string.var_wind_max
                     ),
                     icon = Icons.Outlined.Air,
-                    accent = windMetricAccent()
+                    accent = windMetricAccent(),
+                    trailing = windDirectionLabel
                 )
 
                 today.windMax?.let { score ->
