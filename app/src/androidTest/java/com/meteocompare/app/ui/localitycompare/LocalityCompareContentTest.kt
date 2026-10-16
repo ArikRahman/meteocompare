@@ -2,13 +2,20 @@ package com.meteocompare.app.ui.localitycompare
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
 import com.meteocompare.app.domain.model.City
@@ -20,17 +27,22 @@ import com.meteocompare.app.domain.model.WeatherModel
 import com.meteocompare.app.domain.model.UvForecast
 import com.meteocompare.app.domain.model.ClockFormatPreference
 import com.meteocompare.app.core.locale.LocalClockFormatPreference
+import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.domain.usecase.ConfidenceCalculator
 import com.meteocompare.app.domain.usecase.EqualWeighting
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
 class LocalityCompareContentTest {
     @get:Rule val compose = createComposeRule()
+    // Stable across recompositions: otherwise remember(calculator) rebuilds the
+    // comparison cache and restarts its asynchronous preparation after every click.
+    private val calculator = ConfidenceCalculator(EqualWeighting())
     private val cities = listOf(
         City("paris", "Paris", null, "France", 48.85, 2.35, "Europe/Paris"),
         City("lyon", "Lyon", null, "France", 45.75, 4.85, "Europe/Paris"),
@@ -41,6 +53,92 @@ class LocalityCompareContentTest {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithTag("compare_overview").fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    /**
+     * The comparison has a full overview and a 24-hour chart before its disclosure.
+     * On a phone the details button is usually below the viewport. Compose Test's
+     * performClick() does not implicitly scroll a vertically scrolling Column.
+     * Explicitly bring the target into view and prove the real click opened it.
+     */
+    private fun openComparisonDetails() {
+        compose.onNodeWithTag("compare_hour_details_collapsed", useUnmergedTree = true)
+            .assertExists()
+        compose.onNodeWithTag("compare_toggle_details")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+        compose.onNodeWithTag("compare_hour_details_expanded", useUnmergedTree = true)
+            .assertExists()
+    }
+
+    /** Assert the actual disclosed value, not a transient parent semantics tag. */
+    private fun waitForHourlyDetail(tag: String) {
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithTag(tag, useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    @Test fun hourDetailsDisclosureHasStableSemanticsAndActuallyToggles() {
+        compose.setContent {
+            var expanded by remember { mutableStateOf(false) }
+            MaterialTheme {
+                LocalityHourDetails(
+                    cities = listOf(HourChartCity("paris", "Paris", List(24) { null })),
+                    selectedHour = 14,
+                    hourLabel = "14h",
+                    expanded = expanded,
+                    onToggle = { expanded = !expanded },
+                    units = WeatherUnits(),
+                    locale = Locale.FRANCE
+                )
+            }
+        }
+        compose.onNodeWithTag("compare_hour_details_collapsed").assertExists()
+        compose.onNodeWithTag("compare_toggle_details").performClick()
+        compose.onNodeWithTag("compare_hour_details_expanded").assertExists()
+        compose.onNodeWithTag("compare_detail_uv_paris", useUnmergedTree = true)
+            .assertTextEquals("—")
+        compose.onNodeWithTag("compare_toggle_details").performClick()
+        compose.onNodeWithTag("compare_hour_details_collapsed").assertExists()
+        compose.onNodeWithTag("compare_detail_uv_paris", useUnmergedTree = true)
+            .assertDoesNotExist()
+    }
+
+    @Test fun expandedDetailsStayMountedWhileForecastSnapshotChanges() {
+        val date = LocalDate.of(2026, 10, 14)
+        var comparisonState by mutableStateOf(
+            LocalityCompareState(
+                favorites = cities,
+                selectedIds = listOf("paris", "lyon"),
+                forecasts = mapOf("paris" to CompareForecastState.Loading)
+            )
+        )
+        compose.setContent {
+            MaterialTheme {
+                LocalityCompareContent(
+                    state = comparisonState,
+                    calculator = calculator,
+                    onBack = {}, onToggleCity = {}, onRefresh = {},
+                    currentDate = date, currentHour = 14
+                )
+            }
+        }
+        waitForComparison()
+        openComparisonDetails()
+        // A new asynchronous preparation must never unmount the disclosure.
+        compose.runOnIdle {
+            comparisonState = comparisonState.copy(
+                forecasts = mapOf(
+                    "paris" to CompareForecastState.Failed("offline"),
+                    "lyon" to CompareForecastState.Loading
+                )
+            )
+        }
+        compose.onNodeWithTag("compare_hour_details_expanded", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag("compare_detail_uv_paris", useUnmergedTree = true)
+            .assertTextEquals("—")
     }
 
     @Test fun selectedCities_renderInParallelEvenWhenAForecastIsUnavailable() {
@@ -55,7 +153,7 @@ class LocalityCompareContentTest {
                             "lyon" to CompareForecastState.Loading
                         )
                     ),
-                    calculator = ConfidenceCalculator(EqualWeighting()),
+                    calculator = calculator,
                     onBack = {}, onToggleCity = {}, onRefresh = {},
                     currentDate = LocalDate.of(2026, 10, 14)
                 )
@@ -83,18 +181,21 @@ class LocalityCompareContentTest {
         )
         val forecast = CityForecast(city, mapOf(WeatherModel.GFS to
             ForecastSeries(WeatherModel.GFS, hourly, daily)))
+        // Keep test input identity stable across Compose recompositions, as in the
+        // production StateFlow. In particular UV snapshots must not be recreated.
+        val comparisonState = LocalityCompareState(
+            favorites = cities, selectedIds = listOf("paris", "lyon"),
+            forecasts = mapOf("paris" to CompareForecastState.Ready(forecast)),
+            uvForecasts = mapOf("paris" to UvForecast(
+                mapOf(instant to 5.6), mapOf(date to 8.3)
+            ))
+        )
         compose.setContent {
             CompositionLocalProvider(LocalClockFormatPreference provides ClockFormatPreference.HOUR_12) {
                 MaterialTheme {
                     LocalityCompareContent(
-                        state = LocalityCompareState(
-                            favorites = cities, selectedIds = listOf("paris", "lyon"),
-                            forecasts = mapOf("paris" to CompareForecastState.Ready(forecast)),
-                            uvForecasts = mapOf("paris" to UvForecast(
-                                mapOf(instant to 5.6), mapOf(date to 8.3)
-                            ))
-                        ),
-                        calculator = ConfidenceCalculator(EqualWeighting()),
+                        state = comparisonState,
+                        calculator = calculator,
                         onBack = {}, onToggleCity = {}, onRefresh = {},
                         currentDate = date, currentHour = 14
                     )
@@ -113,9 +214,12 @@ class LocalityCompareContentTest {
         compose.onNodeWithTag("compare_selected_hour").assertTextEquals("2 PM")
         compose.onNodeWithTag("compare_chart_metric_rain").performClick()
         compose.onNodeWithTag("compare_chart_value_paris").assertTextContains("mm", substring = true)
-        compose.onNodeWithTag("compare_toggle_details").performClick()
-        compose.onNodeWithTag("compare_detail_uv_paris").assertTextContains("5", substring = true)
-        compose.onNodeWithTag("compare_detail_clouds_paris").assertTextEquals("25 %")
+        openComparisonDetails()
+        waitForHourlyDetail("compare_detail_uv_paris")
+        compose.onNodeWithTag("compare_detail_uv_paris", useUnmergedTree = true)
+            .assertTextContains("5", substring = true)
+        compose.onNodeWithTag("compare_detail_clouds_paris", useUnmergedTree = true)
+            .assertTextEquals("25 %")
         compose.onNodeWithTag("compare_column_lyon").assertExists()
         // Touching an hourly value never changes the daily summary.
         compose.onNodeWithTag("compare_uv_paris").assertTextContains("8", substring = true)
@@ -145,15 +249,16 @@ class LocalityCompareContentTest {
                 precipitationSum = listOf(2.0), windSpeedMax = listOf(14.0)
             )
         )))
+        val comparisonState = LocalityCompareState(
+            favorites = cities,
+            selectedIds = listOf("paris", "lyon"),
+            forecasts = mapOf("paris" to CompareForecastState.Ready(forecast))
+        )
         compose.setContent {
             MaterialTheme {
                 LocalityCompareContent(
-                    state = LocalityCompareState(
-                        favorites = cities,
-                        selectedIds = listOf("paris", "lyon"),
-                        forecasts = mapOf("paris" to CompareForecastState.Ready(forecast))
-                    ),
-                    calculator = ConfidenceCalculator(EqualWeighting()),
+                    state = comparisonState,
+                    calculator = calculator,
                     onBack = {}, onToggleCity = {}, onRefresh = {},
                     currentDate = date, currentHour = 14
                 )
@@ -164,11 +269,8 @@ class LocalityCompareContentTest {
         compose.onNodeWithTag("compare_hour_chart").assertExists()
         compose.onNodeWithTag("compare_chart_metric_rain").assertIsSelected()
         compose.onNodeWithTag("compare_detail_rain_paris", useUnmergedTree = true).assertDoesNotExist()
-        compose.onNodeWithTag("compare_toggle_details").performClick()
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithTag("compare_detail_rain_paris", useUnmergedTree = true)
-                .fetchSemanticsNodes().isNotEmpty()
-        }
+        openComparisonDetails()
+        waitForHourlyDetail("compare_detail_rain_paris")
         compose.onNodeWithTag("compare_detail_rain_paris", useUnmergedTree = true)
             .assertTextContains("2", substring = true)
         compose.onNodeWithTag("compare_detail_rain_lyon", useUnmergedTree = true)
@@ -199,7 +301,7 @@ class LocalityCompareContentTest {
                         favorites = cities, selectedIds = listOf("paris", "lyon"),
                         forecasts = mapOf("paris" to CompareForecastState.Ready(forecast))
                     ),
-                    calculator = ConfidenceCalculator(EqualWeighting()),
+                    calculator = calculator,
                     onBack = {}, onToggleCity = {}, onRefresh = { refreshCount++ },
                     currentDate = today, currentHour = 12
                 )
@@ -222,7 +324,7 @@ class LocalityCompareContentTest {
             MaterialTheme {
                 LocalityCompareContent(
                     state = LocalityCompareState(favorites = cities, selectedIds = listOf("paris", "lyon")),
-                    calculator = ConfidenceCalculator(EqualWeighting()),
+                    calculator = calculator,
                     onBack = {}, onToggleCity = { lastCity = it }, onRefresh = {},
                     currentDate = LocalDate.of(2026, 10, 14)
                 )
@@ -261,7 +363,7 @@ class LocalityCompareContentTest {
                             "lyon" to ready(cities[1], emptyList(), null)
                         )
                     ),
-                    calculator = ConfidenceCalculator(EqualWeighting()),
+                    calculator = calculator,
                     onBack = {}, onToggleCity = {}, onRefresh = {}, currentDate = date
                 )
             }

@@ -52,7 +52,13 @@ import kotlin.math.roundToInt
  * Les textes sont résolus avec la langue choisie dans l'application (et non
  * celle du système) via [applyPersistedLocale], comme les widgets.
  */
-internal class WeatherNotifier(context: Context, private val units: WeatherUnits = WeatherUnits()) {
+internal class WeatherNotifier(
+    context: Context,
+    private val units: WeatherUnits = WeatherUnits(),
+    // Tests may provide a unique channel so Android's persisted channel choices
+    // cannot disable the real divergence channel across instrumented test runs.
+    private val divergenceChannelId: String = CHANNEL_DIVERGENCE
+) {
 
     private val appContext = context.applicationContext
     private val manager = NotificationManagerCompat.from(appContext)
@@ -168,7 +174,7 @@ internal class WeatherNotifier(context: Context, private val units: WeatherUnits
                     .setName(res.getString(R.string.notification_channel_daily))
                     .setDescription(res.getString(R.string.notification_channel_daily_desc))
                     .build(),
-                NotificationChannelCompat.Builder(CHANNEL_DIVERGENCE, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+                NotificationChannelCompat.Builder(divergenceChannelId, NotificationManagerCompat.IMPORTANCE_DEFAULT)
                     .setName(res.getString(R.string.notification_channel_divergence))
                     .setDescription(res.getString(R.string.notification_channel_divergence_desc))
                     .build(),
@@ -356,7 +362,7 @@ internal class WeatherNotifier(context: Context, private val units: WeatherUnits
             LINE_SEPARATOR
         )
         return RenderedContent(
-            channelId = CHANNEL_DIVERGENCE,
+            channelId = divergenceChannelId,
             title = title,
             text = compact,
             bigText = expanded,

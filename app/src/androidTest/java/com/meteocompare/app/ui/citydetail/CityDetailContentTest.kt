@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.test.platform.app.InstrumentationRegistry
 import com.meteocompare.app.R
 import com.meteocompare.app.domain.model.City
+import com.meteocompare.app.domain.model.CityForecast
 import com.meteocompare.app.domain.model.CityDetailSection
 import com.meteocompare.app.domain.model.VigilanceColor
 import com.meteocompare.app.domain.model.VigilanceForecast
@@ -36,6 +37,28 @@ class CityDetailContentTest {
 
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
+    private val snackbar = SnackbarHostState()
+
+    // Compute all forecast aggregates once, outside setContent. Rebuilding a new
+    // Loaded target on every Compose frame can keep AnimatedContent busy forever
+    // and masks real idle-state regressions in these instrumentation tests.
+    private fun loadedState(
+        forecast: CityForecast,
+        calculator: ConfidenceCalculator
+    ) = CityDetailUiState.Loaded(
+        forecast = forecast,
+        weeklyConfidence = calculator.weeklyConfidence(forecast),
+        hourlyBands = calculator.hourlyTemperatureConfidence(forecast),
+        hourlyPrecipBands = calculator.hourlyPrecipitationConfidence(forecast),
+        hourlyWindBands = calculator.hourlyWindConfidence(forecast),
+        currentTemp = calculator.currentTemperature(forecast),
+        currentCondition = calculator.currentWeatherCondition(forecast),
+        currentCloudCover = calculator.currentCloudCover(forecast),
+        dailyConditions = calculator.dailyConditionsByModel(forecast),
+        calculatedAt = TestFixtures.now,
+        fetchedAt = forecast.fetchedAt
+    )
+
     @Test
     fun loading_state_is_identifiable() {
         composeRule.setContent {
@@ -44,7 +67,7 @@ class CityDetailContentTest {
                     state = CityDetailUiState.Loading,
                     isRefreshing = false,
                     biasState = BiasScreenState.EMPTY,
-                    snackbarHostState = SnackbarHostState(),
+                    snackbarHostState = snackbar,
                     onBack = {}, onRefresh = {}
                 )
             }
@@ -60,7 +83,7 @@ class CityDetailContentTest {
                     state = CityDetailUiState.Loading,
                     isRefreshing = false,
                     biasState = BiasScreenState.EMPTY,
-                    snackbarHostState = SnackbarHostState(),
+                    snackbarHostState = snackbar,
                     onBack = {},
                     onRefresh = {},
                     showBackButton = false
@@ -80,7 +103,7 @@ class CityDetailContentTest {
                     state = CityDetailUiState.Error("Indisponible"),
                     isRefreshing = false,
                     biasState = BiasScreenState.EMPTY,
-                    snackbarHostState = SnackbarHostState(),
+                    snackbarHostState = snackbar,
                     onBack = {}, onRefresh = {}
                 )
             }
@@ -99,7 +122,7 @@ class CityDetailContentTest {
                     state = CityDetailUiState.Error("Indisponible"),
                     isRefreshing = false,
                     biasState = BiasScreenState.EMPTY,
-                    snackbarHostState = SnackbarHostState(),
+                    snackbarHostState = snackbar,
                     onBack = { back++ },
                     onRefresh = { refresh++ }
                 )
@@ -115,26 +138,15 @@ class CityDetailContentTest {
     fun loaded_state_displays_confidence_and_opens_explanation() {
         val forecast = TestFixtures.forecast()
         val calculator = ConfidenceCalculator(EqualWeighting())
+        val loadedState = loadedState(forecast, calculator)
         var clickedDate: String? = null
         composeRule.setContent {
             MeteoCompareTheme {
                 CityDetailContent(
-                    state = CityDetailUiState.Loaded(
-                        forecast = forecast,
-                        weeklyConfidence = calculator.weeklyConfidence(forecast),
-                        hourlyBands = calculator.hourlyTemperatureConfidence(forecast),
-                        hourlyPrecipBands = calculator.hourlyPrecipitationConfidence(forecast),
-                        hourlyWindBands = calculator.hourlyWindConfidence(forecast),
-                        currentTemp = calculator.currentTemperature(forecast),
-                        currentCondition = calculator.currentWeatherCondition(forecast),
-                        currentCloudCover = calculator.currentCloudCover(forecast),
-                        dailyConditions = calculator.dailyConditionsByModel(forecast),
-                        calculatedAt = TestFixtures.now,
-                        fetchedAt = forecast.fetchedAt
-                    ),
+                    state = loadedState,
                     isRefreshing = false,
                     biasState = BiasScreenState.EMPTY,
-                    snackbarHostState = SnackbarHostState(),
+                    snackbarHostState = snackbar,
                     onBack = {}, onRefresh = {},
                     onConfidenceClick = { clickedDate = it }
                 )
@@ -151,25 +163,15 @@ class CityDetailContentTest {
         val city = TestFixtures.paris.copy(name = "Saint-Étienne-du-Rouvray")
         val forecast = TestFixtures.forecast(city = city)
         val calculator = ConfidenceCalculator(EqualWeighting())
+        val loadedState = loadedState(forecast, calculator)
         composeRule.setContent {
             MeteoCompareTheme {
                 CityDetailContent(
-                    state = CityDetailUiState.Loaded(
-                        forecast = forecast,
-                        weeklyConfidence = calculator.weeklyConfidence(forecast),
-                        hourlyBands = calculator.hourlyTemperatureConfidence(forecast),
-                        hourlyPrecipBands = calculator.hourlyPrecipitationConfidence(forecast),
-                        hourlyWindBands = calculator.hourlyWindConfidence(forecast),
-                        currentTemp = calculator.currentTemperature(forecast),
-                        currentCondition = calculator.currentWeatherCondition(forecast),
-                        currentCloudCover = calculator.currentCloudCover(forecast),
-                        dailyConditions = calculator.dailyConditionsByModel(forecast),
-                        calculatedAt = TestFixtures.now,
-                        fetchedAt = forecast.fetchedAt
-                    ),
+                    state = loadedState,
                     isRefreshing = false,
                     biasState = BiasScreenState.EMPTY,
-                    snackbarHostState = SnackbarHostState(),
+                    collapsedSections = CityDetailSection.entries.toSet(),
+                    snackbarHostState = snackbar,
                     onBack = {}, onRefresh = {}
                 )
             }
@@ -185,27 +187,16 @@ class CityDetailContentTest {
     fun loaded_state_exposes_radar_from_top_app_bar() {
         val forecast = TestFixtures.forecast()
         val calculator = ConfidenceCalculator(EqualWeighting())
+        val loadedState = loadedState(forecast, calculator)
         var radarClicks = 0
 
         composeRule.setContent {
             MeteoCompareTheme {
                 CityDetailContent(
-                    state = CityDetailUiState.Loaded(
-                        forecast = forecast,
-                        weeklyConfidence = calculator.weeklyConfidence(forecast),
-                        hourlyBands = calculator.hourlyTemperatureConfidence(forecast),
-                        hourlyPrecipBands = calculator.hourlyPrecipitationConfidence(forecast),
-                        hourlyWindBands = calculator.hourlyWindConfidence(forecast),
-                        currentTemp = calculator.currentTemperature(forecast),
-                        currentCondition = calculator.currentWeatherCondition(forecast),
-                        currentCloudCover = calculator.currentCloudCover(forecast),
-                        dailyConditions = calculator.dailyConditionsByModel(forecast),
-                        calculatedAt = TestFixtures.now,
-                        fetchedAt = forecast.fetchedAt
-                    ),
+                    state = loadedState,
                     isRefreshing = false,
                     biasState = BiasScreenState.EMPTY,
-                    snackbarHostState = SnackbarHostState(),
+                    snackbarHostState = snackbar,
                     onBack = {},
                     onRefresh = {},
                     onRadarClick = { radarClicks++ }
@@ -223,27 +214,16 @@ class CityDetailContentTest {
     fun loaded_state_exposes_engine_comparison_from_top_app_bar() {
         val forecast = TestFixtures.forecast()
         val calculator = ConfidenceCalculator(EqualWeighting())
+        val loadedState = loadedState(forecast, calculator)
         var comparisonClicks = 0
 
         composeRule.setContent {
             MeteoCompareTheme {
                 CityDetailContent(
-                    state = CityDetailUiState.Loaded(
-                        forecast = forecast,
-                        weeklyConfidence = calculator.weeklyConfidence(forecast),
-                        hourlyBands = calculator.hourlyTemperatureConfidence(forecast),
-                        hourlyPrecipBands = calculator.hourlyPrecipitationConfidence(forecast),
-                        hourlyWindBands = calculator.hourlyWindConfidence(forecast),
-                        currentTemp = calculator.currentTemperature(forecast),
-                        currentCondition = calculator.currentWeatherCondition(forecast),
-                        currentCloudCover = calculator.currentCloudCover(forecast),
-                        dailyConditions = calculator.dailyConditionsByModel(forecast),
-                        calculatedAt = TestFixtures.now,
-                        fetchedAt = forecast.fetchedAt
-                    ),
+                    state = loadedState,
                     isRefreshing = false,
                     biasState = BiasScreenState.EMPTY,
-                    snackbarHostState = SnackbarHostState(),
+                    snackbarHostState = snackbar,
                     onBack = {},
                     onRefresh = {},
                     onEngineComparisonClick = { comparisonClicks++ }
@@ -261,27 +241,16 @@ class CityDetailContentTest {
     fun loaded_state_exposes_graphic_view_from_top_app_bar() {
         val forecast = TestFixtures.forecast()
         val calculator = ConfidenceCalculator(EqualWeighting())
+        val loadedState = loadedState(forecast, calculator)
         var graphicClicks = 0
 
         composeRule.setContent {
             MeteoCompareTheme {
                 CityDetailContent(
-                    state = CityDetailUiState.Loaded(
-                        forecast = forecast,
-                        weeklyConfidence = calculator.weeklyConfidence(forecast),
-                        hourlyBands = calculator.hourlyTemperatureConfidence(forecast),
-                        hourlyPrecipBands = calculator.hourlyPrecipitationConfidence(forecast),
-                        hourlyWindBands = calculator.hourlyWindConfidence(forecast),
-                        currentTemp = calculator.currentTemperature(forecast),
-                        currentCondition = calculator.currentWeatherCondition(forecast),
-                        currentCloudCover = calculator.currentCloudCover(forecast),
-                        dailyConditions = calculator.dailyConditionsByModel(forecast),
-                        calculatedAt = TestFixtures.now,
-                        fetchedAt = forecast.fetchedAt
-                    ),
+                    state = loadedState,
                     isRefreshing = false,
                     biasState = BiasScreenState.EMPTY,
-                    snackbarHostState = SnackbarHostState(),
+                    snackbarHostState = snackbar,
                     onBack = {},
                     onRefresh = {},
                     onGraphicViewClick = { graphicClicks++ }
@@ -308,6 +277,7 @@ class CityDetailContentTest {
         )
         val forecast = TestFixtures.forecast(city = london)
         val calculator = ConfidenceCalculator(EqualWeighting())
+        val loadedState = loadedState(forecast, calculator)
         val start = TestFixtures.now
         val alert = VigilancePhenomenonAlert(
             phenomenon = VigilancePhenomenon.WIND,
@@ -345,24 +315,12 @@ class CityDetailContentTest {
         composeRule.setContent {
             MeteoCompareTheme {
                 CityDetailContent(
-                    state = CityDetailUiState.Loaded(
-                        forecast = forecast,
-                        weeklyConfidence = calculator.weeklyConfidence(forecast),
-                        hourlyBands = calculator.hourlyTemperatureConfidence(forecast),
-                        hourlyPrecipBands = calculator.hourlyPrecipitationConfidence(forecast),
-                        hourlyWindBands = calculator.hourlyWindConfidence(forecast),
-                        currentTemp = calculator.currentTemperature(forecast),
-                        currentCondition = calculator.currentWeatherCondition(forecast),
-                        currentCloudCover = calculator.currentCloudCover(forecast),
-                        dailyConditions = calculator.dailyConditionsByModel(forecast),
-                        calculatedAt = TestFixtures.now,
-                        fetchedAt = forecast.fetchedAt
-                    ),
+                    state = loadedState,
                     isRefreshing = false,
                     biasState = BiasScreenState.EMPTY,
                     vigilanceState = VigilanceUiState.Loaded(vigilance),
                     collapsedSections = setOf(CityDetailSection.TODAY_SUMMARY),
-                    snackbarHostState = SnackbarHostState(),
+                    snackbarHostState = snackbar,
                     onBack = {},
                     onRefresh = {}
                 )
@@ -376,28 +334,17 @@ class CityDetailContentTest {
     fun collapsible_header_forwards_the_persistent_section_change() {
         val forecast = TestFixtures.forecast()
         val calculator = ConfidenceCalculator(EqualWeighting())
+        val loadedState = loadedState(forecast, calculator)
         var changedSection: CityDetailSection? = null
         var expandedValue: Boolean? = null
 
         composeRule.setContent {
             MeteoCompareTheme {
                 CityDetailContent(
-                    state = CityDetailUiState.Loaded(
-                        forecast = forecast,
-                        weeklyConfidence = calculator.weeklyConfidence(forecast),
-                        hourlyBands = calculator.hourlyTemperatureConfidence(forecast),
-                        hourlyPrecipBands = calculator.hourlyPrecipitationConfidence(forecast),
-                        hourlyWindBands = calculator.hourlyWindConfidence(forecast),
-                        currentTemp = calculator.currentTemperature(forecast),
-                        currentCondition = calculator.currentWeatherCondition(forecast),
-                        currentCloudCover = calculator.currentCloudCover(forecast),
-                        dailyConditions = calculator.dailyConditionsByModel(forecast),
-                        calculatedAt = TestFixtures.now,
-                        fetchedAt = forecast.fetchedAt
-                    ),
+                    state = loadedState,
                     isRefreshing = false,
                     biasState = BiasScreenState.EMPTY,
-                    snackbarHostState = SnackbarHostState(),
+                    snackbarHostState = snackbar,
                     onBack = {},
                     onRefresh = {},
                     onSectionExpandedChange = { section, expanded ->

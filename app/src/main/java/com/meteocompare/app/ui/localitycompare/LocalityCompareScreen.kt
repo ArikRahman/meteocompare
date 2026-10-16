@@ -280,17 +280,27 @@ internal fun LocalityCompareContent(
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
-                    LocalityHourDetails(
-                        cities = hourlySeries,
-                        selectedHour = selectedHour,
-                        hourLabel = LocalTime.of(selectedHour, 0).format(hourFormat),
-                        expanded = detailsExpanded,
-                        onToggle = { detailsExpanded = !detailsExpanded },
-                        units = units,
-                        locale = locale,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
                 }
+                // Keep the disclosure in the composition while a new comparison is
+                // prepared. Previously `prepared == null` removed this subtree,
+                // briefly losing the panel and its semantics after a click.
+                // Show missing values until the matching snapshot is ready.
+                LocalityHourDetails(
+                    cities = if (prepared == null) {
+                        selectedCities.map { city ->
+                            HourChartCity(city.id, city.name, List(24) { null })
+                        }
+                    } else {
+                        hourlySeries
+                    },
+                    selectedHour = selectedHour,
+                    hourLabel = LocalTime.of(selectedHour, 0).format(hourFormat),
+                    expanded = detailsExpanded,
+                    onToggle = { detailsExpanded = !detailsExpanded },
+                    units = units,
+                    locale = locale,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
                 LocalityComparisonExplanations(
                     expanded = infoExpanded,
                     onToggle = { infoExpanded = !infoExpanded },

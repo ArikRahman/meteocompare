@@ -103,7 +103,7 @@ class WeatherNotificationPipelineTest {
     }
 
     @Test
-    fun blockedChannelDoesNotConsumeDeduplication() = runBlocking {
+    fun blockedIsolatedChannelIsRejectedWithoutConsumingDeduplication() = runBlocking {
         val forecast = divergentTomorrowForecast()
         val engineContext = engineContextProvider.build(
             forecast = forecast,
@@ -114,35 +114,36 @@ class WeatherNotificationPipelineTest {
             "la fixture doit produire une divergence avant de tester le canal"
         }
 
-        // Le canal divergence est volontairement bloqué. On utilise un canal
-        // distinct du résumé quotidien afin que le test reste répétable :
-        // Android restaure les réglages d'un canal supprimé/recréé.
-        platformManager.createNotificationChannel(
-            NotificationChannel(
-                WeatherNotifier.CHANNEL_DIVERGENCE,
-                "blocked-test",
-                NotificationManager.IMPORTANCE_NONE
+        // Android remembers a channel's user-selected importance even after
+        // deleteNotificationChannel(). Never block the PRODUCTION divergence
+        // channel here: doing so poisons enablingDivergenceTriggersImmediateCheck
+        // in this run and in subsequent runs on the same emulator.
+        val isolatedChannelId = "test_blocked_divergence_${UUID.randomUUID()}"
+        try {
+            platformManager.createNotificationChannel(
+                NotificationChannel(
+                    isolatedChannelId,
+                    "blocked-test",
+                    NotificationManager.IMPORTANCE_NONE
+                )
             )
-        )
-        assertEquals(
-            NotificationManager.IMPORTANCE_NONE,
-            platformManager.getNotificationChannel(WeatherNotifier.CHANNEL_DIVERGENCE).importance
-        )
-        preferences.updateNotificationSettings {
-            NotificationSettings(
-                divergenceAlertsEnabled = true,
-                cityIds = setOf(TestFixtures.paris.id)
+            assertEquals(
+                NotificationManager.IMPORTANCE_NONE,
+                platformManager.getNotificationChannel(isolatedChannelId).importance
             )
+            val result = WeatherNotifier(
+                context = context,
+                divergenceChannelId = isolatedChannelId
+            ).post(expected)
+            assertEquals(WeatherNotifier.PostResult.BLOCKED_CHANNEL, result)
+            assertFalse(
+                "un canal bloqué ne doit pas consommer la déduplication",
+                dedup.alreadyNotified(expected.dedupKey)
+            )
+            assertEquals(0, activeWeatherNotifications().size)
+        } finally {
+            platformManager.deleteNotificationChannel(isolatedChannelId)
         }
-        forecasts.setForecast(TestFixtures.paris, forecast)
-
-        runWorkerThroughWorkManager(WeatherNotificationWorker.Kind.ALERTS)
-
-        assertEquals(0, activeWeatherNotifications().size)
-        assertFalse(
-            "un canal bloqué ne doit pas consommer la déduplication",
-            dedup.alreadyNotified(expected.dedupKey)
-        )
     }
 
     @Test
@@ -155,6 +156,13 @@ class WeatherNotificationPipelineTest {
         )
         val expected = requireNotNull(evaluator.modelDivergence(forecast, engineContext, clock.instant()))
         forecasts.setForecast(TestFixtures.paris, forecast)
+        val existingChannel = platformManager.getNotificationChannel(WeatherNotifier.CHANNEL_DIVERGENCE)
+        assertTrue(
+            "Le canal de divergence de l'installation de test est bloqué par Android " +
+                "(importance NONE). Un ancien test le désactivait de façon persistante : " +
+                "réinitialiser uniquement l'installation debug de l'émulateur avant de relancer.",
+            existingChannel == null || existingChannel.importance != NotificationManager.IMPORTANCE_NONE
+        )
         val settings = preferences.updateNotificationSettings {
             NotificationSettings(
                 divergenceAlertsEnabled = true,
@@ -385,13 +393,9 @@ class WeatherNotificationPipelineTest {
         workManager.cancelUniqueWork(WeatherNotificationScheduler.ALERTS_IMMEDIATE_WORK_NAME)
         WeatherNotificationScheduler.reschedule(context, NotificationSettings())
         platformManager.cancelAll()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            listOf(
-                WeatherNotifier.CHANNEL_DAILY_SUMMARY,
-                WeatherNotifier.CHANNEL_DIVERGENCE,
-                WeatherNotifier.CHANNEL_FORECAST_CHANGE
-            ).forEach(platformManager::deleteNotificationChannel)
-        }
+        // Do not delete the production channels: Android retains user channel
+        // importance across deletion/recreation, so this does not reset tests
+        // and can preserve an accidental IMPORTANCE_NONE indefinitely.
         dedup.clear()
     }
 

@@ -269,9 +269,20 @@ internal fun LocalityHourDetails(
 ) {
     val colors = MaterialTheme.colorScheme
     val sharedHorizontalScroll = rememberScrollState()
-    Surface(modifier = modifier.fillMaxWidth().testTag("compare_hour_details"),
-        color = colors.surfaceContainerLow, shape = RoundedCornerShape(18.dp)) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+    // The disclosure state is exposed on the Surface itself. A tag on the inner
+    // Column can be hidden by Compose's merged semantics tree on Android tests.
+    // Keep the stable component tag on the inner layout for diagnostics.
+    Surface(
+        modifier = modifier.fillMaxWidth().testTag(
+            if (expanded) "compare_hour_details_expanded" else "compare_hour_details_collapsed"
+        ),
+        color = colors.surfaceContainerLow,
+        shape = RoundedCornerShape(18.dp)
+    ) {
+        Column(
+            Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                .testTag("compare_hour_details")
+        ) {
             TextButton(onClick = onToggle, modifier = Modifier.fillMaxWidth().testTag("compare_toggle_details")) {
                 Text(stringResource(if (expanded) R.string.compare_hide_details else R.string.compare_show_details, hourLabel))
             }
