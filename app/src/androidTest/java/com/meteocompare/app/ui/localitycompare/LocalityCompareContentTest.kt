@@ -33,7 +33,7 @@ import com.meteocompare.app.domain.model.WeatherModel
 import com.meteocompare.app.domain.model.UvForecast
 import com.meteocompare.app.domain.model.ClockFormatPreference
 import com.meteocompare.app.domain.model.UnitSystem
-import java.time.format.DateTimeFormatter
+import com.meteocompare.app.core.locale.WeatherTimeFormat
 import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.domain.usecase.ConfidenceCalculator
@@ -109,7 +109,7 @@ class LocalityCompareContentTest {
                     LocalityHourlyChart(
                         cities = listOf(HourChartCity("paris", "Paris", List(24) { null })),
                         units = WeatherUnits(unitSystem), locale = Locale.UK,
-                        hourFormatter = DateTimeFormatter.ofPattern("h a", Locale.UK),
+                        hourFormatter = WeatherTimeFormat.hourPadded(Locale.UK, ClockFormatPreference.HOUR_12),
                         selectedHour = 14, onHourSelected = {},
                         metric = metric, onMetricSelected = { metric = it }
                     )
