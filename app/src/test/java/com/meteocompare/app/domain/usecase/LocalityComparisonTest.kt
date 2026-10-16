@@ -234,6 +234,29 @@ class LocalityComparisonTest {
         ))
     }
 
+    @Test fun dailyRainAmountCanInferAgreementEvenWithoutNativeProbability() {
+        // The comparison deliberately uses a model-agreement estimate when the
+        // source provides a rain amount but no native probability. It must not
+        // be confused with missing rain data (covered by the following test).
+        val daily = DailyForecast(
+            dates = listOf(day), tempMax = listOf(null), tempMin = listOf(null),
+            precipitationSum = listOf(3.0), windSpeedMax = listOf(null),
+            precipitationProbabilityMax = listOf(null)
+        )
+        val hourly = HourlyForecast(
+            timestamps = emptyList(), temperature2m = emptyList(),
+            precipitation = emptyList(), windSpeed10m = emptyList()
+        )
+        val forecast = CityForecast(
+            City("rain", "Rain", null, "France", 48.0, 2.0, "UTC"),
+            mapOf(WeatherModel.GFS to ForecastSeries(WeatherModel.GFS, hourly, daily))
+        )
+        val result = requireNotNull(buildLocalityDayMetrics(
+            forecast, day, ConfidenceCalculator(EqualWeighting())
+        ))
+        assertEquals(100, result.rainProbabilityPercent)
+    }
+
     @Test fun missingRainProbability_doesNotBecomesZeroPercent() {
         val forecast = cloudForecast(day, "UTC", List(24) { 30 })
         val result = requireNotNull(buildLocalityDayMetrics(

@@ -2,6 +2,7 @@ package com.meteocompare.app.ui.localitycompare
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -101,7 +102,7 @@ class LocalityCompareContentTest {
             }
         }
         waitForComparison()
-        compose.onNodeWithTag("compare_uv_paris").assertTextContains("8")
+        compose.onNodeWithTag("compare_uv_paris").assertTextContains("8", substring = true)
         // The daily overview and hourly chart share one selected date; no mode switch.
         compose.onNodeWithTag("compare_hour_chart").assertExists()
         compose.onNodeWithTag("compare_hour_chart")
@@ -111,13 +112,13 @@ class LocalityCompareContentTest {
             .performSemanticsAction(SemanticsActions.SetProgress) { it(14f) }
         compose.onNodeWithTag("compare_selected_hour").assertTextEquals("2 PM")
         compose.onNodeWithTag("compare_chart_metric_rain").performClick()
-        compose.onNodeWithTag("compare_chart_value_paris").assertTextContains("mm")
+        compose.onNodeWithTag("compare_chart_value_paris").assertTextContains("mm", substring = true)
         compose.onNodeWithTag("compare_toggle_details").performClick()
-        compose.onNodeWithTag("compare_detail_uv_paris").assertTextContains("5")
+        compose.onNodeWithTag("compare_detail_uv_paris").assertTextContains("5", substring = true)
         compose.onNodeWithTag("compare_detail_clouds_paris").assertTextEquals("25 %")
         compose.onNodeWithTag("compare_column_lyon").assertExists()
         // Touching an hourly value never changes the daily summary.
-        compose.onNodeWithTag("compare_uv_paris").assertTextContains("8")
+        compose.onNodeWithTag("compare_uv_paris").assertTextContains("8", substring = true)
     }
 
     @Test fun chartSelectionSnapsToValidHoursAndStaysWithinTheLocalDay() {
@@ -129,22 +130,49 @@ class LocalityCompareContentTest {
     }
 
     @Test fun overviewMetricSelectsTimelineWithoutSwitchingModes() {
+        val date = LocalDate.of(2026, 10, 14)
+        val city = cities.first()
+        val instant = date.atTime(14, 0).atZone(ZoneId.of("Europe/Paris")).toInstant()
+        val forecast = CityForecast(city, mapOf(WeatherModel.GFS to ForecastSeries(
+            WeatherModel.GFS,
+            HourlyForecast(
+                timestamps = listOf(instant), temperature2m = listOf(19.0),
+                precipitation = listOf(2.0), windSpeed10m = listOf(12.0),
+                cloudCover = listOf(45)
+            ),
+            DailyForecast(
+                dates = listOf(date), tempMax = listOf(20.0), tempMin = listOf(12.0),
+                precipitationSum = listOf(2.0), windSpeedMax = listOf(14.0)
+            )
+        )))
         compose.setContent {
             MaterialTheme {
                 LocalityCompareContent(
-                    state = LocalityCompareState(favorites = cities, selectedIds = listOf("paris", "lyon")),
+                    state = LocalityCompareState(
+                        favorites = cities,
+                        selectedIds = listOf("paris", "lyon"),
+                        forecasts = mapOf("paris" to CompareForecastState.Ready(forecast))
+                    ),
                     calculator = ConfidenceCalculator(EqualWeighting()),
                     onBack = {}, onToggleCity = {}, onRefresh = {},
-                    currentDate = LocalDate.of(2026, 10, 14)
+                    currentDate = date, currentHour = 14
                 )
             }
         }
         waitForComparison()
-        compose.onNodeWithTag("compare_overview").assertExists()
         compose.onNodeWithTag("compare_overview_metric_rain").performClick()
         compose.onNodeWithTag("compare_hour_chart").assertExists()
+        compose.onNodeWithTag("compare_chart_metric_rain").assertIsSelected()
+        compose.onNodeWithTag("compare_detail_rain_paris", useUnmergedTree = true).assertDoesNotExist()
         compose.onNodeWithTag("compare_toggle_details").performClick()
-        compose.onNodeWithTag("compare_detail_rain_paris").assertExists()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithTag("compare_detail_rain_paris", useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag("compare_detail_rain_paris", useUnmergedTree = true)
+            .assertTextContains("2", substring = true)
+        compose.onNodeWithTag("compare_detail_rain_lyon", useUnmergedTree = true)
+            .assertTextEquals("—")
     }
 
     @Test fun dateMetricAndHourChangesNeverRequestANetworkRefresh() {
@@ -215,7 +243,8 @@ class LocalityCompareContentTest {
             )
             val daily = DailyForecast(
                 dates = listOf(date), tempMax = listOf(20.0), tempMin = listOf(10.0),
-                precipitationSum = listOf(3.0), windSpeedMax = listOf(10.0),
+                precipitationSum = listOf(if (probability == null) null else 3.0),
+                windSpeedMax = listOf(10.0),
                 precipitationProbabilityMax = listOf(probability)
             )
             val series = ForecastSeries(WeatherModel.GFS, hourly, daily)
@@ -242,7 +271,8 @@ class LocalityCompareContentTest {
         compose.onNodeWithTag("compare_cloud_bar_paris").assertExists()
         compose.onNodeWithTag("compare_rain_bar_paris").assertExists()
         compose.onNodeWithTag("compare_cloud_cover_lyon").assertTextEquals("—")
-        compose.onNodeWithTag("compare_rain_probability_paris").assertExists()
+        compose.onNodeWithTag("compare_rain_probability_paris").assertTextEquals("70 %")
+        // Lyon has neither daily rain amount nor probability: no consensus estimate is possible.
         compose.onNodeWithTag("compare_rain_probability_lyon").assertTextEquals("—")
         // Absent data must never masquerade as a zero-percent indicator.
         compose.onNodeWithTag("compare_cloud_bar_lyon").assertDoesNotExist()
