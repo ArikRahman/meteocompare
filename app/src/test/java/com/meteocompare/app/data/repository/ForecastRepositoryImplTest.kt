@@ -461,7 +461,7 @@ class ForecastRepositoryImplTest {
             api.getForecastBatched(
                 any(), any(), eq(mixedParam), any(), any(), any(), any(), any(), any(), any()
             )
-        } throws IOException("No data is available for this location")
+        } throws openMeteoBadRequest("No data is available for this location")
         coEvery {
             api.getForecastBatched(
                 any(), any(), eq(globalParam), any(), any(), any(), any(), any(), any(), any()
@@ -486,6 +486,63 @@ class ForecastRepositoryImplTest {
             api.getForecastBatched(
                 any(), any(), eq(globalParam), any(), any(), any(), any(), any(), any(), any()
             )
+        }
+    }
+
+    @Test
+    fun `HTTP 503 skips global fallback and suppresses immediate repeat even without cache`() = runTest {
+        val models = listOf(WeatherModel.AROME_FRANCE_HD, WeatherModel.GFS)
+        val requestModels = models.joinToString(",") { it.apiKey }
+        coEvery {
+            api.getForecastBatched(
+                any(), any(), eq(requestModels), any(), any(), any(), any(), any(), any(), any()
+            )
+        } throws openMeteoHttpError(503)
+        coEvery { cacheDao.getForCity(any()) } returns emptyList()
+
+        val first = repository.refreshCityForecast(paris, models)
+        val second = repository.refreshCityForecast(paris, models)
+        assertTrue(first is ApiResult.Error)
+        assertTrue(second is ApiResult.Error)
+        coVerify(exactly = 1) {
+            api.getForecastBatched(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        }
+        coVerify(exactly = 0) {
+            cacheDao.replaceRequestedModels(any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `HTTP 429 skips regional fallback and keeps existing Room cache visible`() = runTest {
+        installMutableCache(10)
+        val models = listOf(WeatherModel.GFS, WeatherModel.ICON_EU)
+        coEvery {
+            api.getForecastBatched(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } throws openMeteoHttpError(429)
+
+        val visible = repository.getCityForecastStream(
+            city = paris, models = models, forceRefresh = false, maxCacheAgeMs = null
+        ).toList()
+        assertEquals(1, visible.size)
+        assertTrue(visible.single() is ApiResult.Success)
+        coVerify(exactly = 1) {
+            api.getForecastBatched(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        }
+        coVerify(exactly = 0) {
+            cacheDao.replaceRequestedModels(any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `HTTP 400 unrelated to regional coverage never triggers global fallback`() = runTest {
+        val models = listOf(WeatherModel.AROME_FRANCE_HD, WeatherModel.GFS)
+        coEvery {
+            api.getForecastBatched(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } throws openMeteoBadRequest("Invalid value for hourly")
+        val result = repository.refreshCityForecast(paris, models)
+        assertTrue(result is ApiResult.Error)
+        coVerify(exactly = 1) {
+            api.getForecastBatched(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
         }
     }
 
@@ -1470,6 +1527,12 @@ class ForecastRepositoryImplTest {
         }
 
         assertEquals(1, fakeApi.callCount.get())
+    }
+
+    private fun openMeteoHttpError(status: Int): HttpException {
+        val body = """{"error":true,"reason":"Temporary service failure"}"""
+            .toResponseBody("application/json".toMediaType())
+        return HttpException(Response.error<BatchedForecastResponseDto>(status, body))
     }
 
     private fun openMeteoBadRequest(reason: String): HttpException {

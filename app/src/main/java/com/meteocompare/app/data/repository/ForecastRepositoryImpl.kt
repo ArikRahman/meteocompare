@@ -116,6 +116,7 @@ class ForecastRepositoryImpl @Inject constructor(
     private val repoScope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val inflightMutex = Mutex()
     private val inflightFetches = mutableMapOf<String, Deferred<ApiResult<CityForecast>>>()
+    private val transientBackoff = TransientForecastBackoff()
 
     // Signal applicatif léger : un refresh réussi peut être lancé depuis la
     // page Détails, la Home ou un autre composant. Les écrans déjà vivants
@@ -502,6 +503,16 @@ class ForecastRepositoryImpl @Inject constructor(
         }
 
         val now = clock.millis()
+        val retryKey = cacheKey(city, models, forecastDays)
+        // Plusieurs écrans/widgets peuvent demander successivement la même
+        // prévision après une panne serveur. Ne pas marteler Open-Meteo tant
+        // que le délai exponentiel (30 s à 15 min) n'a pas expiré.
+        transientBackoff.blockedStatus(retryKey, now)?.let { status ->
+            return@withContext ApiResult.Error(
+                IOException("Open-Meteo HTTP $status: retry postponed"),
+                context.getString(R.string.error_server, status)
+            )
+        }
 
         // ── Requête batched résiliente ────────────────────────────────
         //
@@ -522,9 +533,27 @@ class ForecastRepositoryImpl @Inject constructor(
             fetchedAtEpochMs = now
         )
         val primary = primaryAttempt.getOrNull()
+        val primaryError = primaryAttempt.exceptionOrNull()
+        // Un 503/429/5xx indique une indisponibilité temporaire du service,
+        // PAS une absence de couverture d'un modèle régional. Retenter
+        // immédiatement six modèles reproduisait le même 503 et doublait
+        // inutilement la charge réseau (voir incident Open-Meteo d'oct. 2026).
+        if (primaryError is HttpException && primaryError.code().isTransientForecastStatus()) {
+            transientBackoff.failed(retryKey, primaryError.code(), now)
+            return@withContext ApiResult.Error(
+                primaryError,
+                primaryError.toUserMessage(context)
+            )
+        }
+
         val globalFallbackModels = models.filter { it.coverage == Coverage.GLOBAL }
+        // Le repli est pertinent uniquement pour une réponse vide ou un 400
+        // identifiant explicitement une localité hors couverture. Les erreurs
+        // IO, auth, parsing et les autres 400 doivent rester des erreurs.
         val canRetryGlobalOnly =
-            globalFallbackModels.isNotEmpty() && globalFallbackModels.size < models.size
+            globalFallbackModels.isNotEmpty() && globalFallbackModels.size < models.size &&
+                (primary?.processed?.series?.isEmpty() == true ||
+                    primaryError?.isUnsupportedLocationResponse() == true)
 
         val selectedAttempt = if (primary?.processed?.series?.isNotEmpty() == true) {
             primary
@@ -532,10 +561,9 @@ class ForecastRepositoryImpl @Inject constructor(
             if (BuildConfig.DEBUG) {
                 android.util.Log.w(
                     LOG_TAG,
-                    "Full model batch unavailable for ${city.id}; retrying " +
-                        "${globalFallbackModels.size} global model(s): " +
-                        globalFallbackModels.joinToString(",") { it.apiKey },
-                    primaryAttempt.exceptionOrNull()
+                    "Regional coverage unavailable for ${city.id}; retrying " +
+                        "${globalFallbackModels.size} selected global model(s)",
+                    primaryError
                 )
             }
             requestBatchAttempt(
@@ -544,6 +572,9 @@ class ForecastRepositoryImpl @Inject constructor(
                 forecastDays = forecastDays,
                 fetchedAtEpochMs = now
             ).getOrElse { fallbackError ->
+                if (fallbackError is HttpException && fallbackError.code().isTransientForecastStatus()) {
+                    transientBackoff.failed(retryKey, fallbackError.code(), now)
+                }
                 return@withContext ApiResult.Error(
                     fallbackError,
                     if (fallbackError.isUnsupportedLocationResponse()) {
@@ -554,7 +585,7 @@ class ForecastRepositoryImpl @Inject constructor(
                 )
             }
         } else {
-            val error = primaryAttempt.exceptionOrNull()
+            val error = primaryError
                 ?: IllegalStateException("No usable model in batched response")
             return@withContext ApiResult.Error(
                 error,
@@ -569,6 +600,7 @@ class ForecastRepositoryImpl @Inject constructor(
                 }
             )
         }
+        transientBackoff.succeeded(retryKey)
 
         val batched = selectedAttempt.response
         val processed = selectedAttempt.processed
@@ -653,6 +685,8 @@ class ForecastRepositoryImpl @Inject constructor(
             ApiResult.Success(fresh)
         }
     }
+
+    private fun Int.isTransientForecastStatus(): Boolean = this == 429 || this in 500..599
 
     /**
      * Open-Meteo renvoie HTTP 400 lorsqu'un modèle régional ne couvre pas la
