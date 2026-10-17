@@ -1,0 +1,1 @@
+Home: schede meteo comprimibili con animazioni più fluide e selezione memorizzata. Previsioni: direzione, velocità e raffiche del vento più leggibili. Widget: formati ridimensionabili spiegati meglio. Prestazioni: cache radar e mappe ottimizzate, memoria gestita meglio e correzioni di stabilità.

@@ -1,0 +1,1 @@
+Accueil : cartes météo repliables avec animations plus fluides et mémorisation de la ville dépliée. Prévisions : meilleure présentation du vent et des rafales. Widgets : formats redimensionnables mieux expliqués. Performances : caches radar et cartographique optimisés, consommation mémoire mieux maîtrisée et correctifs de stabilité.

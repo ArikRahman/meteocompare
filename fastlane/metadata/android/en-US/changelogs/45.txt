@@ -1,0 +1,1 @@
+Home: collapsible weather cards with smoother animations and saved expanded-city selection. Forecasts: clearer wind direction, speed and gusts. Widgets: easier-to-understand resizable formats. Performance: improved radar and map caching, better memory management and stability fixes.

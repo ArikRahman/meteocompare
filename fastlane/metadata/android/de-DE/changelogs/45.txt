@@ -1,0 +1,1 @@
+Startseite: einklappbare Wetterkarten mit sanfteren Animationen und gespeicherter Auswahl. Vorhersagen: übersichtlichere Windrichtung, Geschwindigkeit und Böen. Widgets: Größenanpassung besser erklärt. Leistung: verbesserte Radar- und Karten-Caches, Speichernutzung und Stabilität.

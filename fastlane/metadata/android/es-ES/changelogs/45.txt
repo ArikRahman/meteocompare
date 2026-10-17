@@ -1,0 +1,1 @@
+Inicio: tarjetas del tiempo plegables con animaciones más suaves y selección recordada. Pronósticos: dirección, velocidad y rachas de viento más claras. Widgets: explicación mejorada de los tamaños ajustables. Rendimiento: optimización de las cachés de radar y mapas, memoria y estabilidad.
