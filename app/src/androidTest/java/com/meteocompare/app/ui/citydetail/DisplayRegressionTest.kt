@@ -98,9 +98,9 @@ class DisplayRegressionTest {
                 speed.left >= cell.left && speed.right <= cell.right)
             assertTrue("Gust must remain inside its date/hour column",
                 gust.left >= cell.left && gust.right <= cell.right)
-            assertTrue("Speed must use only one line", speed.height.value <= 22f)
-            assertTrue("Gust must use only one line", gust.height.value <= 18f)
-            assertTrue("Column width must remain the shared 80 dp", kotlin.math.abs(cell.width.value - 80f) <= 1f)
+            assertTrue("Speed must use only one line", speed.bottom - speed.top <= 22.dp)
+            assertTrue("Gust must use only one line", gust.bottom - gust.top <= 18.dp)
+            assertTrue("Column width must remain the shared 80 dp", kotlin.math.abs((cell.right - cell.left).value - 80f) <= 1f)
         }
     }
 
