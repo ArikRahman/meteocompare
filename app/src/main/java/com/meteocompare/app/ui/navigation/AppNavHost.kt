@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.LocationCity
 import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -191,14 +192,24 @@ private fun TabletHomeScreen(
     cityListViewModel: CityListViewModel = hiltViewModel()
 ) {
     val listState by cityListViewModel.uiState.collectAsStateWithLifecycle()
+    val homeExpansion by cityListViewModel.homeExpansion.collectAsStateWithLifecycle()
     val availableCityIds = listState.items.map { it.city.id }
     var directCityId by rememberSaveable { mutableStateOf<String?>(null) }
     var directDestination by rememberSaveable { mutableStateOf<String?>(null) }
     var directRequest by rememberSaveable { mutableStateOf(0) }
     var handledDirectRequest by rememberSaveable { mutableStateOf(0) }
 
+    if (!homeExpansion.isReady) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
     TabletMasterDetailContent(
         availableCityIds = availableCityIds,
+        homeExpandedCityId = homeExpansion.expandedCityId,
+        onHomeCityExpanded = cityListViewModel::onHomeCityExpanded,
         listContent = { activeCityId, onCityClick ->
             CityListScreen(
                 onCityClick = onCityClick,
@@ -257,19 +268,25 @@ internal fun TabletMasterDetailContent(
     listContent: @Composable (String?, (String) -> Unit) -> Unit,
     detailContent: @Composable (String) -> Unit,
     emptyDetailContent: @Composable () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    homeExpandedCityId: String? = null,
+    onHomeCityExpanded: ((String) -> Unit)? = null
 ) {
     var selectedCityId by rememberSaveable { mutableStateOf<String?>(null) }
     var knownCityIds by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
-    val activeCityId = resolveExpandedCityId(
-        selectedCityId, knownCityIds, availableCityIds
-    )
+    val activeCityId = if (onHomeCityExpanded != null) {
+        homeExpandedCityId?.takeIf { it in availableCityIds } ?: availableCityIds.lastOrNull()
+    } else {
+        resolveExpandedCityId(selectedCityId, knownCityIds, availableCityIds)
+    }
 
     // La dernière localité ajoutée prend le focus, comme sur téléphone.
     // La sélection manuelle reste stable pendant les rafraîchissements météo.
-    LaunchedEffect(availableCityIds) {
-        selectedCityId = activeCityId
-        knownCityIds = ArrayList(availableCityIds)
+    LaunchedEffect(availableCityIds, onHomeCityExpanded) {
+        if (onHomeCityExpanded == null) {
+            selectedCityId = activeCityId
+            knownCityIds = ArrayList(availableCityIds)
+        }
     }
 
     BoxWithConstraints(modifier = modifier) {
@@ -286,7 +303,10 @@ internal fun TabletMasterDetailContent(
                     .fillMaxHeight()
                     .testTag(TAG_TABLET_LIST_PANE)
             ) {
-                listContent(activeCityId) { selectedCityId = it }
+                listContent(activeCityId) { cityId ->
+                    if (onHomeCityExpanded != null) onHomeCityExpanded(cityId)
+                    else selectedCityId = cityId
+                }
             }
 
             VerticalDivider(

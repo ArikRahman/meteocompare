@@ -63,6 +63,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -103,6 +104,7 @@ class CityListViewModelTest {
     private val modelsFlow = MutableStateFlow(WeatherModel.MVP_SELECTION)
     private val refreshIntervalFlow = MutableStateFlow(RefreshInterval.DEFAULT)
     private val forecastEngineFlow = MutableStateFlow(ForecastEngine.DEFAULT)
+    private val homeExpandedPreference = MutableStateFlow<String?>(null)
     private val forecastUpdates = MutableSharedFlow<CityForecast>(extraBufferCapacity = 4)
     private val onlineFlow = MutableStateFlow(true)
     private val notificationSettingsFlow = MutableStateFlow(NotificationSettings())
@@ -132,6 +134,10 @@ class CityListViewModelTest {
         // reçu une valeur pour chaque source.
         coEvery { observeRefreshInterval() } returns refreshIntervalFlow
         every { observeForecastEngine() } returns forecastEngineFlow
+        every { observeHomeExpandedCityId() } returns homeExpandedPreference
+        coEvery { setHomeExpandedCityId(any()) } coAnswers {
+            homeExpandedPreference.value = firstArg()
+        }
         every { observeNotificationSettings() } returns notificationSettingsFlow
         coEvery { updateNotificationSettings(any()) } answers {
             val transform = firstArg<(NotificationSettings) -> NotificationSettings>()
@@ -196,6 +202,7 @@ class CityListViewModelTest {
         modelsFlow.value = WeatherModel.MVP_SELECTION
         refreshIntervalFlow.value = RefreshInterval.DEFAULT
         forecastEngineFlow.value = ForecastEngine.DEFAULT
+        homeExpandedPreference.value = null
         onlineFlow.value = true
         // Par défaut, getCityForecastStream renvoie un flow qui reste en cours.
         // Les tests qui veulent un résultat spécifique l'overrident AVANT
@@ -217,6 +224,88 @@ class CityListViewModelTest {
     fun tearDown() {
         unmockkObject(WeatherNotificationScheduler)
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `home restores saved expansion rather than choosing last favorite`() = runViewModelTest {
+        // Simuler un vrai lancement : les deux données sont déjà persistées
+        // avant la création du ViewModel.
+        viewModel.viewModelScope.cancel()
+        homeExpandedPreference.value = paris.id
+        favoritesFlow.value = listOf(paris, lyon)
+        val restarted = createViewModel()
+        runCurrent()
+
+        assertTrue(restarted.homeExpansion.value.isReady)
+        assertEquals(paris.id, restarted.homeExpansion.value.expandedCityId)
+    }
+
+    @Test
+    fun `home waits for stored preference before choosing a card`() = runViewModelTest {
+        viewModel.viewModelScope.cancel()
+        favoritesFlow.value = listOf(paris, lyon)
+        val restorationGate = CompletableDeferred<Unit>()
+        every { prefs.observeHomeExpandedCityId() } returns flow {
+            restorationGate.await()
+            emit(paris.id)
+        }
+        val restarted = createViewModel()
+        runCurrent()
+        assertFalse(restarted.homeExpansion.value.isReady)
+
+        restorationGate.complete(Unit)
+        runCurrent()
+        assertEquals(paris.id, restarted.homeExpansion.value.expandedCityId)
+    }
+
+    @Test
+    fun `home saves manual selection and restores it after restart`() = runViewModelTest {
+        favoritesFlow.value = listOf(paris, lyon)
+        runCurrent()
+        assertEquals(lyon.id, viewModel.homeExpansion.value.expandedCityId)
+        viewModel.onHomeCityExpanded(paris.id)
+        runCurrent()
+        assertEquals(paris.id, homeExpandedPreference.value)
+
+        viewModel.viewModelScope.cancel()
+        val restarted = createViewModel()
+        runCurrent()
+        assertEquals(paris.id, restarted.homeExpansion.value.expandedCityId)
+    }
+
+    @Test
+    fun `home selects new favorites and falls back when expanded city is removed`() = runViewModelTest {
+        favoritesFlow.value = listOf(paris)
+        runCurrent()
+        assertEquals(paris.id, viewModel.homeExpansion.value.expandedCityId)
+
+        favoritesFlow.value = listOf(paris, lyon)
+        runCurrent()
+        assertEquals(lyon.id, viewModel.homeExpansion.value.expandedCityId)
+        assertEquals(lyon.id, homeExpandedPreference.value)
+
+        // Supprimer la carte ouverte choisit une ville encore présente.
+        favoritesFlow.value = listOf(paris)
+        runCurrent()
+        assertEquals(paris.id, viewModel.homeExpansion.value.expandedCityId)
+        assertEquals(paris.id, homeExpandedPreference.value)
+
+        favoritesFlow.value = emptyList()
+        runCurrent()
+        assertNull(viewModel.homeExpansion.value.expandedCityId)
+        viewModel.onHomeCityExpanded(lyon.id) // une ville absente ne peut pas être sauvée
+        assertEquals(paris.id, homeExpandedPreference.value)
+    }
+
+    @Test
+    fun `home uses last favorite if saved city no longer exists`() = runViewModelTest {
+        viewModel.viewModelScope.cancel()
+        homeExpandedPreference.value = "deleted"
+        favoritesFlow.value = listOf(paris, lyon)
+        val restarted = createViewModel()
+        runCurrent()
+        assertEquals(lyon.id, restarted.homeExpansion.value.expandedCityId)
+        assertEquals(lyon.id, homeExpandedPreference.value)
     }
 
     @Test

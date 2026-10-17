@@ -63,6 +63,7 @@ import androidx.compose.material.icons.outlined.WaterDrop
 import androidx.compose.material.icons.outlined.Waves
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -182,6 +183,7 @@ fun CityListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val addState by viewModel.addCityState.collectAsStateWithLifecycle()
+    val homeExpansion by viewModel.homeExpansion.collectAsStateWithLifecycle()
     var showAddSheet by rememberSaveable { mutableStateOf(false) }
     var showDonationDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -208,7 +210,13 @@ fun CityListScreen(
     WeatherAccentTheme(
         condition = uiState.weatherAccentCondition(selectedCityId)
     ) {
-        CityListContent(
+        // Empêche de déplier brièvement la dernière ville avant la lecture
+        // du choix mémorisé (DataStore et favoris chargent indépendamment).
+        if (!homeExpansion.isReady) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else CityListContent(
             uiState = uiState,
             onCityClick = onCityClick,
             onGraphicViewClick = onGraphicViewClick,
@@ -223,7 +231,9 @@ fun CityListScreen(
             onRefresh = viewModel::onRefreshAll,
             onMarineAction = viewModel::onMarineAction,
             selectedCityId = selectedCityId,
-            selectionEnabled = selectionEnabled
+            selectionEnabled = selectionEnabled,
+            homeExpandedCityId = homeExpansion.expandedCityId,
+            onHomeCityExpanded = viewModel::onHomeCityExpanded
         )
 
         if (showDonationDialog) {
@@ -304,7 +314,9 @@ internal fun CityListContent(
     onMarineAction: (City) -> Unit = {},
     snackbarHostState: SnackbarHostState? = null,
     selectedCityId: String? = null,
-    selectionEnabled: Boolean = false
+    selectionEnabled: Boolean = false,
+    homeExpandedCityId: String? = null,
+    onHomeCityExpanded: ((String) -> Unit)? = null
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
@@ -401,7 +413,9 @@ internal fun CityListContent(
                         onRetry = onRetry,
                         onMarineAction = onMarineAction,
                         selectedCityId = selectedCityId,
-                        selectionEnabled = selectionEnabled
+                        selectionEnabled = selectionEnabled,
+                        homeExpandedCityId = homeExpandedCityId,
+                        onHomeCityExpanded = onHomeCityExpanded
                     )
                 }
             }
@@ -420,7 +434,9 @@ internal fun CityList(
     onRetry: (City) -> Unit,
     onMarineAction: (City) -> Unit = {},
     selectedCityId: String? = null,
-    selectionEnabled: Boolean = false
+    selectionEnabled: Boolean = false,
+    homeExpandedCityId: String? = null,
+    onHomeCityExpanded: ((String) -> Unit)? = null
 ) {
     val cityIds = items.map { it.city.id }
     var knownCityIds by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
@@ -432,14 +448,17 @@ internal fun CityList(
     )
     // The tablet already owns the active city in its master/detail navigation.
     // On the phone, expansion is local to Home and survives configuration changes.
-    val expandedCityId = if (selectionEnabled) {
-        selectedCityId?.takeIf { it in cityIds } ?: localExpandedId
-    } else {
-        localExpandedId
+    val expandedCityId = when {
+        onHomeCityExpanded != null -> homeExpandedCityId?.takeIf { it in cityIds }
+            ?: cityIds.lastOrNull()
+        selectionEnabled -> selectedCityId?.takeIf { it in cityIds } ?: localExpandedId
+        else -> localExpandedId
     }
-    LaunchedEffect(cityIds) {
-        requestedExpandedCityId = localExpandedId
-        knownCityIds = ArrayList(cityIds)
+    LaunchedEffect(cityIds, onHomeCityExpanded) {
+        if (onHomeCityExpanded == null) {
+            requestedExpandedCityId = localExpandedId
+            knownCityIds = ArrayList(cityIds)
+        }
     }
 
     LazyColumn(
@@ -466,9 +485,12 @@ internal fun CityList(
                 onClick = {
                     when (cityCardTapAction(state.city.id, expandedCityId)) {
                         CityCardTapAction.EXPAND -> {
-                            requestedExpandedCityId = state.city.id
-                            // On a tablet the detail pane follows the expanded city.
+                            if (onHomeCityExpanded == null) {
+                                requestedExpandedCityId = state.city.id
+                            }
+                            // On tablet the detail pane is the selection owner.
                             if (selectionEnabled) onCityClick(state.city.id)
+                            else onHomeCityExpanded?.invoke(state.city.id)
                         }
                         CityCardTapAction.OPEN_DETAILS -> onCityClick(state.city.id)
                     }

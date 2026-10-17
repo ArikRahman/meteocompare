@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -65,6 +66,12 @@ import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+
+/** La Home attend la restauration DataStore avant de rendre les cartes. */
+data class HomeExpansionState(
+    val isReady: Boolean = false,
+    val expandedCityId: String? = null
+)
 
 sealed interface MarineFeedback {
     data object Enabled : MarineFeedback
@@ -89,6 +96,22 @@ class CityListViewModel @Inject constructor(
     private val engineContextProvider: ForecastEngineContextProvider,
     private val uvIndexRepository: UvIndexRepository
 ) : ViewModel() {
+
+    private val _homeExpansion = MutableStateFlow(HomeExpansionState())
+    val homeExpansion: StateFlow<HomeExpansionState> = _homeExpansion
+    private var knownHomeCityIds: List<String>? = null
+    private var currentHomeCityIds: List<String> = emptyList()
+    // Une seule coroutine écrit en ordre ; une sélection rapide ne peut pas être
+    // écrasée par une sauvegarde plus lente partie avant elle.
+    private val homeSelectionWrites = Channel<String>(Channel.CONFLATED)
+
+    /** Sélection immédiate côté UI, puis persistance hors du thread d'affichage. */
+    fun onHomeCityExpanded(cityId: String) {
+        if (!_homeExpansion.value.isReady || cityId !in currentHomeCityIds) return
+        if (_homeExpansion.value.expandedCityId == cityId) return
+        _homeExpansion.value = HomeExpansionState(isReady = true, expandedCityId = cityId)
+        homeSelectionWrites.trySend(cityId)
+    }
 
     private val forecastsById = MutableStateFlow<Map<String, ForecastState>>(emptyMap())
     /** Dernières données brutes : changer de moteur recalcule sans refetch réseau. */
@@ -220,6 +243,49 @@ class CityListViewModel @Inject constructor(
     )
 
     init {
+        viewModelScope.launch {
+            for (cityId in homeSelectionWrites) {
+                runSuspendCatching { userPreferences.setHomeExpandedCityId(cityId) }
+                    .onFailure { android.util.Log.w("MeteoCompare/Home", "Unable to save expanded city", it) }
+            }
+        }
+        viewModelScope.launch {
+            // Lire la préférence avant les favoris : une émission initiale de la
+            // liste ne doit jamais interpréter les favoris restaurés comme des
+            // nouvelles villes et écraser le choix de l'utilisateur.
+            val restoredId = runSuspendCatching {
+                userPreferences.observeHomeExpandedCityId().first()
+            }.getOrNull()
+            cityRepository.observeFavorites()
+                .map { cities -> cities.map { it.id } }
+                .distinctUntilChanged()
+                .collect { cityIds ->
+                    val previousIds = knownHomeCityIds
+                    val currentSelection = _homeExpansion.value
+                    val priorSelection = if (currentSelection.isReady) {
+                        currentSelection.expandedCityId
+                    } else {
+                        restoredId
+                    }
+                    val active = resolveExpandedCityId(
+                        expandedCityId = priorSelection,
+                        previousCityIds = previousIds ?: cityIds,
+                        cityIds = cityIds
+                    )
+                    currentHomeCityIds = cityIds
+                    knownHomeCityIds = cityIds
+                    _homeExpansion.value = HomeExpansionState(
+                        isReady = true,
+                        expandedCityId = active
+                    )
+                    // Fallback après suppression, ou une nouvelle ville ajoutée.
+                    // Une liste initiale vide ne doit pas effacer la préférence.
+                    if (active != null && active != priorSelection) {
+                        homeSelectionWrites.trySend(active)
+                    }
+                }
+        }
+
         observePresentationTime()
 
         viewModelScope.launch {

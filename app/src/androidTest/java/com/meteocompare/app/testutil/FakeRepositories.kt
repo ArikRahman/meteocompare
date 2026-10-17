@@ -229,6 +229,7 @@ class FakeUserPreferencesRepository @Inject constructor() : UserPreferencesRepos
     private val language = MutableStateFlow(LanguagePreference.SYSTEM)
     private val refresh = MutableStateFlow(RefreshInterval.DEFAULT)
     private val forecastEngine = MutableStateFlow(ForecastEngine.DEFAULT)
+    val homeExpandedCityId = MutableStateFlow<String?>(null)
     private val notificationSettings = MutableStateFlow(NotificationSettings())
     private val collapsedSectionsByCity =
         ConcurrentHashMap<String, MutableStateFlow<Set<CityDetailSection>>>()
@@ -254,6 +255,11 @@ class FakeUserPreferencesRepository @Inject constructor() : UserPreferencesRepos
     override suspend fun setRefreshInterval(interval: RefreshInterval) { refresh.value = interval }
     override fun observeForecastEngine(): Flow<ForecastEngine> = forecastEngine
     override suspend fun setForecastEngine(engine: ForecastEngine) { forecastEngine.value = engine }
+
+    override fun observeHomeExpandedCityId(): Flow<String?> = homeExpandedCityId
+    override suspend fun setHomeExpandedCityId(cityId: String?) {
+        homeExpandedCityId.value = cityId
+    }
 
     override fun observeCollapsedCityDetailSections(
         cityId: String
@@ -304,6 +310,7 @@ class FakeUserPreferencesRepository @Inject constructor() : UserPreferencesRepos
         language.value = LanguagePreference.SYSTEM
         refresh.value = RefreshInterval.DEFAULT
         forecastEngine.value = ForecastEngine.DEFAULT
+        homeExpandedCityId.value = null
         collapsedSectionsByCity.clear()
         viewModeByCity.clear()
         contentTabByCity.clear()

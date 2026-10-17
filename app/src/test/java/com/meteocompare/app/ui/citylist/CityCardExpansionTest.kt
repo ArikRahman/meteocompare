@@ -14,6 +14,14 @@ class CityCardExpansionTest {
         assertEquals("paris", resolveExpandedCityId("removed", listOf("removed"), listOf("paris")))
     }
 
+    @Test fun restoration_keeps_the_previously_expanded_city() {
+        val ids = listOf("paris", "lyon", "brest")
+        // Au premier chargement, tous les favoris sont déjà connus :
+        // aucun ne doit être interprété comme un nouvel ajout.
+        assertEquals("paris", resolveExpandedCityId("paris", ids, ids))
+        assertEquals("brest", resolveExpandedCityId("deleted", ids, ids))
+    }
+
     @Test fun initially_the_last_favorite_is_expanded() {
         assertEquals(
             "brest",

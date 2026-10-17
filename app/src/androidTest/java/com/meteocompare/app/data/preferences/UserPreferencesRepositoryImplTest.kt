@@ -33,6 +33,7 @@ class UserPreferencesRepositoryImplTest {
             repository.setLanguagePreference(LanguagePreference.SYSTEM)
             repository.setRefreshInterval(RefreshInterval.DEFAULT)
             repository.setForecastEngine(ForecastEngine.DEFAULT)
+            repository.setHomeExpandedCityId(null)
             listOf("paris", "lyon").forEach { cityId ->
                 CityDetailSection.entries.forEach { section ->
                     repository.setCityDetailSectionCollapsed(cityId, section, collapsed = false)
@@ -41,6 +42,16 @@ class UserPreferencesRepositoryImplTest {
                 repository.setCityDetailContentTab(cityId, CityDetailContentTab.DEFAULT)
             }
         }
+    }
+
+    @Test
+    fun home_expanded_city_survives_repository_recreation_and_can_be_cleared() = runTest {
+        repository.setHomeExpandedCityId("paris")
+        assertEquals("paris", repository.observeHomeExpandedCityId().first())
+        val recreated = UserPreferencesRepositoryImpl(context, Dispatchers.IO)
+        assertEquals("paris", recreated.observeHomeExpandedCityId().first())
+        recreated.setHomeExpandedCityId(null)
+        assertEquals(null, repository.observeHomeExpandedCityId().first())
     }
 
     @Test

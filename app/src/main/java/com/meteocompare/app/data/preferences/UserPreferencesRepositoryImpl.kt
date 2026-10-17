@@ -56,6 +56,7 @@ private val CITY_DETAIL_VIEW_MODES_KEY =
     stringSetPreferencesKey("city_detail_view_modes")
 private val CITY_DETAIL_CONTENT_TABS_KEY =
     stringSetPreferencesKey("city_detail_content_tabs")
+private val HOME_EXPANDED_CITY_ID_KEY = stringPreferencesKey("home_expanded_city_id")
 private val NOTIFICATION_DAILY_SUMMARY_KEY = booleanPreferencesKey("notification_daily_summary")
 private val NOTIFICATION_DAILY_MINUTE_KEY = intPreferencesKey("notification_daily_summary_minute_of_day")
 private val NOTIFICATION_DIVERGENCE_KEY = booleanPreferencesKey("notification_divergence")
@@ -224,6 +225,18 @@ class UserPreferencesRepositoryImpl @Inject constructor(
             }
 
             prefs[COLLAPSED_CITY_DETAIL_SECTIONS_KEY] = current.toSet()
+        }
+        Unit
+    }
+
+    override fun observeHomeExpandedCityId(): Flow<String?> =
+        safePreferences.map { prefs -> prefs[HOME_EXPANDED_CITY_ID_KEY] }
+            .distinctUntilChanged()
+
+    override suspend fun setHomeExpandedCityId(cityId: String?) = withContext(ioDispatcher) {
+        context.preferencesDataStore.edit { prefs ->
+            if (cityId == null) prefs.remove(HOME_EXPANDED_CITY_ID_KEY)
+            else prefs[HOME_EXPANDED_CITY_ID_KEY] = cityId
         }
         Unit
     }

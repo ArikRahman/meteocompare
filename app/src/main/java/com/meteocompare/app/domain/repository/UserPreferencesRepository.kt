@@ -62,6 +62,10 @@ interface UserPreferencesRepository {
         collapsed: Boolean
     )
 
+    /** Ville dont la carte est dépliée sur Home (commune au téléphone et à la tablette). */
+    fun observeHomeExpandedCityId(): Flow<String?>
+    suspend fun setHomeExpandedCityId(cityId: String?)
+
     /** Dernière granularité consultée dans la comparaison détaillée de la ville. */
     fun observeCityDetailViewMode(cityId: String): Flow<CityDetailViewMode>
     suspend fun setCityDetailViewMode(cityId: String, mode: CityDetailViewMode)

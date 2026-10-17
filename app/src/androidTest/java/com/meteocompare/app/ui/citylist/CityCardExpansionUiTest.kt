@@ -49,6 +49,30 @@ class CityCardExpansionUiTest {
         card(cityId).assert(SemanticsMatcher.expectValue(CityCardExpandedKey, value))
     }
 
+    @Test fun managed_home_selection_displays_saved_city_and_updates_on_tap() {
+        val savedSelection = mutableStateOf<String?>(TestFixtures.paris.id)
+        var opened: String? = null
+        composeRule.setContent {
+            MeteoCompareTheme {
+                CityList(
+                    items = listOf(paris, lyon),
+                    homeExpandedCityId = savedSelection.value,
+                    onHomeCityExpanded = { savedSelection.value = it },
+                    onCityClick = { opened = it },
+                    onRemove = {}, onRetry = {}
+                )
+            }
+        }
+        assertExpanded(TestFixtures.paris.id, true)
+        assertExpanded(TestFixtures.lyon.id, false)
+        card(TestFixtures.lyon.id).performClick()
+        assertExpanded(TestFixtures.lyon.id, true)
+        composeRule.runOnIdle {
+            assertEquals(TestFixtures.lyon.id, savedSelection.value)
+            assertEquals(null, opened)
+        }
+    }
+
     @Test fun single_city_stays_expanded_and_opens_details_on_first_tap() {
         var opened: String? = null
         composeRule.setContent {

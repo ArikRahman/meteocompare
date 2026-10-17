@@ -82,6 +82,33 @@ class AdaptiveNavigationContentTest {
     }
 
     @Test
+    fun tablet_uses_persisted_home_selection_instead_of_last_city() {
+        val expanded = mutableStateOf<String?>("paris")
+        composeRule.setContent {
+            MeteoCompareTheme {
+                TabletMasterDetailContent(
+                    availableCityIds = listOf("paris", "lyon"),
+                    homeExpandedCityId = expanded.value,
+                    onHomeCityExpanded = { expanded.value = it },
+                    listContent = { active, select ->
+                        Column {
+                            Text(active ?: "none", Modifier.testTag(TAG_TEST_LIST_SELECTION))
+                            Button(onClick = { select("lyon") }, modifier = Modifier.testTag(TAG_TEST_SELECT_CITY)) {
+                                Text("Lyon")
+                            }
+                        }
+                    },
+                    detailContent = { Text(it, Modifier.testTag(TAG_TEST_ACTIVE_CITY)) },
+                    emptyDetailContent = {}
+                )
+            }
+        }
+        composeRule.onNodeWithTag(TAG_TEST_ACTIVE_CITY).assertTextEquals("paris")
+        composeRule.onNodeWithTag(TAG_TEST_SELECT_CITY).performClick()
+        composeRule.onNodeWithTag(TAG_TEST_ACTIVE_CITY).assertTextEquals("lyon")
+    }
+
+    @Test
     fun tablet_clicking_a_city_replaces_the_detail_content() {
         composeRule.setContent {
             MeteoCompareTheme {

@@ -12,8 +12,9 @@ internal fun resolveExpandedCityId(
     cityIds: List<String>
 ): String? {
     if (cityIds.isEmpty()) return null
-    // On initial load (including after process recreation), prefer the last favorite.
-    // When several favorites arrive in one emission, the last appended one wins.
+    // At startup callers pass the already-loaded IDs as previousCityIds so a
+    // persisted expandedCityId wins. Newly appended favorites still take focus;
+    // without a valid selection the last favorite is the fallback.
     val previous = previousCityIds.toSet()
     return cityIds.lastOrNull { it !in previous }
         ?: expandedCityId?.takeIf { it in cityIds }
