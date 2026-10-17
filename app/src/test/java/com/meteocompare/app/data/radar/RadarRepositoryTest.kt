@@ -85,9 +85,23 @@ class RadarRepositoryTest {
     @Test
     fun `radar caches are bounded for mobile memory pressure`() {
         // 512x512 ARGB images are ~1 MiB each; 256x256 OSM tiles are ~256 KiB.
-        // These limits keep the theoretical pixel payload around 24 MiB.
+        // Retain entry limits for tiny images, but bound *actual* pixels too:
+        // 16 MiB radar (13 standard frames fit) + 4 MiB map tiles.
         assertEquals(16, FRAME_CACHE_SIZE)
         assertEquals(32, TILE_CACHE_SIZE)
+        assertEquals(16L * 1024 * 1024, FRAME_CACHE_BYTES)
+        assertEquals(4L * 1024 * 1024, TILE_CACHE_BYTES)
+    }
+
+    @Suppress("DEPRECATION")
+    @Test
+    fun `UI hidden alone retains radar cache while real memory pressure clears it`() {
+        assertFalse(shouldClearRadarCaches(android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN))
+        assertFalse(shouldClearRadarCaches(android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE))
+        assertTrue(shouldClearRadarCaches(android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW))
+        assertTrue(shouldClearRadarCaches(android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL))
+        assertTrue(shouldClearRadarCaches(android.content.ComponentCallbacks2.TRIM_MEMORY_BACKGROUND))
+        assertTrue(shouldClearRadarCaches(android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE))
     }
 
     @Test

@@ -7,10 +7,15 @@ import android.net.NetworkCapabilities
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.shareIn
 
 /**
  * Vérifie et observe la connectivité réseau avant de lancer une requête.
@@ -31,14 +36,31 @@ class NetworkMonitor @Inject constructor(
     }
 
     /**
-     * Flux chaud par souscription de l'état réseau courant.
+     * Flux partagé de l'état réseau courant.
      *
-     * Une première valeur est émise immédiatement, puis chaque changement de
+     * La première souscription publie rapidement l'état actuel, puis chaque changement de
      * réseau/capacités provoque une nouvelle lecture. [distinctUntilChanged]
      * évite les recompositions lorsque plusieurs callbacks Android décrivent le
      * même état logique.
      */
-    fun observeOnline(): Flow<Boolean> = callbackFlow {
+    // Home, detail and other collectors must not each register their own
+    // ConnectivityManager callback. Share one while somebody is observing;
+    // after a short rotation grace period the callback is unregistered.
+    private val observationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val sharedOnline by lazy {
+        observeOnlineUnshared().shareIn(
+            observationScope,
+            SharingStarted.WhileSubscribed(
+                stopTimeoutMillis = 5_000,
+                replayExpirationMillis = 0
+            ),
+            replay = 1
+        )
+    }
+
+    fun observeOnline(): Flow<Boolean> = sharedOnline
+
+    private fun observeOnlineUnshared(): Flow<Boolean> = callbackFlow {
         val manager = connectivityManager()
         if (manager == null) {
             trySend(true)

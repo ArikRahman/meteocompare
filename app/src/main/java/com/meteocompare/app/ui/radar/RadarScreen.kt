@@ -563,6 +563,11 @@ private fun RadarStage(
     val density = LocalDensity.current.density
     val tileImages = remember(state.baseTiles) { state.baseTiles.map { it to it.image.toImageBitmap() } }
     val radar = remember(state.displayImage) { state.displayImage?.toImageBitmap() }
+    // Reordering rain cells is unrelated to Canvas redraws (e.g. playback,
+    // frame loading, theme animation). Only redo it when analysis changes.
+    val orderedProjectionCells = remember(state.nowcast) {
+        state.nowcast?.cells.orEmpty().sortedBy { it.impact?.relevanceScore ?: 0.0 }
+    }
     val background = MaterialTheme.colorScheme.surfaceVariant
     val markerColor = MaterialTheme.colorScheme.primary
     Canvas(
@@ -598,7 +603,7 @@ private fun RadarStage(
                 filterQuality = FilterQuality.None
             )
         }
-        if (state.projectionVisible) drawProjectionOverlay(state, density)
+        if (state.projectionVisible) drawProjectionOverlay(state, density, orderedProjectionCells)
         drawCircle(Color.White.copy(alpha = .95f), radius = 7f * density, center = Offset(cx, cy))
         drawCircle(markerColor, radius = 4f * density, center = Offset(cx, cy))
     }
@@ -607,8 +612,11 @@ private fun RadarStage(
 private fun RadarImage.toImageBitmap(): ImageBitmap =
     Bitmap.createBitmap(argb, width, height, Bitmap.Config.ARGB_8888).asImageBitmap()
 
-private fun DrawScope.drawProjectionOverlay(state: RadarUiState.Ready, density: Float) {
-    val cells = state.nowcast?.cells.orEmpty().sortedBy { it.impact?.relevanceScore ?: .0 }
+private fun DrawScope.drawProjectionOverlay(
+    state: RadarUiState.Ready,
+    density: Float,
+    cells: List<RadarRainCell>
+) {
     cells.forEachIndexed { index, cell ->
         val projection = projectRainCell(cell, state.horizonMinutes.toDouble()) ?: return@forEachIndexed
         val geometry = radarNowcastDisplayGeometry(state.range, (size.width / density).toDouble(), (size.height / density).toDouble(), cell.analysisZoom)

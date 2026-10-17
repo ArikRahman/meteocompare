@@ -105,10 +105,14 @@ fun HourlyConfidenceChart(
     normals: Map<Int, DayNormals>? = null,
     units: WeatherUnits = LocalWeatherUnits.current
 ) {
-    val displayBands = bands.filter { band ->
-        metricPlotValue(band.minValue) != null && metricPlotValue(band.maxValue) != null &&
-            metricPlotValue(band.meanValue) != null && band.maxValue >= band.minValue
-    }.sortedBy { it.timestamp }
+    // Filtering and sorting can touch 168+ hourly points. Zoom and drag
+    // recompositions must only redraw, not rebuild the series each frame.
+    val displayBands = remember(bands, metric) {
+        bands.filter { band ->
+            metricPlotValue(band.minValue) != null && metricPlotValue(band.maxValue) != null &&
+                metricPlotValue(band.meanValue) != null && band.maxValue >= band.minValue
+        }.sortedBy { it.timestamp }
+    }
 
     if (displayBands.size < 2) {
         Box(modifier = modifier.height(ChartCanvasHeight), contentAlignment = Alignment.Center) {
@@ -200,14 +204,16 @@ fun HourlyConfidenceChart(
     // Description sémantique
     val resources = LocalResources.current
     val locale = LocalConfiguration.current.locales[0]
-    // Calcul léger refait à chaque recomposition pertinente afin qu'un
-    // changement de langue/configuration soit reflété immédiatement.
-    val a11yBase = com.meteocompare.app.ui.accessibility.A11yFormatter
-        .hourlyChartDescription(resources, displayBands, units = units, metricUnit = when (metric) {
-            ConfidenceMetric.TEMPERATURE -> WeatherUnit.TEMPERATURE
-            ConfidenceMetric.PRECIPITATION -> WeatherUnit.PRECIPITATION
-            ConfidenceMetric.WIND -> WeatherUnit.WIND_SPEED
-        })
+    // This full spoken summary is independent of the zoom viewport. Cache it
+    // until data, locale, units or metric change; zoom updates just the prefix.
+    val a11yBase = remember(resources, locale, displayBands, units, metric) {
+        com.meteocompare.app.ui.accessibility.A11yFormatter
+            .hourlyChartDescription(resources, displayBands, units = units, metricUnit = when (metric) {
+                ConfidenceMetric.TEMPERATURE -> WeatherUnit.TEMPERATURE
+                ConfidenceMetric.PRECIPITATION -> WeatherUnit.PRECIPITATION
+                ConfidenceMetric.WIND -> WeatherUnit.WIND_SPEED
+            })
+    }
     val a11yZoomedPrefix = stringResource(R.string.chart_zoom_a11y_zoomed)
     val a11yDescription = if (isZoomed) "$a11yZoomedPrefix. $a11yBase" else a11yBase
 

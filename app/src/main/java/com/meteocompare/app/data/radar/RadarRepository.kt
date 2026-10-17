@@ -1,5 +1,8 @@
 package com.meteocompare.app.data.radar
 
+import android.content.ComponentCallbacks2
+import android.content.Context
+import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import com.meteocompare.app.BuildConfig
 import com.meteocompare.app.di.IoDispatcher
@@ -11,6 +14,7 @@ import com.meteocompare.app.domain.radar.RadarImage
 import com.meteocompare.app.domain.radar.RadarMetadata
 import android.util.Log
 import dagger.Lazy
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -26,6 +30,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -44,6 +50,8 @@ private const val RADAR_OPTIONS = "0_1"
 private const val METADATA_TTL_MS = 5 * 60_000L
 internal const val FRAME_CACHE_SIZE = 16
 internal const val TILE_CACHE_SIZE = 32
+internal const val FRAME_CACHE_BYTES = 16L * 1024L * 1024L
+internal const val TILE_CACHE_BYTES = 4L * 1024L * 1024L
 private const val DOWNLOAD_LOCK_STRIPES = 32
 
 interface RadarRepository {
@@ -163,6 +171,13 @@ internal suspend fun Call.awaitBodyBytes(urlForError: String = request().url.toS
         })
     }
 
+/** The UI_HIDDEN callback is lifecycle information, not a low-memory signal. */
+@Suppress("DEPRECATION")
+internal fun shouldClearRadarCaches(level: Int): Boolean =
+    level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW ||
+        level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL ||
+        level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND
+
 @Singleton
 class RainViewerRadarRepository @Inject constructor(
     // L'instance OkHttp du radar est créée à la première requête SUR Dispatchers.IO.
@@ -170,20 +185,47 @@ class RainViewerRadarRepository @Inject constructor(
     // thread lors de la création du ViewModel (StrictMode DiskReadViolation).
     @param:RadarOkHttp private val client: Lazy<OkHttpClient>,
     private val json: Json,
-    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    @param:ApplicationContext private val context: Context
 ) : RadarRepository {
     private val metadataMutex = Mutex()
     private var cachedMetadata: RadarMetadata? = null
     private var cachedMetadataAt = 0L
 
-    private val frameCache = object : LinkedHashMap<String, RadarImage>(FRAME_CACHE_SIZE, .75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, RadarImage>?): Boolean = size > FRAME_CACHE_SIZE
+    // Up to 13 RainViewer frames of 512x512 ARGB pixels (~13 MiB) must fit in
+    // memory to avoid re-decoding on every playback loop. The byte budget and
+    // entry count still protect against unexpected image dimensions.
+    private val frameCache = PixelBudgetCache(FRAME_CACHE_SIZE, FRAME_CACHE_BYTES)
+    private val tileCache = PixelBudgetCache(TILE_CACHE_SIZE, TILE_CACHE_BYTES)
+
+    // This singleton lives as long as the app process. Register with the
+    // Application context only, never an Activity. Dropping our references is
+    // safe even while a ViewModel is drawing an image it already received.
+    @Suppress("DEPRECATION")
+    private val memoryCallbacks = object : ComponentCallbacks2 {
+        override fun onConfigurationChanged(newConfig: Configuration) = Unit
+        override fun onLowMemory() = clearImageCaches("low_memory")
+        override fun onTrimMemory(level: Int) {
+            // UI_HIDDEN (20) is not itself memory pressure. Preserve frames for
+            // a quick return to the radar; clear when Android really needs RAM.
+            if (shouldClearRadarCaches(level)) clearImageCaches("trim_$level")
+        }
     }
-    private val tileCache = object : LinkedHashMap<String, RadarImage>(TILE_CACHE_SIZE, .75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, RadarImage>?): Boolean = size > TILE_CACHE_SIZE
+
+    init {
+        context.registerComponentCallbacks(memoryCallbacks)
     }
-    private val cacheMutex = Mutex()
+
+    private fun clearImageCaches(reason: String) {
+        frameCache.clear()
+        tileCache.clear()
+        if (BuildConfig.DEBUG) Log.d("MeteoCompare/RadarCache", "CLEARED reason=$reason")
+    }
+
     private val downloadLocks = Array(DOWNLOAD_LOCK_STRIPES) { Mutex() }
+    // Keep OSM downloads/PNG decodes from saturating CPU and sockets during
+    // large/full-screen viewports. Weather radar frames are not throttled here.
+    private val tileDownloadLimiter = Semaphore(4)
 
     private fun downloadLock(url: String): Mutex =
         downloadLocks[(url.hashCode() and Int.MAX_VALUE) % downloadLocks.size]
@@ -205,16 +247,33 @@ class RainViewerRadarRepository @Inject constructor(
 
     override suspend fun radarImage(metadata: RadarMetadata, frame: RadarFrame, city: City, zoom: Int): RadarImage {
         val url = radarImageUrl(metadata, frame, city, zoom)
-        cacheMutex.withLock { frameCache[url] }?.let { return it }
+        // Only log the opaque frame token, never the locality coordinates in the URL.
+        val frameId = frame.path.substringAfterLast('/')
+        frameCache[url]?.let {
+            if (BuildConfig.DEBUG) Log.d("MeteoCompare/RadarCache", "MEMORY_HIT frame=$frameId")
+            return it
+        }
 
-        // A display refresh and the nowcast analysis can legitimately ask for the
-        // same RainViewer frame at the same time. Serialising identical URL work
-        // prevents duplicate HTTP downloads while preserving cancellation.
+        // A display refresh and the nowcast analysis can ask for the same frame
+        // simultaneously. Serialize identical URL work to avoid duplicate decodes.
         return downloadLock(url).withLock download@{
-            cacheMutex.withLock { frameCache[url] }?.let { return@download it }
-            decodeImage(getBytes(url)).also { image ->
-                cacheMutex.withLock { frameCache[url] = image }
+            frameCache[url]?.let {
+                if (BuildConfig.DEBUG) Log.d("MeteoCompare/RadarCache", "MEMORY_HIT frame=$frameId coalesced=true")
+                return@download it
             }
+            val image = decodeImage(getBytes(url))
+            val stats = frameCache.put(url, image)
+            if (BuildConfig.DEBUG) {
+                Log.d("MeteoCompare/RadarCache", "DECODE frame=$frameId " +
+                    "dimensions=${image.width}x${image.height} " +
+                    "entries=${stats.entries} retainedBytes=${stats.bytes}")
+                if (stats.evicted > 0) {
+                    Log.d("MeteoCompare/RadarCache", "EVICTION frame=$frameId " +
+                        "count=${stats.evicted} retainedBytes=${stats.bytes}")
+                }
+                if (!stats.stored) Log.d("MeteoCompare/RadarCache", "NOT_CACHED frame=$frameId oversized=true")
+            }
+            image
         }
     }
 
@@ -227,15 +286,17 @@ class RainViewerRadarRepository @Inject constructor(
         baseTileRequests(city, zoom, viewportWidth, viewportHeight).map { tile ->
             async {
                 try {
-                    cacheMutex.withLock { tileCache[tile.url] }?.let { cached ->
+                    tileCache[tile.url]?.let { cached ->
                         if (BuildConfig.DEBUG) {
                             Log.d("MeteoCompare/OSMCache", "MEMORY_HIT tile=${tile.url.removePrefix("$OSM_TILE_URL/")}")
                         }
                         return@async RadarBaseTile(tile.leftFromCenter, tile.topFromCenter, cached)
                     }
-                    val image = downloadLock(tile.url).withLock {
-                        cacheMutex.withLock { tileCache[tile.url] } ?: decodeImage(getBytes(tile.url)).also { decoded ->
-                            cacheMutex.withLock { tileCache[tile.url] = decoded }
+                    val image = tileDownloadLimiter.withPermit {
+                        downloadLock(tile.url).withLock {
+                            tileCache[tile.url] ?: decodeImage(getBytes(tile.url)).also { decoded ->
+                                tileCache.put(tile.url, decoded)
+                            }
                         }
                     }
                     RadarBaseTile(tile.leftFromCenter, tile.topFromCenter, image)
