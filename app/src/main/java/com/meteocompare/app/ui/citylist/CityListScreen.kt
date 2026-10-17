@@ -16,6 +16,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -152,6 +153,15 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
+
+// Soft, synchronized morph: inset, content height, and neighbouring card
+// placement share a gradual ease-in/ease-out (no default spring rebound).
+// Keep these timings together so cards do not visually fight each other.
+internal const val CITY_CARD_RESIZE_DURATION_MS = 800
+private const val CITY_CARD_CROSSFADE_DURATION_MS = 620
+private const val CITY_CARD_CROSSFADE_DELAY_MS = 120
+private const val CITY_CARD_EMPHASIS_DURATION_MS = 500
+private val CityCardResizeEasing = CubicBezierEasing(0.33f, 0f, 0.67f, 1f)
 
 // ============================================================================
 //  Public screen entry — Hilt + state collection
@@ -471,11 +481,15 @@ internal fun CityList(
                 onMarineAction = { onMarineAction(state.city) },
                 isSelected = state.city.id == selectedCityId,
                 selectionEnabled = selectionEnabled,
-                // animateItem() permet aux ajouts/suppressions d'animer
-                // proprement à l'intérieur de la LazyColumn.
+                // Match the card's height morph, instead of using the default
+                // spring for neighbouring items (which can feel like a snap).
                 modifier = Modifier.animateItem(
-                    fadeInSpec = tween(300),
-                    fadeOutSpec = tween(200)
+                    fadeInSpec = tween(450, easing = CityCardResizeEasing),
+                    placementSpec = tween(
+                        durationMillis = CITY_CARD_RESIZE_DURATION_MS,
+                        easing = CityCardResizeEasing
+                    ),
+                    fadeOutSpec = tween(450, easing = CityCardResizeEasing)
                 )
             )
         }
@@ -569,7 +583,10 @@ internal fun CityCard(
         )
         val emphasisAlpha by animateFloatAsState(
             targetValue = selectionVisuals.targetAlpha,
-            animationSpec = tween(durationMillis = 180),
+            animationSpec = tween(
+                durationMillis = CITY_CARD_EMPHASIS_DURATION_MS,
+                easing = CityCardResizeEasing
+            ),
             label = "city-card-selection-emphasis"
         )
         val targetAccentColor = if (
@@ -581,7 +598,10 @@ internal fun CityCard(
         }
         val displayedAccentColor by animateColorAsState(
             targetValue = targetAccentColor,
-            animationSpec = tween(durationMillis = 180),
+            animationSpec = tween(
+                durationMillis = CITY_CARD_EMPHASIS_DURATION_MS,
+                easing = CityCardResizeEasing
+            ),
             label = "city-card-weather-accent"
         )
         val targetContainerColor = when {
@@ -597,7 +617,10 @@ internal fun CityCard(
         }
         val containerColor by animateColorAsState(
             targetValue = targetContainerColor,
-            animationSpec = tween(durationMillis = 180),
+            animationSpec = tween(
+                durationMillis = CITY_CARD_EMPHASIS_DURATION_MS,
+                easing = CityCardResizeEasing
+            ),
             label = "city-card-container"
         )
         val targetGradientAccentAlpha = cityCardGradientAccentAlpha(
@@ -606,7 +629,10 @@ internal fun CityCard(
         )
         val gradientAccentAlpha by animateFloatAsState(
             targetValue = targetGradientAccentAlpha,
-            animationSpec = tween(durationMillis = 180),
+            animationSpec = tween(
+                durationMillis = CITY_CARD_EMPHASIS_DURATION_MS,
+                easing = CityCardResizeEasing
+            ),
             label = "city-card-gradient-accent"
         )
         // Keep the right edge aligned with full cards. The animated start
@@ -614,7 +640,10 @@ internal fun CityCard(
         // edge or recomputing weather data on each animation frame.
         val compactStartInset by animateDpAsState(
             targetValue = if (expanded) 0.dp else 32.dp,
-            animationSpec = tween(durationMillis = 260),
+            animationSpec = tween(
+                durationMillis = CITY_CARD_RESIZE_DURATION_MS,
+                easing = CityCardResizeEasing
+            ),
             label = "city-card-compact-width"
         )
 
@@ -670,16 +699,26 @@ internal fun CityCard(
                     }
             ) {
 
-                // AnimatedContent only transitions when the card is toggled.
-                // Fade + clipped size change avoids scaling the complex forecast
-                // tree; LazyColumn only composes cards currently in view.
+                // Keep the outgoing layout visible while the card starts to
+                // resize; bring the replacement in through a long, overlapping
+                // fade. Only size and opacity change, not weather calculations
+                // or scale of the forecast content.
                 AnimatedContent(
                     targetState = expanded,
                     transitionSpec = {
-                        (fadeIn(tween(180, delayMillis = 60)) togetherWith
-                            fadeOut(tween(120))).using(
+                        (fadeIn(tween(
+                            durationMillis = CITY_CARD_CROSSFADE_DURATION_MS,
+                            delayMillis = CITY_CARD_CROSSFADE_DELAY_MS,
+                            easing = CityCardResizeEasing
+                        )) togetherWith fadeOut(tween(
+                            durationMillis = CITY_CARD_CROSSFADE_DURATION_MS,
+                            easing = CityCardResizeEasing
+                        ))).using(
                             SizeTransform(clip = true, sizeAnimationSpec = { _, _ ->
-                                tween(durationMillis = 260)
+                                tween(
+                                    durationMillis = CITY_CARD_RESIZE_DURATION_MS,
+                                    easing = CityCardResizeEasing
+                                )
                             })
                         )
                     },
@@ -891,7 +930,7 @@ private fun CompactCityCardContent(
                     .weight(1f, fill = false)
                     .testTag("$TAG_CITY_CARD_COMPACT_CONDITION_LABEL${state.city.id}")
             )
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(16.dp))
             Row(
                 modifier = Modifier.testTag("$TAG_CITY_CARD_COMPACT_TEMPERATURES${state.city.id}"),
                 verticalAlignment = Alignment.CenterVertically,

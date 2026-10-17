@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="widget_label_weather">Wetter</string>
+    <string name="widget_resize_tip_title">Ein Wetter-Widget für alle Größen</string>
+    <string name="widget_resize_tip_body">Die Android-Angabe „2×1“ bezeichnet nur die Anfangsgröße. Halte das Widget nach dem Hinzufügen gedrückt, um seine Größe anzupassen (je nach Startbildschirm). Wähle unten die Vorhersage für 5 oder 12 Stunden bzw. 5 Tage.</string>
     <string name="widget_config_colors_section">Farben</string>
     <string name="widget_config_colors_bg">Hintergrund</string>
     <string name="widget_config_colors_text">Text</string>

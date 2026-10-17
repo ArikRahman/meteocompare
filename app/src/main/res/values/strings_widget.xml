@@ -18,6 +18,8 @@
 
     <!-- Deux types redimensionnables, sans taille imposée dans le libellé. -->
     <string name="widget_label_weather">Météo</string>
+    <string name="widget_resize_tip_title">Un widget météo, toutes les tailles</string>
+    <string name="widget_resize_tip_body">Le « 2×1 » affiché par Android est seulement la taille de départ. Après l’ajout, appuyez longuement sur le widget pour le redimensionner (selon votre écran d’accueil). Choisissez ci-dessous les prévisions sur 5 h, 12 h ou 5 jours.</string>
 
     <!-- Section couleurs dans la config activity -->
     <string name="widget_config_colors_section">Couleurs</string>

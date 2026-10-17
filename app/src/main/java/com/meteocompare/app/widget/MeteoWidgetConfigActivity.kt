@@ -454,6 +454,36 @@ private fun WidgetConfigForm(
         )
         Spacer(Modifier.height(16.dp))
 
+        // Le sélecteur Android montre une seule entrée « Météo » avec une
+        // emprise 2×1 initiale. Expliquer ici, avant tout réglage, que les
+        // anciens formats ne sont pas perdus : ils sont redimensionnables.
+        // Le widget « À retenir » a un contenu fixe sur 24 h : ne pas lui
+        // présenter les modes de prévision du widget météo.
+        if (!insightMode) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                )
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = stringResource(R.string.widget_resize_tip_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.widget_resize_tip_body),
+                        modifier = Modifier.testTag(TAG_WIDGET_RESIZE_TIP),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+
         // ─── Section ville ────────────────────────────────────────
         Text(
             text = stringResource(R.string.widget_config_pick_city),
@@ -1163,6 +1193,7 @@ internal const val TAG_WIDGET_CORNER_CUSTOM = "widget_corner_custom"
 internal const val TAG_WIDGET_CORNER_RADIUS = "widget_corner_radius"
 internal const val TAG_WIDGET_SPACING = "widget_spacing_"
 internal const val TAG_WIDGET_CONFIG_ROOT = "widget_config_root"
+internal const val TAG_WIDGET_RESIZE_TIP = "widget_resize_tip"
 internal const val TAG_WIDGET_CITY = "widget_city_"
 internal const val TAG_WIDGET_OPACITY = "widget_opacity"
 internal const val TAG_WIDGET_OPACITY_INPUT = "widget_opacity_input"

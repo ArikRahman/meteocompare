@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="widget_label_weather">Tiempo</string>
+    <string name="widget_resize_tip_title">Un widget del tiempo para todos los tamaños</string>
+    <string name="widget_resize_tip_body">La etiqueta «2×1» de Android solo indica el tamaño inicial. Tras añadir el widget, mantenlo pulsado para cambiar su tamaño (según tu pantalla de inicio). Elige abajo la previsión de 5 horas, 12 horas o 5 días.</string>
     <string name="widget_config_colors_section">Colores</string>
     <string name="widget_config_colors_bg">Fondo</string>
     <string name="widget_config_colors_text">Texto</string>

@@ -47,7 +47,7 @@
     <string name="action_add_city">Añadir una ciudad</string>
     <string name="action_cancel">Cancelar</string>
 
-    <string name="widget_description">Widget del tiempo personalizable y redimensionable para una ciudad favorita, con comparación de modelos.</string>
+    <string name="widget_description">Un widget redimensionable: previsiones de 5 o 12 horas o de 5 días según su tamaño.</string>
     <string name="widget_config_title">Configurar widget</string>
     <string name="widget_config_subtitle">Elige la ciudad que se mostrará y la opacidad del fondo.</string>
     <string name="widget_config_pick_city">Ciudad que se mostrará</string>

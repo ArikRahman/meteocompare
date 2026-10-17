@@ -236,6 +236,8 @@ Deux widgets Glance sont proposés dans le sélecteur Android :
 - **Météo** : adapte son contenu à l'espace disponible. En version compacte : condition, température actuelle, ville et confiance. En l'agrandissant : min/max, prévisions des prochaines heures ou des prochains jours, ou une bande de confiance (température / pluie / vent) selon les préférences.
 - **À retenir** : met en avant le principal signal météo et la comparaison des modèles, avec un rendu redimensionnable.
 
+**Depuis la v1.17.1 :** les anciens raccourcis de tailles (dont 2×5) ont été regroupés dans le seul widget « Météo ». Le « 2×1 » éventuellement affiché par Android indique son **emprise initiale**, pas une limitation. Ajoutez « Météo », choisissez le mode souhaité (5 heures, 12 heures, 5 jours…), puis sur l'écran d'accueil **appuyez longuement pour redimensionner** le widget. Selon le lanceur Android, des poignées apparaissent directement ou une commande « Redimensionner » est proposée. Le contenu détaillé apparaît lorsqu'il dispose de suffisamment de place.
+
 Les modes confidence rendent une heatmap horizontale colorée par la confiance sur 7 jours, avec sous chaque cellule la valeur agrégée et le jour de la semaine. C'est le rendu widget de la bande de confiance de l'écran détail.
 
 **Localisation widget** : l'écran de config et le rendu du widget utilisent tous deux le helper `applyPersistedLocale` (dans `core/locale/`) pour respecter la préférence de langue de l'app, indépendamment de la locale système.

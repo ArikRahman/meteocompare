@@ -11,6 +11,8 @@
 
     <!-- Widget variant labels (shown in the picker) -->
     <string name="widget_label_weather">Weather</string>
+    <string name="widget_resize_tip_title">One weather widget, every size</string>
+    <string name="widget_resize_tip_body">Android’s “2×1” label is only the starting size. After adding the widget, touch and hold it to resize (depending on your home screen). Choose 5-hour, 12-hour or 5-day forecasts below.</string>
 
     <!-- Colors section in the config activity -->
     <string name="widget_config_colors_section">Colors</string>

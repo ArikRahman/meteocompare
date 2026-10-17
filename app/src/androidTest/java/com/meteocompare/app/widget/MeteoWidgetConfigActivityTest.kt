@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -101,6 +102,13 @@ class MeteoWidgetConfigActivityTest {
     @After fun tearDown() {
         if (::scenario.isInitialized) scenario.close()
         if (::host.isInitialized) host.deleteHost()
+    }
+
+    @Test
+    fun resize_guidance_is_visible_before_the_weather_widget_configuration() {
+        composeRule.onNodeWithTag(TAG_WIDGET_RESIZE_TIP)
+            .assertIsDisplayed()
+            .assertTextContains(context.getString(com.meteocompare.app.R.string.widget_resize_tip_body))
     }
 
     @Test

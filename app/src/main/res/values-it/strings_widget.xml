@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="widget_label_weather">Meteo</string>
+    <string name="widget_resize_tip_title">Un solo widget meteo per tutte le dimensioni</string>
+    <string name="widget_resize_tip_body">L’indicazione «2×1» di Android è solo la dimensione iniziale. Dopo aver aggiunto il widget, tienilo premuto per ridimensionarlo (in base alla schermata Home). Scegli qui sotto le previsioni per 5 ore, 12 ore o 5 giorni.</string>
     <string name="widget_config_colors_section">Colori</string>
     <string name="widget_config_colors_bg">Sfondo</string>
     <string name="widget_config_colors_text">Testo</string>

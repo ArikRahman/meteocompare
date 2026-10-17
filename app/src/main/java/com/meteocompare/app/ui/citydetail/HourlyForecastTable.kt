@@ -1,13 +1,10 @@
 package com.meteocompare.app.ui.citydetail
 
-import com.meteocompare.app.core.util.windCardinal
-
 import com.meteocompare.app.core.locale.LocalClockFormatPreference
 import com.meteocompare.app.core.locale.WeatherTimeFormat
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -30,7 +27,6 @@ import com.meteocompare.app.domain.model.CityForecast
 import com.meteocompare.app.domain.model.HourlyForecast
 import com.meteocompare.app.domain.model.WeatherModel
 import com.meteocompare.app.domain.model.sortedByFamily
-import com.meteocompare.app.ui.components.WindArrow
 import com.meteocompare.app.ui.theme.color
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -188,6 +184,7 @@ fun HourlyForecastTable(
                             style = textStyle,
                             background = background,
                             directionDegrees = direction,
+                            isWindCell = directionExtractor != null,
                             height = modelRowHeight,
                             palette = palette
                         )
@@ -282,6 +279,7 @@ private fun HourValueCell(
     style: ValueStyle?,
     background: Color,
     directionDegrees: Int? = null,
+    isWindCell: Boolean,
     height: Dp,
     palette: DetailTablePalette
 ) {
@@ -289,32 +287,13 @@ private fun HourValueCell(
         modifier = Modifier.fillMaxWidth().height(height).detailTableCell(background, palette),
         contentAlignment = Alignment.Center
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (directionDegrees != null) {
-                WindArrow(directionDegrees = directionDegrees, size = 10.dp)
-                windCardinal(directionDegrees, LocalConfiguration.current.locales[0])?.let { cardinal ->
-                    Text(cardinal, style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
-                    color = style?.color ?: Color.Unspecified,
-                    fontWeight = style?.fontWeight,
-                    modifier = Modifier.padding(start = if (directionDegrees != null) 2.dp else 0.dp)
-                )
-                secondaryText?.let { secondary ->
-                    Text(
-                        text = secondary,
-                        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
-                        color = style?.color ?: MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                }
-            }
-        }
+        WindTableCellContent(
+            text = text,
+            secondaryText = secondaryText,
+            style = style,
+            directionDegrees = directionDegrees,
+            isWindCell = isWindCell
+        )
     }
 }
 

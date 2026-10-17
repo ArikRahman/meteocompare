@@ -47,7 +47,7 @@
     <string name="action_add_city">Add a city</string>
     <string name="action_cancel">Cancel</string>
 
-    <string name="widget_description">Customizable, resizable weather widget for a favorite city, with model comparison.</string>
+    <string name="widget_description">One resizable widget: 5-hour, 12-hour or 5-day forecasts depending on its size.</string>
     <string name="widget_config_title">Configure widget</string>
     <string name="widget_config_subtitle">Pick which city to display and the background opacity.</string>
     <string name="widget_config_pick_city">City to display</string>

@@ -3,8 +3,6 @@ package com.meteocompare.app.ui.citylist
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertDoesNotExist
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -229,9 +227,9 @@ class CityCardExpansionUiTest {
         }
         val collapsedBounds = card(TestFixtures.paris.id).fetchSemanticsNode().boundsInRoot
         composeRule.runOnIdle { expanded.value = true }
-        composeRule.mainClock.advanceTimeBy(130)
+        composeRule.mainClock.advanceTimeBy(CITY_CARD_RESIZE_DURATION_MS / 2L)
         val expandingBounds = card(TestFixtures.paris.id).fetchSemanticsNode().boundsInRoot
-        composeRule.mainClock.advanceTimeBy(350)
+        composeRule.mainClock.advanceTimeBy(CITY_CARD_RESIZE_DURATION_MS.toLong())
         val expandedBounds = card(TestFixtures.paris.id).fetchSemanticsNode().boundsInRoot
         assertTrue(
             "Expansion should smoothly increase width",
@@ -250,9 +248,9 @@ class CityCardExpansionUiTest {
         )
 
         composeRule.runOnIdle { expanded.value = false }
-        composeRule.mainClock.advanceTimeBy(130)
+        composeRule.mainClock.advanceTimeBy(CITY_CARD_RESIZE_DURATION_MS / 2L)
         val collapsingBounds = card(TestFixtures.paris.id).fetchSemanticsNode().boundsInRoot
-        composeRule.mainClock.advanceTimeBy(350)
+        composeRule.mainClock.advanceTimeBy(CITY_CARD_RESIZE_DURATION_MS.toLong())
         val collapsedAgainBounds = card(TestFixtures.paris.id).fetchSemanticsNode().boundsInRoot
         assertTrue(
             "Collapse should smoothly decrease width",
@@ -274,6 +272,104 @@ class CityCardExpansionUiTest {
             abs(collapsedAgainBounds.width - collapsedBounds.width) <= 1f &&
                 abs(collapsedAgainBounds.height - collapsedBounds.height) <= 1f
         )
+    }
+
+    @Test fun resize_starts_gently_and_can_reverse_without_snapping() {
+        composeRule.mainClock.autoAdvance = false
+        val expanded = mutableStateOf(false)
+        composeRule.setContent {
+            MeteoCompareTheme {
+                CityCard(
+                    state = paris,
+                    expanded = expanded.value,
+                    onClick = { expanded.value = !expanded.value },
+                    onRemove = {},
+                    onRetry = {}
+                )
+            }
+        }
+        val collapsedBounds = card(TestFixtures.paris.id).fetchSemanticsNode().boundsInRoot
+
+        composeRule.runOnIdle { expanded.value = true }
+        composeRule.mainClock.advanceTimeBy(CITY_CARD_RESIZE_DURATION_MS / 6L)
+        val earlyBounds = card(TestFixtures.paris.id).fetchSemanticsNode().boundsInRoot
+        composeRule.mainClock.advanceTimeBy(CITY_CARD_RESIZE_DURATION_MS / 3L)
+        val halfwayBounds = card(TestFixtures.paris.id).fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            "The expansion must begin gradually, not jump to its final width",
+            earlyBounds.width > collapsedBounds.width &&
+                earlyBounds.width < halfwayBounds.width
+        )
+        assertTrue(
+            "The inset animation must accelerate smoothly after its gentle start",
+            earlyBounds.width - collapsedBounds.width <
+                halfwayBounds.width - earlyBounds.width
+        )
+
+        // Reverse before reaching full width. A new tween should begin from
+        // the current width rather than snapping to the collapsed target.
+        composeRule.runOnIdle { expanded.value = false }
+        composeRule.mainClock.advanceTimeBy(16)
+        val reversedBounds = card(TestFixtures.paris.id).fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            "Reversing mid-flight should keep the width continuous",
+            abs(reversedBounds.width - halfwayBounds.width) <=
+                with(composeRule.density) { 3.dp.toPx() }
+        )
+        assertTrue(
+            "The right edge must remain anchored when reversing",
+            abs(reversedBounds.right - collapsedBounds.right) <= 1f
+        )
+        composeRule.mainClock.advanceTimeBy(CITY_CARD_RESIZE_DURATION_MS.toLong() + 100)
+        val collapsedAgainBounds = card(TestFixtures.paris.id).fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            "Reversing should eventually return to the compact dimensions",
+            abs(collapsedAgainBounds.width - collapsedBounds.width) <= 1f &&
+                abs(collapsedAgainBounds.height - collapsedBounds.height) <= 1f
+        )
+    }
+
+    @Test fun morph_remains_in_progress_after_old_duration_in_both_directions() {
+        // Regression: 420 ms was previously the full transition. At that point
+        // V6 must still be resizing rather than abruptly reaching either size.
+        composeRule.mainClock.autoAdvance = false
+        val expanded = mutableStateOf(false)
+        composeRule.setContent {
+            MeteoCompareTheme {
+                CityCard(
+                    state = paris,
+                    expanded = expanded.value,
+                    onClick = { expanded.value = !expanded.value },
+                    onRemove = {},
+                    onRetry = {}
+                )
+            }
+        }
+        val tag = TestFixtures.paris.id
+        val compact = card(tag).fetchSemanticsNode().boundsInRoot
+        composeRule.runOnIdle { expanded.value = true }
+        composeRule.mainClock.advanceTimeBy(420)
+        val opening = card(tag).fetchSemanticsNode().boundsInRoot
+        composeRule.mainClock.advanceTimeBy(CITY_CARD_RESIZE_DURATION_MS.toLong())
+        val full = card(tag).fetchSemanticsNode().boundsInRoot
+        assertTrue("Width should still be expanding after 420 ms",
+            opening.width > compact.width && opening.width < full.width)
+        assertTrue("Height should still be expanding after 420 ms",
+            opening.height > compact.height && opening.height < full.height)
+
+        composeRule.runOnIdle { expanded.value = false }
+        composeRule.mainClock.advanceTimeBy(420)
+        val closing = card(tag).fetchSemanticsNode().boundsInRoot
+        composeRule.mainClock.advanceTimeBy(CITY_CARD_RESIZE_DURATION_MS.toLong())
+        val compactAgain = card(tag).fetchSemanticsNode().boundsInRoot
+        assertTrue("Width should still be shrinking after 420 ms",
+            closing.width < full.width && closing.width > compactAgain.width)
+        assertTrue("Height should still be shrinking after 420 ms",
+            closing.height < full.height && closing.height > compactAgain.height)
+        assertTrue("The right edge stays fixed throughout the softer morph",
+            listOf(opening, full, closing, compactAgain).all {
+                abs(it.right - compact.right) <= 1f
+            })
     }
 
     @Test fun newly_added_city_takes_expansion_and_removal_falls_back() {

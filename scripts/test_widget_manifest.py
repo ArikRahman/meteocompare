@@ -104,6 +104,21 @@ class WidgetContractTests(unittest.TestCase):
                               'TAG_WIDGET_OPACITY_INPUT', 'TAG_WIDGET_SAVE'):
             self.assertIn(preserved_tag, form)
 
+    def test_resize_explanation_localized_and_visible_in_configuration(self):
+        config = (WIDGET_DIR / 'MeteoWidgetConfigActivity.kt').read_text()
+        self.assertIn('if (!insightMode)', config)
+        self.assertIn('R.string.widget_resize_tip_body', config)
+        self.assertIn('TAG_WIDGET_RESIZE_TIP', config)
+        for locale in ('values', 'values-en', 'values-de', 'values-es', 'values-it'):
+            widget = ET.parse(RES_DIR / locale / 'strings_widget.xml').getroot()
+            strings = ET.parse(RES_DIR / locale / 'strings.xml').getroot()
+            texts = {el.get('name'): (el.text or '') for el in widget.findall('string')}
+            descriptions = {el.get('name'): (el.text or '') for el in strings.findall('string')}
+            self.assertTrue(texts.get('widget_resize_tip_title'), locale)
+            self.assertIn('2×1', texts['widget_resize_tip_body'], locale)
+            self.assertTrue('5' in texts['widget_resize_tip_body'] and '12' in texts['widget_resize_tip_body'], locale)
+            self.assertTrue('5' in descriptions['widget_description'] and '12' in descriptions['widget_description'], locale)
+
     def test_picker_labels_localized(self):
         for locale in ('values','values-en','values-de','values-es','values-it'):
             strings = ET.parse(RES_DIR / locale / 'strings_widget.xml').getroot()

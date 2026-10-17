@@ -4,14 +4,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.platform.app.InstrumentationRegistry
 import com.meteocompare.app.R
+import com.meteocompare.app.core.units.WeatherUnit
 import com.meteocompare.app.core.units.LocalWeatherUnits
 import com.meteocompare.app.core.units.WeatherUnits
 import com.meteocompare.app.data.worker.BiasHistoryRefreshState
@@ -21,6 +25,7 @@ import com.meteocompare.app.domain.model.WeatherModel
 import com.meteocompare.app.testutil.TestFixtures
 import com.meteocompare.app.ui.theme.MeteoCompareTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -30,6 +35,74 @@ class DisplayRegressionTest {
 
     @Test fun daily_table_converts_gusts_when_units_change() = checkWindTable(DisplayMode.DAILY)
     @Test fun hourly_table_converts_gusts_when_units_change() = checkWindTable(DisplayMode.HOURLY)
+
+    @Test fun daily_wind_table_keeps_values_in_their_day() = checkWindLayout(DisplayMode.DAILY)
+    @Test fun hourly_wind_table_keeps_values_in_their_hour() = checkWindLayout(DisplayMode.HOURLY)
+
+    private fun checkWindLayout(mode: DisplayMode) {
+        val unitSystem = mutableStateOf(UnitSystem.METRIC)
+        val forecast = TestFixtures.forecast(models = listOf(WeatherModel.GFS)).let { initial ->
+            initial.copy(seriesByModel = initial.seriesByModel.mapValues { (_, series) ->
+                series.copy(
+                    daily = series.daily.copy(
+                        windSpeedMax = series.daily.dates.map { 128.0 },
+                        windGustsMax = series.daily.dates.map { 160.0 },
+                        windDirection10mDominant = series.daily.dates.map { 45 }
+                    ),
+                    hourly = series.hourly.copy(
+                        windSpeed10m = series.hourly.timestamps.map { 128.0 },
+                        windGusts10m = series.hourly.timestamps.map { 160.0 },
+                        windDirection10m = series.hourly.timestamps.map { 45 }
+                    )
+                )
+            })
+        }
+        composeRule.setContent {
+            CompositionLocalProvider(LocalWeatherUnits provides WeatherUnits(unitSystem.value)) {
+                MeteoCompareTheme {
+                    Surface {
+                        DetailedComparisonContent(
+                            mode = mode, tab = CityDetailContentTab.WIND,
+                            forecast = forecast, dailyConditions = emptyList(), normals = null,
+                            presentationNow = TestFixtures.now, cityToday = TestFixtures.today
+                        )
+                    }
+                }
+            }
+        }
+
+        // Valeurs suffisamment grandes pour reproduire le retour à la ligne de la V7.
+        // Contrôler aussi les unités impériales, sans changer la largeur des colonnes.
+        listOf(UnitSystem.METRIC, UnitSystem.IMPERIAL).forEach { system ->
+            composeRule.runOnIdle { unitSystem.value = system }
+            composeRule.waitForIdle()
+            val units = WeatherUnits(system)
+            val cell = composeRule.onAllNodesWithTag(
+                TAG_WIND_DETAIL_VALUE_CELL, useUnmergedTree = true
+            )[0].getUnclippedBoundsInRoot()
+            val direction = composeRule.onAllNodesWithText("NE", useUnmergedTree = true)[0]
+                .getUnclippedBoundsInRoot()
+            val speed = composeRule.onAllNodesWithText(
+                units.speed(128.0), useUnmergedTree = true
+            )[0].getUnclippedBoundsInRoot()
+            val gust = composeRule.onAllNodesWithText(
+                "${context.getString(R.string.wind_gust_abbreviation)} ${units.value(160.0, WeatherUnit.WIND_SPEED)}",
+                useUnmergedTree = true
+            )[0].getUnclippedBoundsInRoot()
+
+            assertTrue("Direction must be above the speed", direction.bottom <= speed.top + 1.dp)
+            assertTrue("Gust must be below the speed", speed.bottom <= gust.top + 1.dp)
+            assertTrue("Direction must remain inside its date/hour column",
+                direction.left >= cell.left && direction.right <= cell.right)
+            assertTrue("Speed must remain inside its date/hour column",
+                speed.left >= cell.left && speed.right <= cell.right)
+            assertTrue("Gust must remain inside its date/hour column",
+                gust.left >= cell.left && gust.right <= cell.right)
+            assertTrue("Speed must use only one line", speed.height.value <= 22f)
+            assertTrue("Gust must use only one line", gust.height.value <= 18f)
+            assertTrue("Column width must remain the shared 80 dp", kotlin.math.abs(cell.width.value - 80f) <= 1f)
+        }
+    }
 
     private fun checkWindTable(mode: DisplayMode) {
         val units = mutableStateOf(UnitSystem.METRIC)
